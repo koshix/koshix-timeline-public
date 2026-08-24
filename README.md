@@ -22,7 +22,7 @@
 id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote\tcore
 ```
 
-`core` は基幹75件なら `1`、補足項目なら `0` です。基幹項目は正確に75件を維持してください。
+`core` は旧選定状態を残すメタデータです。旧選定対象は `1`、それ以外は `0` とし、現在は固定件数を維持する必要はありません。
 
 詳しい登録規約は `DATA-GUIDE.md` を参照してください。
 
