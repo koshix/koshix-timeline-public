@@ -2080,7 +2080,7 @@ export default function App() {
                           ))}
                         </span>
                       )}
-                      
+
                       <span
                         style={{
                           fontSize: 11, color: "#b0b4bb", paddingTop: 4, flexShrink: 0,
