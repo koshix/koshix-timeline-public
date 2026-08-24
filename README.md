@@ -1,85 +1,132 @@
-# 自分史プロジェクション — 静的スターター
+# Koshix Timeline（自分史プロジェクション）
 
-このZIPは、Webサーバーへ配置するだけで動作する静的配布版です。Node.jsやビルド作業は不要です。
+公開された歴史的出来事と、任意の個人史を、利用者の年齢・学齢期・人生段階に重ねて表示するインタラクティブ年表です。
 
-## 最初に変更するファイル
+このリポジトリは、React / Vite のソースコードを含む開発・改変可能な版です。
+MIT Licenseの条件に従って、ソースコードを修正・再配布できます。
 
-### `config.json`
+簡単に設置して使いたい場合は、GitHub Releaseの `koshix-timeline-starter.zip` を利用してください。Release ZIPはNode.jsやビルド作業を必要としない静的配布版です。
 
-タイトル、ハッシュタグ、共有先URL、プロフィール初期値を設定します。
+## クイックスタート
 
-特に `shareUrl` を実際の公開先へ変更してください。
+必要な環境:
 
-```json
-"shareUrl": "https://example.com/timeline/"
-```
+- Node.js 18以降
+- npm
+- Webブラウザ
 
-### `events.tsv`
-
-公開年表の正本です。タブ区切りのUTF-8テキストとして編集します。
-
-```text
-id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote\tcore
-```
-
-`core` は旧選定状態を残すメタデータです。旧選定対象は `1`、それ以外は `0` とし、現在は固定件数を維持する必要はありません。
-
-詳しい登録規約は `DATA-GUIDE.md` を参照してください。
-
-## 個人イベント
-
-`private/events.tsv` は、ヘッダーだけの空テンプレートです。個人史を使わない場合は、そのままで構いません。
-
-個人史を追加する場合は、各行で次を満たしてください。
-
-```text
-cats に me を含める
-primary を me にする
-importance を 1、2、3 のいずれかにする
-```
-
-同じ空テンプレートを `examples/private-events.tsv` にも収録しています。
-
-## 重要：個人史の保護
-
-実データを書き込む前に、Webサーバー側で `private/` ディレクトリを認証保護してください。画面上で非表示にするだけでは、TSVファイルは保護されません。
-
-ApacheのBasic認証を使う場合の概略は次です。
-
-```apache
-AuthType Basic
-AuthName "Personal Timeline"
-AuthUserFile /absolute/path/outside/webroot/.htpasswd
-Require valid-user
-```
-
-パスワードファイルはWeb公開領域の外に置きます。実個人史の公開前に、認証なしでは `401`、認証ありでは `200` になることを確認してください。
+リポジトリをcloneして依存関係をインストールします。
 
 ```bash
-curl -I https://example.com/timeline/private/events.tsv
-curl -I -u USER https://example.com/timeline/private/events.tsv
+git clone https://github.com/koshix/koshix-timeline-starter.git
+cd koshix-timeline-starter
+npm install
+npm run dev
 ```
 
-## 配置
+開発サーバーはローカルでの開発・確認用です。インターネットへ直接公開しないでください。
 
-このフォルダーの内容を、そのままWebサーバーへ置きます。相対パスを使っているため、ドメイン直下でも任意のサブディレクトリでも動作します。
+本番用ファイルを作成する場合:
+
+```bash
+npm run build
+```
+
+成果物は `dist/` に作成されます。
+
+## 自分用に変更する
+
+### 表示設定
+
+`public/config.json` を編集します。
+
+主な項目:
+
+- `title`: 年表のタイトル
+- `hashtag`: 共有用ハッシュタグ
+- `shareUrl`: 自分が設置する公開URL
+- `defaults`: 生年、進学年、就職年、退職年などの初期値
+
+公開用ソースでは `shareUrl` は例示URLになっています。自分の設置先へ変更してください。
+
+### 公開年表
+
+`public/events.tsv` が公開イベントの正本です。
+
+イベントの列、日付、重要度、分類、出典などの規約は `DATA-GUIDE.md` を参照してください。
+
+### 個人史
+
+実際の個人史データは、このリポジトリには含まれません。
+
+個人史を使う場合は、空テンプレートから作成します。
+
+```bash
+cp examples/private-events.tsv public/private/events.tsv
+```
+
+`public/private/events.tsv` は `.gitignore` 対象です。
+
+## 個人史の保護
+
+個人史をWeb上で使用する場合、画面上で非表示にするだけでは保護されません。
+Webサーバー側で `private/` ディレクトリをBasic認証などで保護してください。
+
+実個人史はproduction buildから自動的に除外されます。
+サーバーへ配置する場合も、公開ファイルとは別に管理してください。
+
+## 主なコマンド
+
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run build:events
+npm run build:private
+npm run test:life-stages
+npm run add:event:interactive
+npm run build:starter
+```
+
+`npm run build:starter` は、Node.js不要で設置できる静的配布ZIPを作成します。
+
+## 主なファイル
 
 ```text
-index.html
-assets/
-config.json
-events.tsv
-icons.svg
-favicon.svg
-private/
+src/                        Reactアプリ本体
+public/events.tsv           公開年表
+public/config.json          表示設定
+public/icons.svg            SVGアイコン
+examples/private-events.tsv 個人史の空テンプレート
+scripts/                    検査・build・配布用スクリプト
+DATA-GUIDE.md               イベント登録・編集規約
+LICENSE                     ライセンス
+THIRD-PARTY-NOTICES.md      原作品・第三者ソフトウェア表示
 ```
 
-サーバー側で作成した `private/.htaccess` などを、再アップロード時に削除・上書きしないよう注意してください。
+## 公開データと個人データ
 
-## 原型とライセンス
+公開年表とprivateな個人史は明確に分離してください。
 
-このアプリは、松尾公也氏の「SF・コンピューター技術ライフライン」を原型としています。
+この公開リポジトリには実際の個人史を含めないでください。
+`public/private/events.tsv` はGit管理対象外です。
 
-- https://github.com/matsuo-koya/sf-tech-lifeline
+## 原型と変更
 
-ソフトウェアのライセンスは `LICENSE`、第三者ソフトウェアの表示は `THIRD-PARTY-NOTICES.md` を参照してください。
+このプロジェクトは、松尾公也氏の「SF・コンピューター技術ライフライン」を原型としています。
+
+元プロジェクト:
+
+https://github.com/matsuo-koya/sf-tech-lifeline
+
+本派生版では、公開データと個人データのTSV化、ランタイム設定、個人領域の分離、重要度表示、SVG sprite、相対パスビルド、テーマの糸などを追加・変更しています。
+
+## ライセンス
+
+MIT Licenseです。
+
+- 原作品: Copyright (c) 2026 Koya Matsuo
+- 本派生版で新たに作成・改変した部分: Copyright (c) 2026 Kunio Koshigiri
+
+詳細は `LICENSE` を参照してください。
+React、React DOM、Viteなどの第三者ソフトウェアと元プロジェクトの帰属表示は `THIRD-PARTY-NOTICES.md` に記載しています。

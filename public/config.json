@@ -1,0 +1,15 @@
+{
+  "title": "自分史プロジェクション",
+  "hashtag": "#自分史プロジェクション",
+  "shareUrl": "https://example.com/timeline/",
+  "defaults": {
+    "birthYear": 1965,
+    "birthMonth": 0,
+    "higherEdYear": "",
+    "higherEdType": "university",
+    "graduateYear": "",
+    "graduateType": "masters",
+    "adultYear": "",
+    "retirementYear": ""
+  }
+}

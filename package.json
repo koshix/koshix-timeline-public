@@ -1,0 +1,27 @@
+{
+  "name": "koshix-timeline",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build:events": "node scripts/build-events.mjs",
+    "predev": "npm run build:events && npm run build:private && npm run test:life-stages",
+    "dev": "vite",
+    "prebuild": "npm run build:events && npm run build:private && npm run test:life-stages",
+    "build": "vite build && node scripts/remove-private-build-data.mjs && node scripts/copy-legal-files.mjs",
+    "preview": "vite preview",
+    "add:event": "node scripts/add-event.mjs",
+    "build:private": "node scripts/build-private-events.mjs",
+    "test:life-stages": "node scripts/test-life-stages.mjs",
+    "add:event:interactive": "node scripts/add-event-interactive.mjs",
+    "build:starter": "npm run build && node scripts/build-starter.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}
