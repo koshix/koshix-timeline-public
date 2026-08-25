@@ -2,6 +2,26 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { loadEvents } from "./events-source";
 import { loadConfig } from "./config-source";
 import { loadPrivateEvents } from "./private-events-source";
+import {
+  parsePersonalEventsTsv,
+  serializePersonalEventsTsv,
+} from "./personal-events-tsv";
+import {
+  loadBrowserPersonalEvents,
+  saveBrowserPersonalEvents,
+  clearBrowserPersonalEvents,
+} from "./personal-events-store";
+import { applyEventCustomizations } from "./event-customizations";
+import {
+  parseEventCustomizationsTsv,
+  serializeEventCustomizationsTsv,
+} from "./event-customizations-tsv";
+import {
+  EMPTY_EVENT_CUSTOMIZATIONS,
+  loadBrowserEventCustomizations,
+  saveBrowserEventCustomizations,
+  clearBrowserEventCustomizations,
+} from "./event-customizations-store";
 import { THREADS } from "./threads";
 import {
   GRADUATE_TYPES,
@@ -167,15 +187,6 @@ const RECENT = (() => {
 
 // ---- 最近の新機能(手で追記する) ----
 const FEATURES = [];
-
-// ---- 年表の規模(見出しに表示する) ----
-const STATS = EVENTS.reduce(
-  (a, e) => ({
-    count: a.count + 1,
-    chars: a.chars + [...(e.n || "")].length,
-  }),
-  { count: 0, chars: 0 }
-);
 
 // ---- 共有 ----
 const APP_TITLE = CONFIG.title || "自分史プロジェクション";
@@ -1089,7 +1100,42 @@ export default function App() {
   const [retirementY, setRetirementY] = useState(
     INITIAL_EDUCATION.retirementYear
   );
-  const [myEvents, setMyEvents] = useState([]); // 認証後に private/events.tsv から読み込む
+  const [myEvents, setMyEvents] = useState([]);
+
+  const [eventCustomizations, setEventCustomizations] = useState(
+    EMPTY_EVENT_CUSTOMIZATIONS
+  );
+  const [eventCustomizationStatus, setEventCustomizationStatus] =
+    useState("");
+  const [eventCustomizationEditorOpen, setEventCustomizationEditorOpen] =
+    useState(false);
+  const [editingEventId, setEditingEventId] = useState(null);
+  const [eventEditDraft, setEventEditDraft] = useState({
+    title: "",
+    summary: "",
+    importance: 2,
+  });
+  const [eventAddOpen, setEventAddOpen] = useState(false);
+  const [eventAddDraft, setEventAddDraft] = useState({
+    date: "",
+    title: "",
+    category: "society",
+    importance: 2,
+    summary: "",
+  });
+  const [personalEventsSource, setPersonalEventsSource] = useState("");
+  const [personalFileStatus, setPersonalFileStatus] = useState("");
+  const [personalAddOpen, setPersonalAddOpen] = useState(false);
+  const [personalEditorOpen, setPersonalEditorOpen] = useState(false);
+  const [editingPersonalId, setEditingPersonalId] = useState(null);
+  const [personalDraft, setPersonalDraft] = useState({
+    date: "",
+    title: "",
+    importance: 2,
+    summary: "",
+  });
+  const eventCustomizationFileInputRef = useRef(null);
+  const personalFileInputRef = useRef(null);
   // 大分類フィルタ。true が入っているカテゴリーだけを非表示にする
   const [catOff, setCatOff] = useState(SAVED.catOff ?? {});
   // 公開イベントの表示量。3=重要、2=標準、1=全部
@@ -1130,6 +1176,53 @@ export default function App() {
     });
   }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, retirementY, catOff, importanceMin, subOff, closedStages, setupOpen, tts, speed]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    loadBrowserPersonalEvents()
+      .then((events) => {
+        if (!cancelled) {
+          setMyEvents(events);
+          if (events.length > 0) {
+            setPersonalEventsSource("browser");
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Browser personal history could not be loaded:", err);
+        if (!cancelled) {
+          setPersonalFileStatus(
+            err?.message || "ブラウザ内の自分史を読み込めませんでした"
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadBrowserEventCustomizations()
+      .then((customizations) => {
+        if (!cancelled) {
+          setEventCustomizations(customizations);
+        }
+      })
+      .catch((err) => {
+        console.error(
+          "Browser event customizations could not be loaded:",
+          err
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const toggleStage = (key) =>
     setClosedStages((prev) => {
       const next = new Set(prev);
@@ -1159,27 +1252,881 @@ export default function App() {
     );
   };
 
-  const toggleMyEvents = async () => {
-    // ON → OFF は認証不要
-    if (showMe) {
-      setShowMe(false);
+  const startEditingEvent = (event) => {
+    setEditingEventId(event.id);
+    setEventEditDraft({
+      title: event.t ?? "",
+      summary: event.n ?? "",
+      importance: event.importance ?? 2,
+    });
+    setEventCustomizationStatus(
+      `「${event.t}」を修正中です`
+    );
+  };
+
+  const cancelEditingEvent = () => {
+    setEditingEventId(null);
+    setEventEditDraft({
+      title: "",
+      summary: "",
+      importance: 2,
+    });
+    setEventCustomizationStatus("");
+  };
+
+  const saveEditedEvent = async (event) => {
+    const base = EVENTS.find((item) => item.id === event.id);
+
+    if (!base) {
+      setEventCustomizationStatus(
+        "正本に対応する項目が見つかりません"
+      );
       return;
     }
 
-    // 個人史TSVそのものを取得する。
-    // localhostではそのまま取得でき、
+    const title = eventEditDraft.title.trim();
+    const summary = eventEditDraft.summary.trim();
+    const importance = Number(eventEditDraft.importance);
+
+    if (!title || !summary) {
+      setEventCustomizationStatus(
+        "タイトルと概要は空にできません"
+      );
+      return;
+    }
+
+    if (![1, 2, 3].includes(importance)) {
+      setEventCustomizationStatus(
+        "重要度は1、2、3のいずれかにしてください"
+      );
+      return;
+    }
+
+    const changes = {};
+
+    if (title !== base.t) changes.t = title;
+    if (summary !== base.n) changes.n = summary;
+    if (importance !== base.importance) {
+      changes.importance = importance;
+    }
+
+    const nextOverrides = {
+      ...(eventCustomizations.overrides ?? {}),
+    };
+
+    const previous = nextOverrides[event.id] ?? {};
+
+    const preserved = Object.fromEntries(
+      Object.entries(previous).filter(
+        ([key]) => !["t", "n", "importance"].includes(key)
+      )
+    );
+
+    const merged = {
+      ...preserved,
+      ...changes,
+    };
+
+    if (Object.keys(merged).length === 0) {
+      delete nextOverrides[event.id];
+    } else {
+      nextOverrides[event.id] = merged;
+    }
+
+    const next = {
+      overrides: nextOverrides,
+      hidden: [...(eventCustomizations.hidden ?? [])],
+      additions: [...(eventCustomizations.additions ?? [])],
+    };
+
+    try {
+      await saveBrowserEventCustomizations(next);
+      setEventCustomizations(next);
+
+      setEditingEventId(null);
+      setEventEditDraft({
+        title: "",
+        summary: "",
+        importance: 2,
+      });
+
+      setEventCustomizationStatus(
+        Object.keys(merged).length === 0
+          ? `「${base.t}」を正本の内容に戻しました`
+          : `「${title}」の修正をこのブラウザに保存しました`
+      );
+    } catch (err) {
+      console.error(
+        "Event customization could not be saved:",
+        err
+      );
+      setEventCustomizationStatus(
+        `保存失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const importEventCustomizationsFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsed = parseEventCustomizationsTsv(text);
+
+      // 正本とのID衝突なども、保存前に検査する。
+      const preview = applyEventCustomizations(
+        EVENTS,
+        parsed
+      );
+
+      const overrideCount = Object.keys(
+        parsed.overrides ?? {}
+      ).length;
+      const hiddenCount = parsed.hidden?.length ?? 0;
+      const additionCount =
+        parsed.additions?.length ?? 0;
+
+      const ok = window.confirm(
+        `「${file.name}」を読み込み、` +
+        `現在の年表カスタマイズを置き換えますか？\n\n` +
+        `修正 ${overrideCount}件 / ` +
+        `非表示 ${hiddenCount}件 / ` +
+        `追加 ${additionCount}件`
+      );
+
+      if (!ok) return;
+
+      await saveBrowserEventCustomizations(parsed);
+      setEventCustomizations(parsed);
+
+      setEditingEventId(null);
+      setEventEditDraft({
+        title: "",
+        summary: "",
+        importance: 2,
+      });
+      setEventAddOpen(false);
+      resetEventAddDraft();
+      setOpen(new Set());
+
+      const orphanCount = preview.orphaned.length;
+
+      setEventCustomizationStatus(
+        `${file.name} から年表カスタマイズを読み込み、` +
+        `このブラウザに保存しました` +
+        `（修正 ${overrideCount}件 / ` +
+        `非表示 ${hiddenCount}件 / ` +
+        `追加 ${additionCount}件` +
+        (
+          orphanCount > 0
+            ? ` / 正本にないID ${orphanCount}件`
+            : ""
+        ) +
+        `）`
+      );
+    } catch (err) {
+      console.error(
+        "Event customizations could not be imported:",
+        err
+      );
+      setEventCustomizationStatus(
+        `TSV読み込み失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const exportEventCustomizationsFile = () => {
+    try {
+      const text = serializeEventCustomizationsTsv(
+        eventCustomizations
+      );
+
+      const blob = new Blob(
+        [text],
+        {
+          type: "text/tab-separated-values;charset=utf-8",
+        }
+      );
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = "koshix-timeline-customizations.tsv";
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+
+      const overrideCount = Object.keys(
+        eventCustomizations.overrides ?? {}
+      ).length;
+      const hiddenCount =
+        eventCustomizations.hidden?.length ?? 0;
+      const additionCount =
+        eventCustomizations.additions?.length ?? 0;
+
+      setEventCustomizationStatus(
+        `年表カスタマイズをTSVへ書き出しました` +
+        `（修正 ${overrideCount}件 / ` +
+        `非表示 ${hiddenCount}件 / ` +
+        `追加 ${additionCount}件）`
+      );
+    } catch (err) {
+      console.error(
+        "Event customizations could not be exported:",
+        err
+      );
+      setEventCustomizationStatus(
+        `TSV書き出し失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const resetEventAddDraft = () => {
+    setEventAddDraft({
+      date: "",
+      title: "",
+      category: "society",
+      importance: 2,
+      summary: "",
+    });
+  };
+
+  const openNewEventForm = () => {
+    resetEventAddDraft();
+    setEventCustomizationEditorOpen(true);
+    setEventAddOpen(true);
+    setEventCustomizationStatus("");
+  };
+
+  const cancelAddingEvent = () => {
+    setEventAddOpen(false);
+    resetEventAddDraft();
+    setEventCustomizationStatus("");
+  };
+
+  const saveAddedEvent = async () => {
+    const date = eventAddDraft.date.trim();
+    const title = eventAddDraft.title.trim();
+    const summary = eventAddDraft.summary.trim();
+    const category = eventAddDraft.category;
+    const importance = Number(eventAddDraft.importance);
+
+    const dateMatch = date.match(
+      /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/
+    );
+
+    if (!dateMatch) {
+      setEventCustomizationStatus(
+        "日付は YYYY、YYYY-MM、YYYY-MM-DD の形式で入力してください"
+      );
+      return;
+    }
+
+    const month = dateMatch[2] ? Number(dateMatch[2]) : null;
+    const day = dateMatch[3] ? Number(dateMatch[3]) : null;
+
+    if (month !== null && (month < 1 || month > 12)) {
+      setEventCustomizationStatus("月は01〜12で入力してください");
+      return;
+    }
+
+    if (day !== null && (day < 1 || day > 31)) {
+      setEventCustomizationStatus("日は01〜31で入力してください");
+      return;
+    }
+
+    if (!title || !summary) {
+      setEventCustomizationStatus(
+        "タイトルと概要は空にできません"
+      );
+      return;
+    }
+
+    if (!MAIN_CATS.includes(category)) {
+      setEventCustomizationStatus("分野の指定が不正です");
+      return;
+    }
+
+    if (![1, 2, 3].includes(importance)) {
+      setEventCustomizationStatus(
+        "重要度は1、2、3のいずれかにしてください"
+      );
+      return;
+    }
+
+    const iconByCategory = {
+      work: "video",
+      science: "chip",
+      education: "book",
+      computer: "computer",
+      culture: "music",
+      society: "flag",
+    };
+
+    const additions = [
+      ...(eventCustomizations.additions ?? []),
+    ];
+
+    const usedIds = new Set([
+      ...EVENTS.map((event) => event.id),
+      ...additions.map((event) => event.id),
+    ]);
+
+    let id;
+    do {
+      id =
+        `custom-${Date.now().toString(36)}-` +
+        Math.random().toString(36).slice(2, 8);
+    } while (usedIds.has(id));
+
+    const addition = {
+      id,
+      date,
+      y: Number(date.slice(0, 4)),
+      t: title,
+      cats: [category],
+      primary: category,
+      cat: category,
+      importance,
+      core: false,
+      ic: iconByCategory[category],
+      n: summary,
+    };
+
+    const next = {
+      overrides: {
+        ...(eventCustomizations.overrides ?? {}),
+      },
+      hidden: [
+        ...(eventCustomizations.hidden ?? []),
+      ],
+      additions: [...additions, addition],
+    };
+
+    try {
+      await saveBrowserEventCustomizations(next);
+      setEventCustomizations(next);
+      setEventAddOpen(false);
+      resetEventAddDraft();
+      setEventCustomizationStatus(
+        `「${title}」をこのブラウザの年表に追加しました`
+      );
+    } catch (err) {
+      console.error(
+        "Custom event could not be added:",
+        err
+      );
+      setEventCustomizationStatus(
+        `追加失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const deleteAddedEvent = async (event) => {
+    const addition = (eventCustomizations.additions ?? []).find(
+      (item) => item.id === event.id
+    );
+
+    if (!addition) {
+      setEventCustomizationStatus(
+        "追加項目として保存されているデータが見つかりません"
+      );
+      return;
+    }
+
+    const ok = window.confirm(
+      `追加項目「${addition.t}」をこのブラウザから削除しますか？`
+    );
+
+    if (!ok) return;
+
+    const next = {
+      overrides: {
+        ...(eventCustomizations.overrides ?? {}),
+      },
+      hidden: [
+        ...(eventCustomizations.hidden ?? []),
+      ],
+      additions: (eventCustomizations.additions ?? []).filter(
+        (item) => item.id !== event.id
+      ),
+    };
+
+    try {
+      await saveBrowserEventCustomizations(next);
+      setEventCustomizations(next);
+
+      setOpen((prev) => {
+        const nextOpen = new Set(prev);
+        nextOpen.delete(event.id);
+        return nextOpen;
+      });
+
+      setEventCustomizationStatus(
+        `「${addition.t}」を削除しました`
+      );
+    } catch (err) {
+      console.error(
+        "Custom event could not be deleted:",
+        err
+      );
+      setEventCustomizationStatus(
+        `削除失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const hideEvent = async (event) => {
+    const ok = window.confirm(
+      `年表項目「${event.t}」をこのブラウザで非表示にしますか？`
+    );
+
+    if (!ok) return;
+
+    const hidden = [
+      ...new Set([
+        ...(eventCustomizations.hidden ?? []),
+        event.id,
+      ]),
+    ];
+
+    const next = {
+      overrides: {
+        ...(eventCustomizations.overrides ?? {}),
+      },
+      hidden,
+      additions: [
+        ...(eventCustomizations.additions ?? []),
+      ],
+    };
+
+    try {
+      await saveBrowserEventCustomizations(next);
+      setEventCustomizations(next);
+
+      if (editingEventId === event.id) {
+        setEditingEventId(null);
+        setEventEditDraft({
+          title: "",
+          summary: "",
+          importance: 2,
+        });
+      }
+
+      setOpen((prev) => {
+        const nextOpen = new Set(prev);
+        nextOpen.delete(event.id);
+        return nextOpen;
+      });
+
+      setEventCustomizationStatus(
+        `「${event.t}」を非表示にしました`
+      );
+    } catch (err) {
+      console.error(
+        "Event could not be hidden:",
+        err
+      );
+      setEventCustomizationStatus(
+        `非表示失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const restoreHiddenEvent = async (id) => {
+    const base = EVENTS.find((event) => event.id === id);
+
+    const next = {
+      overrides: {
+        ...(eventCustomizations.overrides ?? {}),
+      },
+      hidden: (eventCustomizations.hidden ?? []).filter(
+        (itemId) => itemId !== id
+      ),
+      additions: [
+        ...(eventCustomizations.additions ?? []),
+      ],
+    };
+
+    try {
+      await saveBrowserEventCustomizations(next);
+      setEventCustomizations(next);
+      setEventCustomizationStatus(
+        base
+          ? `「${base.t}」を表示に戻しました`
+          : `項目 ${id} の非表示指定を解除しました`
+      );
+    } catch (err) {
+      console.error(
+        "Hidden event could not be restored:",
+        err
+      );
+      setEventCustomizationStatus(
+        `復帰失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const clearEventCustomizations = async () => {
+    const overrideCount = Object.keys(
+      eventCustomizations.overrides ?? {}
+    ).length;
+    const hiddenCount = eventCustomizations.hidden?.length ?? 0;
+    const additionCount = eventCustomizations.additions?.length ?? 0;
+    const total = overrideCount + hiddenCount + additionCount;
+
+    if (total === 0) {
+      setEventCustomizationStatus(
+        "保存されている年表カスタマイズはありません"
+      );
+      return;
+    }
+
+    const ok = window.confirm(
+      `年表カスタマイズ ${total}件をこのブラウザから消去しますか？`
+    );
+
+    if (!ok) return;
+
+    try {
+      await clearBrowserEventCustomizations();
+      setEventCustomizations({
+        overrides: {},
+        hidden: [],
+        additions: [],
+      });
+      setEditingEventId(null);
+      setEventEditDraft({
+        title: "",
+        summary: "",
+        importance: 2,
+      });
+      setEventCustomizationStatus(
+        "年表カスタマイズを消去し、正本の年表に戻しました"
+      );
+    } catch (err) {
+      console.error(
+        "Browser event customizations could not be cleared:",
+        err
+      );
+      setEventCustomizationStatus(
+        `消去失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const importPersonalEventsFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const events = parsePersonalEventsTsv(text);
+
+      await saveBrowserPersonalEvents(events);
+      setMyEvents(events);
+      setPersonalEventsSource("browser");
+      setEditingPersonalId(null);
+      setPersonalAddOpen(false);
+      setPersonalFileStatus(
+        `${file.name} から ${events.length}件を読み込み、このブラウザに保存しました`
+      );
+    } catch (err) {
+      console.error("Personal history file could not be imported:", err);
+      setPersonalFileStatus(
+        `読み込み失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const exportPersonalEventsFile = () => {
+    try {
+      const text = serializePersonalEventsTsv(myEvents);
+      const blob = new Blob(
+        [text],
+        { type: "text/tab-separated-values;charset=utf-8" }
+      );
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = "koshix-timeline-personal-history.tsv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+
+      setPersonalFileStatus(
+        `${myEvents.length}件をTSVファイルへ書き出しました`
+      );
+    } catch (err) {
+      console.error("Personal history file could not be exported:", err);
+      setPersonalFileStatus(
+        `書き出し失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const resetPersonalDraft = () => {
+    setPersonalDraft({
+      date: "",
+      title: "",
+      importance: 2,
+      summary: "",
+    });
+  };
+
+  const clearPersonalEventsFile = async () => {
+    if (personalEventsSource !== "browser") {
+      setPersonalFileStatus(
+        "TSV消去は通常TSVが選択されているときだけ実行できます"
+      );
+      return;
+    }
+
+    const ok = window.confirm(
+      `通常TSV ${myEvents.length}件をこのブラウザから消去しますか？`
+    );
+
+    if (!ok) return;
+
+    try {
+      await clearBrowserPersonalEvents();
+
+      setMyEvents([]);
+      setPersonalEventsSource("");
+      setShowMe(false);
+      setEditingPersonalId(null);
+      resetPersonalDraft();
+      setPersonalAddOpen(false);
+      setPersonalEditorOpen(false);
+      setPersonalFileStatus(
+        "通常TSVをこのブラウザから消去しました"
+      );
+    } catch (err) {
+      console.error("Personal history TSV could not be cleared:", err);
+      setPersonalFileStatus(
+        `TSV消去失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const openNewPersonalEventForm = () => {
+    if (personalEventsSource === "server") return;
+
+    setPersonalEditorOpen(true);
+
+    if (personalAddOpen && editingPersonalId === null) {
+      setPersonalAddOpen(false);
+      return;
+    }
+
+    setEditingPersonalId(null);
+    resetPersonalDraft();
+    setPersonalAddOpen(true);
+  };
+
+  const closePersonalEventForm = () => {
+    setEditingPersonalId(null);
+    resetPersonalDraft();
+    setPersonalAddOpen(false);
+  };
+
+  const startEditingPersonalEvent = (event) => {
+    if (personalEventsSource !== "browser") {
+      setPersonalFileStatus(
+        "編集できるのは通常TSVのブラウザ自分史だけです"
+      );
+      return;
+    }
+
+    setPersonalEditorOpen(true);
+    setEditingPersonalId(event.id);
+    setPersonalDraft({
+      date: event.date ?? "",
+      title: event.t ?? "",
+      importance: event.importance ?? 2,
+      summary: event.n ?? "",
+    });
+    setPersonalAddOpen(true);
+    setPersonalFileStatus(
+      `自分史「${event.t}」を編集中です`
+    );
+
+    setTimeout(() => {
+      document
+        .getElementById("personal-history-editor")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  };
+
+  const savePersonalEvent = async () => {
+    if (personalEventsSource === "server") {
+      setPersonalFileStatus(
+        "管理者TSV選択中はブラウザ自分史を追加・編集できません"
+      );
+      return;
+    }
+
+    const date = String(personalDraft.date ?? "").trim();
+    const title = String(personalDraft.title ?? "").trim();
+    const summary = String(personalDraft.summary ?? "").trim();
+
+    const existing = editingPersonalId
+      ? myEvents.find((event) => event.id === editingPersonalId)
+      : null;
+
+    if (editingPersonalId && !existing) {
+      setPersonalFileStatus(
+        "編集対象の自分史が見つかりません"
+      );
+      return;
+    }
+
+    const event = existing
+      ? {
+          ...existing,
+          date,
+          y: Number(date.slice(0, 4)),
+          t: title,
+          importance: Number(personalDraft.importance),
+          n: summary,
+        }
+      : {
+          id: `me-${Date.now().toString(36)}`,
+          date,
+          y: Number(date.slice(0, 4)),
+          t: title,
+          cats: ["me"],
+          primary: "me",
+          importance: Number(personalDraft.importance),
+          ic: "flag",
+          n: summary,
+        };
+
+    const rawEvents = existing
+      ? myEvents.map((item) =>
+          item.id === editingPersonalId ? event : item
+        )
+      : [...myEvents, event];
+
+    try {
+      // 既存TSV仕様で検証してからIndexedDBへ保存する。
+      const events = parsePersonalEventsTsv(
+        serializePersonalEventsTsv(rawEvents)
+      );
+
+      await saveBrowserPersonalEvents(events);
+
+      setMyEvents(events);
+      setPersonalEventsSource("browser");
+      setEditingPersonalId(null);
+      resetPersonalDraft();
+      setPersonalAddOpen(false);
+      setPersonalFileStatus(
+        existing
+          ? `自分史「${title}」を更新し、このブラウザに保存しました`
+          : `自分史「${title}」を追加し、このブラウザに保存しました`
+      );
+    } catch (err) {
+      console.error("Personal history event could not be saved:", err);
+      setPersonalFileStatus(
+        `${existing ? "更新" : "追加"}失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const deletePersonalEvent = async (event) => {
+    if (personalEventsSource !== "browser") {
+      setPersonalFileStatus(
+        "削除できるのは通常TSVのブラウザ自分史だけです"
+      );
+      return;
+    }
+
+    const ok = window.confirm(
+      `自分史「${event.t}」を削除しますか？`
+    );
+
+    if (!ok) return;
+
+    try {
+      const remaining = myEvents.filter(
+        (item) => item.id !== event.id
+      );
+
+      // 削除後もTSVとして読み戻せることを確認してから保存する。
+      const events = parsePersonalEventsTsv(
+        serializePersonalEventsTsv(remaining)
+      );
+
+      await saveBrowserPersonalEvents(events);
+
+      setMyEvents(events);
+
+      if (editingPersonalId === event.id) {
+        setEditingPersonalId(null);
+        resetPersonalDraft();
+        setPersonalAddOpen(false);
+      }
+
+      setOpen((prev) => {
+        const next = new Set(prev);
+        next.delete(eid(event));
+        return next;
+      });
+
+      setPersonalFileStatus(
+        `自分史「${event.t}」を削除し、このブラウザに保存しました`
+      );
+    } catch (err) {
+      console.error("Personal history event could not be deleted:", err);
+      setPersonalFileStatus(
+        `削除失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const toggleMyEvents = () => {
+    setShowMe((value) => !value);
+  };
+
+  const loadServerPersonalEvents = async () => {
+    // 管理者向け。localhostではそのまま取得でき、
     // 公開環境では private/ のBasic認証を通過した場合だけ取得できる。
     try {
       const events = await loadPrivateEvents();
 
       if (events === null) {
+        setPersonalFileStatus(
+          "管理者TSVを読み込めませんでした"
+        );
         return;
       }
 
       setMyEvents(events);
-      setShowMe(true);
+      setPersonalEventsSource("server");
+      setEditingPersonalId(null);
+      setPersonalAddOpen(false);
+      setPersonalEditorOpen(false);
+      setPersonalFileStatus(
+        `管理者TSV ${events.length}件を読み込みました`
+      );
     } catch (err) {
       console.error("Personal events could not be loaded:", err);
+      setPersonalFileStatus(
+        `管理者TSVの読み込み失敗: ${err?.message || String(err)}`
+      );
     }
   };
 
@@ -1212,6 +2159,27 @@ export default function App() {
     }, 150);
     return () => clearTimeout(timer);
   }, []);
+
+  const effectiveEvents = useMemo(
+    () =>
+      applyEventCustomizations(
+        EVENTS,
+        eventCustomizations
+      ).events,
+    [eventCustomizations]
+  );
+
+  const effectiveStats = useMemo(
+    () =>
+      effectiveEvents.reduce(
+        (a, e) => ({
+          count: a.count + 1,
+          chars: a.chars + [...(e.n || "")].length,
+        }),
+        { count: 0, chars: 0 }
+      ),
+    [effectiveEvents]
+  );
 
   const grouped = useMemo(() => {
     const searchExpression = parseSearchExpression(searchText);
@@ -1247,7 +2215,7 @@ export default function App() {
     };
     const list = [
       // v0.1: 旧 tech → computer、旧 music → culture として暫定表示
-      ...EVENTS
+      ...effectiveEvents
         // 大分類フィルタは主分類で判定する。
         // sf などの副分類はタグ・色ドットとして保持する。
         .filter(
@@ -1298,7 +2266,7 @@ export default function App() {
       myShown: list.filter((e) => e.cat === "me").length,
       searchError: searchExpression.error,
     };
-  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, retirementY, myEvents, catOff, importanceMin, showMe, subOff, searchText]);
+  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, retirementY, myEvents, effectiveEvents, catOff, importanceMin, showMe, subOff, searchText]);
 
   const font =
     '"Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif';
@@ -1316,7 +2284,7 @@ export default function App() {
             {APP_TITLE}
           </h1>
           <div style={{ fontSize: 11.5, color: "#8a8f98", marginTop: 8, fontFamily: mono }}>
-            全{STATS.count}項目・解説{STATS.chars.toLocaleString()}字
+            全{effectiveStats.count}項目・解説{effectiveStats.chars.toLocaleString()}字
           </div>
           <div
             style={{
@@ -1945,6 +2913,37 @@ export default function App() {
                         </span>
                       </button>
 
+                      {isOpen && personalEventsSource === "browser" && (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            margin: "0 4px 8px 108px",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => startEditingPersonalEvent(ev)}
+                            style={miniBtn}
+                          >
+                            修正
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => deletePersonalEvent(ev)}
+                            style={{
+                              ...miniBtn,
+                              color: "#9b2c2c",
+                              border: "1px solid #d8a4a4",
+                              background: "#fff7f7",
+                            }}
+                          >
+                            削除
+                          </button>
+                        </div>
+                      )}
+
                       {isOpen && ev.n && (
                         <div
                           style={{
@@ -1965,6 +2964,7 @@ export default function App() {
                             日付：{formatEventDate(ev.date)}
                           </div>
                           {ev.n}
+
                           {ev.note && (
                             <div
                               style={{
@@ -2195,6 +3195,56 @@ export default function App() {
                           }}
                         >
                           <SpeakButton ev={ev} rate={speed} color={CAT[ev.cat].bg} />
+
+                          {(eventCustomizations.additions ?? []).some(
+                            (item) => item.id === id
+                          ) ? (
+                            <button
+                              type="button"
+                              onClick={() => deleteAddedEvent(ev)}
+                              style={{
+                                ...miniBtn,
+                                color: "#8b4a35",
+                                border: "1px solid #d6b3a5",
+                                background: "#fff8f5",
+                              }}
+                            >
+                              削除
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => startEditingEvent(ev)}
+                                style={{
+                                  ...miniBtn,
+                                  ...(editingEventId === id
+                                    ? {
+                                        background: "#e8f1ff",
+                                        border: "1px solid #6f98d5",
+                                        color: "#28568f",
+                                      }
+                                    : {}),
+                                }}
+                              >
+                                修正
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => hideEvent(ev)}
+                                style={{
+                                  ...miniBtn,
+                                  color: "#8b4a35",
+                                  border: "1px solid #d6b3a5",
+                                  background: "#fff8f5",
+                                }}
+                              >
+                                非表示
+                              </button>
+                            </>
+                          )}
+
                           <ShareBar
                             compact
                             color={CAT[ev.cat].bg}
@@ -2203,6 +3253,143 @@ export default function App() {
                             url={`${SHARE_URL}?e=${encodeURIComponent(id)}`}
                           />
                         </div>
+
+                        {editingEventId === id && (
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              saveEditedEvent(ev);
+                            }}
+                            style={{
+                              marginTop: 10,
+                              padding: 10,
+                              border: "1px solid #cfdce8",
+                              borderRadius: 8,
+                              background: "#ffffffaa",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 11.5,
+                                fontWeight: 800,
+                                color: "#365f7d",
+                                marginBottom: 7,
+                              }}
+                            >
+                              この年表項目を修正
+                            </div>
+
+                            <input
+                              type="text"
+                              required
+                              value={eventEditDraft.title}
+                              onChange={(e) =>
+                                setEventEditDraft((prev) => ({
+                                  ...prev,
+                                  title: e.target.value,
+                                }))
+                              }
+                              placeholder="タイトル"
+                              aria-label="年表項目タイトル"
+                              style={{
+                                boxSizing: "border-box",
+                                width: "100%",
+                                fontFamily: font,
+                                fontSize: 12,
+                                padding: "7px 9px",
+                                border: "1px solid #cfd3d8",
+                                borderRadius: 7,
+                              }}
+                            />
+
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                marginTop: 8,
+                              }}
+                            >
+                              <label
+                                style={{
+                                  fontSize: 11.5,
+                                  fontWeight: 700,
+                                  color: "#365f7d",
+                                }}
+                              >
+                                重要度
+                              </label>
+
+                              <select
+                                value={eventEditDraft.importance}
+                                onChange={(e) =>
+                                  setEventEditDraft((prev) => ({
+                                    ...prev,
+                                    importance: Number(e.target.value),
+                                  }))
+                                }
+                                style={{
+                                  fontFamily: font,
+                                  fontSize: 12,
+                                  padding: "6px 8px",
+                                  border: "1px solid #cfd3d8",
+                                  borderRadius: 7,
+                                }}
+                              >
+                                <option value={3}>L3 重要</option>
+                                <option value={2}>L2 標準</option>
+                                <option value={1}>L1 補足</option>
+                              </select>
+                            </div>
+
+                            <textarea
+                              required
+                              value={eventEditDraft.summary}
+                              onChange={(e) =>
+                                setEventEditDraft((prev) => ({
+                                  ...prev,
+                                  summary: e.target.value,
+                                }))
+                              }
+                              placeholder="概要"
+                              aria-label="年表項目概要"
+                              rows={4}
+                              style={{
+                                display: "block",
+                                boxSizing: "border-box",
+                                width: "100%",
+                                marginTop: 8,
+                                fontFamily: font,
+                                fontSize: 12,
+                                lineHeight: 1.6,
+                                padding: "7px 9px",
+                                border: "1px solid #cfd3d8",
+                                borderRadius: 7,
+                                resize: "vertical",
+                              }}
+                            />
+
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 8,
+                                marginTop: 9,
+                              }}
+                            >
+                              <button type="submit" style={miniBtn}>
+                                変更を保存
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={cancelEditingEvent}
+                                style={miniBtn}
+                              >
+                                キャンセル
+                              </button>
+                            </div>
+                          </form>
+                        )}
                       </div>
                     )}
                   </li>
@@ -2258,6 +3445,971 @@ export default function App() {
           <ShareBar
             text={`${APP_TITLE}——6つのテーマで時代を自分の年齢から読む(${EVENTS.length}項目) ${HASHTAG}`}
           />
+        </div>
+
+        <div
+          style={{
+            background: "#f3f7fb",
+            border: "1px solid #cfdce8",
+            borderRadius: 12,
+            padding: "12px 16px",
+            marginTop: 16,
+            marginBottom: 14,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              color: "#365f7d",
+            }}
+          >
+            年表カスタマイズ（差分TSV方式）
+          </div>
+
+          <div
+            style={{
+              fontSize: 11.5,
+              lineHeight: 1.7,
+              color: "#6b7280",
+              marginTop: 4,
+            }}
+          >
+            正本の年表は変更せず、差分TSVだけがこのブラウザ内に保存されます。
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 10,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: "#365f7d",
+              }}
+            >
+              ●現在の年表：
+              修正 {Object.keys(eventCustomizations.overrides ?? {}).length}件
+              {" / "}
+              非表示 {eventCustomizations.hidden?.length ?? 0}件
+              {" / "}
+              追加 {eventCustomizations.additions?.length ?? 0}件
+            </span>
+
+            <button
+              type="button"
+              onClick={clearEventCustomizations}
+              disabled={
+                Object.keys(eventCustomizations.overrides ?? {}).length === 0 &&
+                (eventCustomizations.hidden?.length ?? 0) === 0 &&
+                (eventCustomizations.additions?.length ?? 0) === 0
+              }
+              style={{
+                ...miniBtn,
+                background: "#fff3f3",
+                border: "1px solid #e4bcbc",
+                color: "#8a4f4f",
+                ...(
+                  Object.keys(eventCustomizations.overrides ?? {}).length === 0 &&
+                  (eventCustomizations.hidden?.length ?? 0) === 0 &&
+                  (eventCustomizations.additions?.length ?? 0) === 0
+                    ? { opacity: 0.45, cursor: "not-allowed" }
+                    : {}
+                ),
+              }}
+            >
+              TSV消去
+            </button>
+
+            <input
+              ref={eventCustomizationFileInputRef}
+              type="file"
+              accept=".tsv,text/tab-separated-values,text/plain"
+              onChange={importEventCustomizationsFile}
+              style={{ display: "none" }}
+            />
+
+            <button
+              type="button"
+              onClick={() =>
+                eventCustomizationFileInputRef.current?.click()
+              }
+              style={{
+                ...miniBtn,
+                background: "#f0f6fd",
+                border: "1px solid #bdd0e5",
+                color: "#41698f",
+              }}
+            >
+              TSV読込
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEventCustomizationEditorOpen((value) => !value);
+                setEventAddOpen(false);
+                resetEventAddDraft();
+              }}
+              style={{
+                ...miniBtn,
+                fontWeight: 800,
+                background: "#f5f0fa",
+                border: "1px solid #cfbfdf",
+                color: "#68517d",
+                ...(eventCustomizationEditorOpen
+                  ? {
+                      background: "#ece3f5",
+                      border: "1px solid #9f82b6",
+                      color: "#5f3f76",
+                    }
+                  : {}),
+              }}
+            >
+              TSV編集
+            </button>
+
+            <button
+              type="button"
+              onClick={exportEventCustomizationsFile}
+              style={{
+                ...miniBtn,
+                background: "#f0f8f2",
+                border: "1px solid #bed8c5",
+                color: "#4b7356",
+              }}
+            >
+              TSV書出
+            </button>
+          </div>
+
+          {eventCustomizationStatus && (
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 11.5,
+                color: "#5f6770",
+              }}
+            >
+              {eventCustomizationStatus}
+            </div>
+          )}
+
+          {eventCustomizationEditorOpen && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                border: "1px solid #cfdce8",
+                borderRadius: 10,
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <strong style={{ fontSize: 12, color: "#365f7d" }}>
+                  差分TSVを編集
+                </strong>
+
+                <span style={{ flex: 1 }} />
+
+                <button
+                  type="button"
+                  onClick={openNewEventForm}
+                  style={{
+                    ...miniBtn,
+                    background: "#e7f1fb",
+                    border: "1px solid #91b3d2",
+                    color: "#315f87",
+                    fontWeight: 800,
+                  }}
+                >
+                  ＋追加
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEventCustomizationEditorOpen(false);
+                    setEventAddOpen(false);
+                    resetEventAddDraft();
+                  }}
+                  style={{
+                    ...miniBtn,
+                    marginLeft: 6,
+                  }}
+                >
+                  閉じる
+                </button>
+              </div>
+            </div>
+          )}
+
+          {eventCustomizationEditorOpen && eventAddOpen && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveAddedEvent();
+              }}
+              style={{
+                marginTop: 10,
+                padding: 10,
+                border: "1px solid #cfdce8",
+                borderRadius: 8,
+                background: "#ffffffaa",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                  color: "#365f7d",
+                  marginBottom: 7,
+                }}
+              >
+                年表項目を追加
+              </div>
+
+              <input
+                type="text"
+                required
+                value={eventAddDraft.date}
+                onChange={(e) =>
+                  setEventAddDraft((prev) => ({
+                    ...prev,
+                    date: e.target.value,
+                  }))
+                }
+                placeholder="日付（YYYY / YYYY-MM / YYYY-MM-DD）"
+                aria-label="追加項目の日付"
+                style={{
+                  boxSizing: "border-box",
+                  width: "100%",
+                  fontFamily: font,
+                  fontSize: 12,
+                  padding: "7px 9px",
+                  border: "1px solid #cfd3d8",
+                  borderRadius: 7,
+                }}
+              />
+
+              <input
+                type="text"
+                required
+                value={eventAddDraft.title}
+                onChange={(e) =>
+                  setEventAddDraft((prev) => ({
+                    ...prev,
+                    title: e.target.value,
+                  }))
+                }
+                placeholder="タイトル"
+                aria-label="追加項目のタイトル"
+                style={{
+                  boxSizing: "border-box",
+                  width: "100%",
+                  marginTop: 8,
+                  fontFamily: font,
+                  fontSize: 12,
+                  padding: "7px 9px",
+                  border: "1px solid #cfd3d8",
+                  borderRadius: 7,
+                }}
+              />
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: 10,
+                  marginTop: 8,
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: "#365f7d",
+                  }}
+                >
+                  分野
+                </label>
+
+                <select
+                  value={eventAddDraft.category}
+                  onChange={(e) =>
+                    setEventAddDraft((prev) => ({
+                      ...prev,
+                      category: e.target.value,
+                    }))
+                  }
+                  style={{
+                    fontFamily: font,
+                    fontSize: 12,
+                    padding: "6px 8px",
+                    border: "1px solid #cfd3d8",
+                    borderRadius: 7,
+                  }}
+                >
+                  {MAIN_CATS.map((key) => (
+                    <option key={key} value={key}>
+                      {CAT[key].label}
+                    </option>
+                  ))}
+                </select>
+
+                <label
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: "#365f7d",
+                  }}
+                >
+                  重要度
+                </label>
+
+                <select
+                  value={eventAddDraft.importance}
+                  onChange={(e) =>
+                    setEventAddDraft((prev) => ({
+                      ...prev,
+                      importance: Number(e.target.value),
+                    }))
+                  }
+                  style={{
+                    fontFamily: font,
+                    fontSize: 12,
+                    padding: "6px 8px",
+                    border: "1px solid #cfd3d8",
+                    borderRadius: 7,
+                  }}
+                >
+                  <option value={3}>L3 重要</option>
+                  <option value={2}>L2 標準</option>
+                  <option value={1}>L1 補足</option>
+                </select>
+              </div>
+
+              <textarea
+                required
+                value={eventAddDraft.summary}
+                onChange={(e) =>
+                  setEventAddDraft((prev) => ({
+                    ...prev,
+                    summary: e.target.value,
+                  }))
+                }
+                placeholder="概要"
+                aria-label="追加項目の概要"
+                rows={4}
+                style={{
+                  display: "block",
+                  boxSizing: "border-box",
+                  width: "100%",
+                  marginTop: 8,
+                  fontFamily: font,
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                  padding: "7px 9px",
+                  border: "1px solid #cfd3d8",
+                  borderRadius: 7,
+                  resize: "vertical",
+                }}
+              />
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  marginTop: 9,
+                }}
+              >
+                <button type="submit" style={miniBtn}>
+                  追加して保存
+                </button>
+
+                <button
+                  type="button"
+                  onClick={cancelAddingEvent}
+                  style={miniBtn}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </form>
+          )}
+
+          {eventCustomizationEditorOpen &&
+            (eventCustomizations.hidden?.length ?? 0) > 0 && (
+            <div
+              style={{
+                marginTop: 10,
+                paddingTop: 8,
+                borderTop: "1px solid #dbe4ec",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                  color: "#365f7d",
+                  marginBottom: 5,
+                }}
+              >
+                非表示中の項目
+              </div>
+
+              {eventCustomizations.hidden.map((id) => {
+                const base = EVENTS.find(
+                  (event) => event.id === id
+                );
+
+                return (
+                  <div
+                    key={id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "5px 0",
+                    }}
+                  >
+                    <span
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontSize: 11.5,
+                        color: "#4f5965",
+                      }}
+                    >
+                      {base
+                        ? `${base.y} ${base.t}`
+                        : id}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => restoreHiddenEvent(id)}
+                      style={miniBtn}
+                    >
+                      表示に戻す
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            background: "#f7f2fb",
+            border: "1px solid #dfd2ea",
+            borderRadius: 12,
+            padding: "12px 16px",
+            marginTop: 16,
+            marginBottom: 14,
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 800, color: CAT.me.bg }}>
+            自分史ファイル（TSV形式）
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              lineHeight: 1.7,
+              color: "#6b7280",
+              marginTop: 4,
+            }}
+          >
+            通常TSVはこのブラウザ内に保存されます。
+            「TSV編集」で追加・編集・削除し、年表表示は上の「自分」で切り替えます。
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 10,
+            }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 800,
+                color: "#5f4a72",
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: "50%",
+                  background:
+                    personalEventsSource === "browser"
+                      ? "#4f7fc7"
+                      : personalEventsSource === "server"
+                        ? "#d69232"
+                        : "#a0a5ad",
+                }}
+              />
+              現在の自分史：
+              {personalEventsSource === "browser"
+                ? `通常TSV（${myEvents.length}件）`
+                : personalEventsSource === "server"
+                  ? `管理者TSV（${myEvents.length}件）`
+                  : "未読み込み"}
+            </span>
+
+            <button
+              onClick={clearPersonalEventsFile}
+              disabled={personalEventsSource !== "browser"}
+              style={{
+                ...miniBtn,
+                background: "#fff3f3",
+                border: "1px solid #e4bcbc",
+                color: "#8a4f4f",
+                ...(personalEventsSource !== "browser"
+                  ? { opacity: 0.45, cursor: "not-allowed" }
+                  : {}),
+              }}
+            >
+              TSV消去
+            </button>
+
+            <button
+              onClick={() => personalFileInputRef.current?.click()}
+              style={{
+                ...miniBtn,
+                background: "#f0f6fd",
+                border: "1px solid #bdd0e5",
+                color: "#41698f",
+                ...(personalEventsSource === "browser"
+                  ? {
+                      background: "#e5f0fc",
+                      border: "1px solid #7fa5d0",
+                      color: "#28568f",
+                      fontWeight: 800,
+                    }
+                  : {}),
+              }}
+            >
+              TSV読込
+            </button>
+
+            <button
+              onClick={() => {
+                setPersonalEditorOpen((value) => !value);
+                setPersonalAddOpen(false);
+                setEditingPersonalId(null);
+                resetPersonalDraft();
+              }}
+              disabled={personalEventsSource === "server"}
+              style={{
+                ...miniBtn,
+                fontWeight: 800,
+                background: "#f5f0fa",
+                border: "1px solid #cfbfdf",
+                color: "#68517d",
+                ...(personalEventsSource === "server"
+                  ? { opacity: 0.45, cursor: "not-allowed" }
+                  : {}),
+                ...(personalEditorOpen
+                  ? {
+                      background: "#ece3f5",
+                      border: "1px solid #9f82b6",
+                      color: "#5f3f76",
+                    }
+                  : {}),
+              }}
+            >
+              TSV編集
+            </button>
+
+            <button
+              onClick={exportPersonalEventsFile}
+              style={{
+                ...miniBtn,
+                background: "#f0f8f2",
+                border: "1px solid #bed8c5",
+                color: "#4b7356",
+              }}
+            >
+              TSV書出
+            </button>
+
+            <button
+              onClick={loadServerPersonalEvents}
+              style={{
+                ...miniBtn,
+                ...(personalEventsSource === "server"
+                  ? {
+                      background: "#fff1dc",
+                      border: "1px solid #d79a43",
+                      color: "#8a5208",
+                      fontWeight: 800,
+                    }
+                  : {}),
+              }}
+            >
+              （管理者TSV読込）
+            </button>
+
+            <input
+              ref={personalFileInputRef}
+              type="file"
+              accept=".tsv,text/tab-separated-values,text/plain"
+              onChange={importPersonalEventsFile}
+              style={{ display: "none" }}
+            />
+          </div>
+
+          {personalEditorOpen && personalEventsSource !== "server" && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                border: "1px solid #dfd2ea",
+                borderRadius: 10,
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 8,
+                }}
+              >
+                <strong style={{ fontSize: 12, color: "#5f4a72" }}>
+                  通常TSVを編集
+                </strong>
+
+                <span style={{ fontSize: 11, color: "#7b818b" }}>
+                  {myEvents.length}件
+                </span>
+
+                <span style={{ flex: 1 }} />
+
+                <button
+                  type="button"
+                  onClick={openNewPersonalEventForm}
+                  style={{
+                    ...miniBtn,
+                    background: "#e7f1fb",
+                    border: "1px solid #91b3d2",
+                    color: "#315f87",
+                    fontWeight: 800,
+                  }}
+                >
+                  ＋追加
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPersonalEditorOpen(false);
+                    setPersonalAddOpen(false);
+                    setEditingPersonalId(null);
+                    resetPersonalDraft();
+                  }}
+                  style={{
+                    ...miniBtn,
+                    marginLeft: 6,
+                  }}
+                >
+                  閉じる
+                </button>
+              </div>
+
+              {myEvents.length === 0 ? (
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    color: "#7b818b",
+                    padding: "8px 0",
+                  }}
+                >
+                  自分史はまだありません。
+                </div>
+              ) : (
+                <div
+                  style={{
+                    maxHeight: 320,
+                    overflowY: "auto",
+                    borderTop: "1px solid #ece7f0",
+                  }}
+                >
+                  {myEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "7px 2px",
+                        borderBottom: "1px solid #ece7f0",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 88,
+                          flexShrink: 0,
+                          fontSize: 11,
+                          color: "#747b86",
+                        }}
+                      >
+                        {event.date}
+                      </span>
+
+                      <span
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          fontSize: 12,
+                          color: "#333a44",
+                        }}
+                      >
+                        {event.t}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => startEditingPersonalEvent(event)}
+                        style={miniBtn}
+                      >
+                        編集
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deletePersonalEvent(event)}
+                        style={{
+                          ...miniBtn,
+                          color: "#9b2c2c",
+                          border: "1px solid #d8a4a4",
+                          background: "#fff7f7",
+                        }}
+                      >
+                        削除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {personalAddOpen && personalEventsSource !== "server" && (
+            <form
+              id="personal-history-editor"
+              onSubmit={(e) => {
+                e.preventDefault();
+                savePersonalEvent();
+              }}
+              style={{
+                marginTop: 12,
+                padding: 12,
+                border: "1px solid #dfd2ea",
+                borderRadius: 10,
+                background: "#fff",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "#5f4a72",
+                  marginBottom: 8,
+                }}
+              >
+                {editingPersonalId ? "自分史を編集" : "自分史を追加"}
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(130px, 0.8fr) minmax(220px, 2fr)",
+                  gap: 8,
+                }}
+              >
+                <input
+                  type="text"
+                  required
+                  value={personalDraft.date}
+                  onChange={(e) =>
+                    setPersonalDraft((prev) => ({
+                      ...prev,
+                      date: e.target.value,
+                    }))
+                  }
+                  placeholder="日付 YYYY / YYYY-MM / YYYY-MM-DD"
+                  aria-label="日付"
+                  style={{
+                    fontFamily: font,
+                    fontSize: 12,
+                    padding: "7px 9px",
+                    border: "1px solid #cfd3d8",
+                    borderRadius: 7,
+                  }}
+                />
+
+                <input
+                  type="text"
+                  required
+                  value={personalDraft.title}
+                  onChange={(e) =>
+                    setPersonalDraft((prev) => ({
+                      ...prev,
+                      title: e.target.value,
+                    }))
+                  }
+                  placeholder="タイトル"
+                  aria-label="タイトル"
+                  style={{
+                    fontFamily: font,
+                    fontSize: 12,
+                    padding: "7px 9px",
+                    border: "1px solid #cfd3d8",
+                    borderRadius: 7,
+                  }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginTop: 8,
+                }}
+              >
+                <label
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: "#5f4a72",
+                  }}
+                >
+                  重要度
+                </label>
+
+                <select
+                  value={personalDraft.importance}
+                  onChange={(e) =>
+                    setPersonalDraft((prev) => ({
+                      ...prev,
+                      importance: Number(e.target.value),
+                    }))
+                  }
+                  style={{
+                    fontFamily: font,
+                    fontSize: 12,
+                    padding: "6px 8px",
+                    border: "1px solid #cfd3d8",
+                    borderRadius: 7,
+                  }}
+                >
+                  <option value={3}>L3 重要</option>
+                  <option value={2}>L2 標準</option>
+                  <option value={1}>L1 補足</option>
+                </select>
+              </div>
+
+              <textarea
+                required
+                value={personalDraft.summary}
+                onChange={(e) =>
+                  setPersonalDraft((prev) => ({
+                    ...prev,
+                    summary: e.target.value,
+                  }))
+                }
+                placeholder="概要"
+                aria-label="概要"
+                rows={3}
+                style={{
+                  display: "block",
+                  boxSizing: "border-box",
+                  width: "100%",
+                  marginTop: 8,
+                  fontFamily: font,
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                  padding: "7px 9px",
+                  border: "1px solid #cfd3d8",
+                  borderRadius: 7,
+                  resize: "vertical",
+                }}
+              />
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  marginTop: 9,
+                }}
+              >
+                <button type="submit" style={miniBtn}>
+                  {editingPersonalId ? "変更を保存" : "保存"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closePersonalEventForm}
+                  style={miniBtn}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </form>
+          )}
+
+          {personalEventsSource === "server" && (
+            <div
+              style={{
+                fontSize: 10.5,
+                lineHeight: 1.6,
+                color: "#8a6a3d",
+                marginTop: 8,
+              }}
+            >
+              管理者TSV選択中はブラウザ側の追加・編集を行いません。
+            </div>
+          )}
+
+          {personalFileStatus && (
+            <div
+              role="status"
+              style={{
+                fontSize: 11,
+                lineHeight: 1.6,
+                color: "#6b7280",
+                marginTop: 8,
+              }}
+            >
+              {personalFileStatus}
+            </div>
+          )}
         </div>
 
         <div id="timeline-settings" style={{ scrollMarginTop: 16 }}>
