@@ -893,7 +893,7 @@ function Theater({ thread, gradeLabel, birth, tts, setTts, speed, setSpeed, onCl
             </div>
           </div>
           <button onClick={onClose} aria-label="閉じる" style={{ ...ctlBtn(), padding: "6px 10px" }}>
-            ✕ 閉じる
+            ×閉じる
           </button>
         </div>
         <div style={{ marginTop: 8, height: 3, background: "#d7dce2", borderRadius: 2 }}>
@@ -1889,13 +1889,13 @@ export default function App() {
   const clearPersonalEventsFile = async () => {
     if (personalEventsSource !== "browser") {
       setPersonalFileStatus(
-        "TSV消去は通常TSVが選択されているときだけ実行できます"
+        "消去できるのは、このブラウザの自分史を使用しているときだけです"
       );
       return;
     }
 
     const ok = window.confirm(
-      `通常TSV ${myEvents.length}件をこのブラウザから消去しますか？`
+      `自分史 ${myEvents.length}件をこのブラウザから消去しますか？`
     );
 
     if (!ok) return;
@@ -1911,12 +1911,12 @@ export default function App() {
       setPersonalAddOpen(false);
       setPersonalEditorOpen(false);
       setPersonalFileStatus(
-        "通常TSVをこのブラウザから消去しました"
+        "このブラウザの自分史を消去しました"
       );
     } catch (err) {
       console.error("Personal history TSV could not be cleared:", err);
       setPersonalFileStatus(
-        `TSV消去失敗: ${err?.message || String(err)}`
+        `消去失敗: ${err?.message || String(err)}`
       );
     }
   };
@@ -1945,7 +1945,7 @@ export default function App() {
   const startEditingPersonalEvent = (event) => {
     if (personalEventsSource !== "browser") {
       setPersonalFileStatus(
-        "編集できるのは通常TSVのブラウザ自分史だけです"
+        "編集できるのは、このブラウザに保存した自分史だけです"
       );
       return;
     }
@@ -1973,7 +1973,7 @@ export default function App() {
   const savePersonalEvent = async () => {
     if (personalEventsSource === "server") {
       setPersonalFileStatus(
-        "管理者TSV選択中はブラウザ自分史を追加・編集できません"
+        "管理者データを表示中はブラウザ自分史を追加・編集できません"
       );
       return;
     }
@@ -2049,7 +2049,7 @@ export default function App() {
   const deletePersonalEvent = async (event) => {
     if (personalEventsSource !== "browser") {
       setPersonalFileStatus(
-        "削除できるのは通常TSVのブラウザ自分史だけです"
+        "削除できるのは、このブラウザに保存した自分史だけです"
       );
       return;
     }
@@ -2109,7 +2109,7 @@ export default function App() {
 
       if (events === null) {
         setPersonalFileStatus(
-          "管理者TSVを読み込めませんでした"
+          "管理者データを読み込めませんでした"
         );
         return;
       }
@@ -2120,12 +2120,12 @@ export default function App() {
       setPersonalAddOpen(false);
       setPersonalEditorOpen(false);
       setPersonalFileStatus(
-        `管理者TSV ${events.length}件を読み込みました`
+        `管理者データ ${events.length}件を読み込みました`
       );
     } catch (err) {
       console.error("Personal events could not be loaded:", err);
       setPersonalFileStatus(
-        `管理者TSVの読み込み失敗: ${err?.message || String(err)}`
+        `管理者データの読み込み失敗: ${err?.message || String(err)}`
       );
     }
   };
@@ -2272,6 +2272,174 @@ export default function App() {
     '"Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif';
   const mono = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
+  const threadWindowMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("threads") === "1";
+
+  const openThreadWindow = () => {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("threads", "1");
+
+    const popup = window.open(
+      url.toString(),
+      "koshix-timeline-threads",
+      "popup=yes,width=760,height=820,resizable=yes,scrollbars=yes"
+    );
+
+    popup?.focus();
+  };
+
+  if (threadWindowMode) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#fafaf8",
+          fontFamily: font,
+          color: "#22272e",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 680,
+            margin: "0 auto",
+            padding: "28px 18px 48px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 18,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  letterSpacing: "0.2em",
+                  color: "#8a8f98",
+                }}
+              >
+                {APP_TITLE}
+              </div>
+
+              <h1
+                style={{
+                  fontSize: 24,
+                  margin: "5px 0 0",
+                  color: "#374151",
+                }}
+              >
+                テーマの糸
+              </h1>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => window.close()}
+              style={miniBtn}
+            >
+              ×閉じる
+            </button>
+          </div>
+
+          <div
+            style={{
+              fontSize: 12.5,
+              lineHeight: 1.8,
+              color: "#6b7280",
+              marginBottom: 16,
+            }}
+          >
+            関連する出来事を一本の流れとしてたどります。
+            テーマを選ぶと、読み上げ付きの再生画面が始まります。
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+              gap: 10,
+            }}
+          >
+            {THREAD_LIST.map((th, index) => {
+              const threadColors = [
+                ["#f7f3ee", "#ddd1c3"],
+                ["#f1f5f2", "#cddbd2"],
+                ["#f3f4f8", "#d2d5e2"],
+                ["#f7f2f5", "#dfd1da"],
+                ["#f5f5ef", "#d9d9c8"],
+                ["#f1f5f7", "#cbd8de"],
+                ["#f7f4ef", "#ddd3c5"],
+                ["#f3f2f7", "#d5d0df"],
+                ["#f2f6f3", "#cedbd2"],
+                ["#f6f2f2", "#ddcfcf"],
+              ];
+              const [background, border] =
+                threadColors[index % threadColors.length];
+
+              return (
+              <button
+                key={th.key}
+                type="button"
+                onClick={() => setThread(th)}
+                style={{
+                  fontFamily: font,
+                  textAlign: "left",
+                  cursor: "pointer",
+                  padding: "12px 14px",
+                  borderRadius: 10,
+                  border: `1px solid ${border}`,
+                  background,
+                  color: "#4b5563",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: "#4B56A6",
+                  }}
+                >
+                  ▶ {th.title}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 5,
+                    fontSize: 11,
+                    lineHeight: 1.6,
+                    color: "#6b7280",
+                  }}
+                >
+                  {th.events.length}項目
+                </div>
+              </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {thread && (
+          <Theater
+            thread={thread}
+            gradeLabel={grouped.gradeLabel}
+            birth={birth}
+            tts={tts}
+            setTts={setTts}
+            speed={speed}
+            setSpeed={setSpeed}
+            onClose={() => setThread(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: "#fafaf8", fontFamily: font, color: "#22272e" }}>
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 16px 64px" }}>
@@ -2306,32 +2474,6 @@ export default function App() {
               </strong>
               件
             </span>
-            <button
-              onClick={() => {
-                setSetupOpen(true);
-                setTimeout(() => {
-                  document.getElementById("timeline-settings")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }, 0);
-              }}
-              style={{
-                fontFamily: font,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: "pointer",
-                padding: "5px 10px",
-                borderRadius: 8,
-                border: "1px solid #7a6a55",
-                background: "#fff",
-                color: "#5f5142",
-                marginLeft: 5,
-                marginRight: 5,
-              }}
-            >
-              あなたの設定
-            </button>
             <div
               style={{
                 display: "inline-flex",
@@ -2398,38 +2540,147 @@ export default function App() {
           )}
         </header>
 
-        {/* テーマの糸 */}
-        <div
+        <section
+          aria-label="はじめて使う方へ"
           style={{
-            background: "#e5e7eb", border: "1px solid #c7cbd1", borderRadius: 12,
-            padding: "12px 16px", marginBottom: 14, color: "#374151",
+            background: "#fffdf8",
+            border: "1px solid #eadfce",
+            borderRadius: 12,
+            padding: "12px 14px",
+            marginBottom: 14,
           }}
         >
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>テーマの糸をたどる</span>
-            <span style={{ fontSize: 11, color: "#6b7280" }}>
-              関連する項目が自動で流れます(読み上げつき・{THREAD_LIST.length}本)
-            </span>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              color: "#5f5142",
+            }}
+          >
+            はじめて使う方へ
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
-            {THREAD_LIST.map((th) => (
-              <button
-                key={th.key}
-                onClick={() => setThread(th)}
-                style={{
-                  fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: font,
-                  padding: "5px 12px", borderRadius: 999,
-                  border: "1px solid #cbd5e1", background: "#ffffff", color: "#4B56A6",
-                }}
-              >
-                ▶ {th.title}
-                <span style={{ color: "#6b7280", fontFamily: mono, fontSize: 10.5, marginLeft: 6 }}>
-                  {th.events.length}
-                </span>
-              </button>
-            ))}
+
+          <div
+            style={{
+              fontSize: 11.5,
+              lineHeight: 1.7,
+              color: "#6b7280",
+              marginTop: 3,
+            }}
+          >
+            まず生年を合わせるだけで、出来事を「そのとき何歳だったか」で読めます。
+            自分史や年表の変更は、このブラウザ内に保存できます。
           </div>
-        </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginTop: 10,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setSetupOpen(true);
+                setTimeout(() => {
+                  document
+                    .getElementById("timeline-settings")
+                    ?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                }, 0);
+              }}
+              style={{
+                flex: "1 1 190px",
+                fontFamily: font,
+                fontSize: 12,
+                fontWeight: 800,
+                lineHeight: 1.5,
+                textAlign: "left",
+                cursor: "pointer",
+                padding: "9px 12px",
+                borderRadius: 9,
+                border: "1px solid #c9b999",
+                background: "#ffffff",
+                color: "#5f5142",
+              }}
+            >
+              ① 生年・人生段階を設定
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (personalEventsSource !== "server") {
+                  setPersonalEditorOpen(true);
+                  setPersonalAddOpen(true);
+                  setEditingPersonalId(null);
+                  resetPersonalDraft();
+                }
+                setTimeout(() => {
+                  document
+                    .getElementById("personal-history")
+                    ?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                }, 0);
+              }}
+              style={{
+                flex: "1 1 190px",
+                fontFamily: font,
+                fontSize: 12,
+                fontWeight: 800,
+                lineHeight: 1.5,
+                textAlign: "left",
+                cursor: "pointer",
+                padding: "9px 12px",
+                borderRadius: 9,
+                border: "1px solid #cfbfdf",
+                background: "#ffffff",
+                color: "#5f4a72",
+              }}
+            >
+              ② 自分史を追加
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEventCustomizationEditorOpen(true);
+                setEventAddOpen(false);
+                resetEventAddDraft();
+                setTimeout(() => {
+                  document
+                    .getElementById("timeline-customization")
+                    ?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                }, 0);
+              }}
+              style={{
+                flex: "1 1 190px",
+                fontFamily: font,
+                fontSize: 12,
+                fontWeight: 800,
+                lineHeight: 1.5,
+                textAlign: "left",
+                cursor: "pointer",
+                padding: "9px 12px",
+                borderRadius: 9,
+                border: "1px solid #bdd0e5",
+                background: "#ffffff",
+                color: "#365f7d",
+              }}
+            >
+              ③ 年表の編集
+            </button>
+          </div>
+        </section>
 
         {/* 旧小分類：あなた版では現在使用しない */}
         <div
@@ -2798,6 +3049,26 @@ export default function App() {
           >
             {CAT.me.label}
           </button>
+
+          <button
+            type="button"
+            onClick={openThreadWindow}
+            style={{
+              fontFamily: font,
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              padding: "6px 14px",
+              borderRadius: 999,
+              marginLeft: 30,
+              border: "1.5px solid #d1d5db",
+              background: "#f3f4f6",
+              color: "#6b7280",
+            }}
+          >
+            テーマの糸
+          </button>
+
           <div
             style={{
               flexBasis: "100%",
@@ -3448,7 +3719,9 @@ export default function App() {
         </div>
 
         <div
+          id="timeline-customization"
           style={{
+            scrollMarginTop: 16,
             background: "#f3f7fb",
             border: "1px solid #cfdce8",
             borderRadius: 12,
@@ -3464,7 +3737,7 @@ export default function App() {
               color: "#365f7d",
             }}
           >
-            年表カスタマイズ（差分TSV方式）
+            年表の編集
           </div>
 
           <div
@@ -3475,7 +3748,7 @@ export default function App() {
               marginTop: 4,
             }}
           >
-            正本の年表は変更せず、差分TSVだけがこのブラウザ内に保存されます。
+            元の年表は変更せず、あなたの変更内容だけをこのブラウザに保存します。必要ならTSVファイルでバックアップできます。
           </div>
 
           <div
@@ -3524,7 +3797,7 @@ export default function App() {
                 ),
               }}
             >
-              TSV消去
+              年表の変更を消去
             </button>
 
             <input
@@ -3547,7 +3820,7 @@ export default function App() {
                 color: "#41698f",
               }}
             >
-              TSV読込
+              ファイルから読込
             </button>
 
             <button
@@ -3572,7 +3845,7 @@ export default function App() {
                   : {}),
               }}
             >
-              TSV編集
+              編集
             </button>
 
             <button
@@ -3585,7 +3858,7 @@ export default function App() {
                 color: "#4b7356",
               }}
             >
-              TSV書出
+              ファイルに保存
             </button>
           </div>
 
@@ -3619,7 +3892,7 @@ export default function App() {
                 }}
               >
                 <strong style={{ fontSize: 12, color: "#365f7d" }}>
-                  差分TSVを編集
+                  年表の変更内容を編集
                 </strong>
 
                 <span style={{ flex: 1 }} />
@@ -3650,7 +3923,7 @@ export default function App() {
                     marginLeft: 6,
                   }}
                 >
-                  閉じる
+                  ×閉じる
                 </button>
               </div>
             </div>
@@ -3914,7 +4187,9 @@ export default function App() {
         </div>
 
         <div
+          id="personal-history"
           style={{
+            scrollMarginTop: 16,
             background: "#f7f2fb",
             border: "1px solid #dfd2ea",
             borderRadius: 12,
@@ -3924,7 +4199,7 @@ export default function App() {
           }}
         >
           <div style={{ fontSize: 14, fontWeight: 800, color: CAT.me.bg }}>
-            自分史ファイル（TSV形式）
+            自分史の編集
           </div>
           <div
             style={{
@@ -3934,8 +4209,9 @@ export default function App() {
               marginTop: 4,
             }}
           >
-            通常TSVはこのブラウザ内に保存されます。
-            「TSV編集」で追加・編集・削除し、年表表示は上の「自分」で切り替えます。
+            自分史はこのブラウザ内に保存されます。
+            「編集」で追加・編集・削除し、年表表示は上の「自分」で切り替えます。
+            必要ならTSVファイルでバックアップできます。
           </div>
 
           <div
@@ -3973,9 +4249,9 @@ export default function App() {
               />
               現在の自分史：
               {personalEventsSource === "browser"
-                ? `通常TSV（${myEvents.length}件）`
+                ? `このブラウザ（${myEvents.length}件）`
                 : personalEventsSource === "server"
-                  ? `管理者TSV（${myEvents.length}件）`
+                  ? `管理者データ（${myEvents.length}件）`
                   : "未読み込み"}
             </span>
 
@@ -3992,7 +4268,7 @@ export default function App() {
                   : {}),
               }}
             >
-              TSV消去
+              自分史を消去
             </button>
 
             <button
@@ -4012,7 +4288,7 @@ export default function App() {
                   : {}),
               }}
             >
-              TSV読込
+              ファイルから読込
             </button>
 
             <button
@@ -4041,7 +4317,7 @@ export default function App() {
                   : {}),
               }}
             >
-              TSV編集
+              編集
             </button>
 
             <button
@@ -4053,25 +4329,45 @@ export default function App() {
                 color: "#4b7356",
               }}
             >
-              TSV書出
+              ファイルに保存
             </button>
 
-            <button
-              onClick={loadServerPersonalEvents}
+            <details
               style={{
-                ...miniBtn,
-                ...(personalEventsSource === "server"
-                  ? {
-                      background: "#fff1dc",
-                      border: "1px solid #d79a43",
-                      color: "#8a5208",
-                      fontWeight: 800,
-                    }
-                  : {}),
+                marginLeft: 6,
+                fontSize: 11,
+                color: "#8a8f98",
               }}
             >
-              （管理者TSV読込）
-            </button>
+              <summary
+                style={{
+                  cursor: "pointer",
+                  userSelect: "none",
+                  padding: "4px 6px",
+                }}
+              >
+                管理者向け
+              </summary>
+
+              <button
+                type="button"
+                onClick={loadServerPersonalEvents}
+                style={{
+                  ...miniBtn,
+                  marginTop: 6,
+                  ...(personalEventsSource === "server"
+                    ? {
+                        background: "#fff1dc",
+                        border: "1px solid #d79a43",
+                        color: "#8a5208",
+                        fontWeight: 800,
+                      }
+                    : {}),
+                }}
+              >
+                管理者データ読込
+              </button>
+            </details>
 
             <input
               ref={personalFileInputRef}
@@ -4101,7 +4397,7 @@ export default function App() {
                 }}
               >
                 <strong style={{ fontSize: 12, color: "#5f4a72" }}>
-                  通常TSVを編集
+                  自分史を編集
                 </strong>
 
                 <span style={{ fontSize: 11, color: "#7b818b" }}>
@@ -4137,7 +4433,7 @@ export default function App() {
                     marginLeft: 6,
                   }}
                 >
-                  閉じる
+                  ×閉じる
                 </button>
               </div>
 
@@ -4393,7 +4689,7 @@ export default function App() {
                 marginTop: 8,
               }}
             >
-              管理者TSV選択中はブラウザ側の追加・編集を行いません。
+              管理者データを表示中はブラウザ側の追加・編集を行いません。
             </div>
           )}
 
