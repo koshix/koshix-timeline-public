@@ -22,7 +22,7 @@ ZIPを展開し、その中のファイル一式をWebサーバーへ配置し�
 
 ## 最短手順
 
-1. GitHub Releaseから `koshix-timeline-starter.zip` を取得する
+1. 自分史プロジェクションのWeb版にある「ダウンロード版」から `koshix-timeline-starter.zip` を取得する
 2. ZIPを展開する
 3. `config.json` を自分の公開先に合わせて変更する
 4. `events.tsv` を自分の年表として編集する

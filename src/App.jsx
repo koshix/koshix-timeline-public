@@ -191,6 +191,7 @@ const FEATURES = [];
 // ---- 共有 ----
 const APP_TITLE = CONFIG.title || "自分史プロジェクション";
 const HASHTAG = CONFIG.hashtag ?? "#自分史プロジェクション";
+const DOWNLOAD_URL = String(CONFIG.downloadUrl || "").trim();
 
 const SHARE_URL = (() => {
   const configured = String(CONFIG.shareUrl || "").trim();
@@ -251,7 +252,7 @@ const clipTo = (s, budget) => {
   return out.replace(/[、。]$/, "") + "…";
 };
 
-function ShareBar({ text, url = SHARE_URL, compact = false, small = false, color = "#37414f", note }) {
+function ShareBar({ text, url = SHARE_URL, compact = false, small = false, color = "#37414f", note, labelOnly = false }) {
   const [copiedAll, setCopiedAll] = useState(false);
   const t = encodeURIComponent(text);
   const u = encodeURIComponent(url);
@@ -279,8 +280,11 @@ function ShareBar({ text, url = SHARE_URL, compact = false, small = false, color
   };
   const base = {
     fontSize: compact || small ? 11 : 11.5, fontWeight: 700, textDecoration: "none",
-    borderRadius: 999, padding: compact || small ? "3px 10px" : "4px 12px",
-    border: `1px solid ${color}44`, background: "#ffffffaa", color,
+    borderRadius: labelOnly ? 0 : 999,
+    padding: labelOnly ? "2px 3px" : (compact || small ? "3px 10px" : "4px 12px"),
+    border: labelOnly ? "none" : `1px solid ${color}44`,
+    background: labelOnly ? "transparent" : "#ffffffaa",
+    color,
     cursor: "pointer", lineHeight: 1.6, fontFamily: "inherit",
   };
   return (
@@ -289,7 +293,7 @@ function ShareBar({ text, url = SHARE_URL, compact = false, small = false, color
         {note && <span style={{ fontSize: 10.5, color: "#9aa0a8", flexShrink: 0 }}>タイトルのみ</span>}
         {targets.map(([label, href]) => (
           <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={base}>
-            {label}で共有
+            {labelOnly ? (label === "LINE" ? "Line" : label) : `${label}で共有`}
           </a>
         ))}
       </div>
@@ -2448,52 +2452,52 @@ export default function App() {
           <div style={{ fontSize: 11, letterSpacing: "0.25em", color: "#8a8f98", marginBottom: 6 }}>
             6つのテーマでたどる、自分の時代
           </div>
-          <h1 style={{ fontSize: 29, fontWeight: 800, margin: 0, lineHeight: 1.35 }}>
-            {APP_TITLE}
-          </h1>
-          <div style={{ fontSize: 11.5, color: "#8a8f98", marginTop: 8, fontFamily: mono }}>
-            全{effectiveStats.count}項目・解説{effectiveStats.chars.toLocaleString()}字
-          </div>
           <div
             style={{
-              display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap",
-              marginTop: 9,
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              flexWrap: "wrap",
             }}
           >
-            <span
+            <h1
               style={{
-                display: "inline-flex", alignItems: "baseline", gap: 5,
-                padding: "5px 10px", borderRadius: 8,
-                background: "#eef1f5", border: "1px solid #d7dce2",
-                color: "#37414f", fontSize: 12, fontWeight: 700,
+                fontSize: 29,
+                fontWeight: 800,
+                margin: 0,
+                lineHeight: 1.35,
+                flex: "1 1 300px",
               }}
             >
-              現在表示
-              <strong style={{ fontFamily: mono, fontSize: 20, lineHeight: 1 }}>
-                {grouped.shown + grouped.myShown}
-              </strong>
-              件
-            </span>
+              {APP_TITLE}
+            </h1>
+
             <div
+              role="group"
+              aria-label="共有"
               style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
-                padding: "4px 6px",
+                gap: 7,
+                flexWrap: "wrap",
+                padding: "4px 7px",
+                border: "1px solid #e2e4e8",
                 borderRadius: 10,
-                background: "#f1f3f5",
-                border: "1px solid #e0e4e8",
+                background: "#f7f8f9",
               }}
             >
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: "#6b7280" }}>
+                共有：
+              </span>
               <ShareBar
                 small
+                labelOnly
                 text={`${APP_TITLE}——6つのテーマで時代を自分の年齢から読む(${EVENTS.length}項目) ${HASHTAG}`}
               />
             </div>
-            {grouped.myShown > 0 && (
-              <span style={{ fontSize: 11, color: "#6b7280" }}>
-                公開{grouped.shown}件＋個人史{grouped.myShown}件
-              </span>
-            )}
+          </div>
+          <div style={{ fontSize: 11.5, color: "#8a8f98", marginTop: 8, fontFamily: mono }}>
+            全{effectiveStats.count}項目・解説{effectiveStats.chars.toLocaleString()}字
           </div>
           {RECENT && (
             <div
@@ -2568,8 +2572,8 @@ export default function App() {
               marginTop: 3,
             }}
           >
-            まず生年を合わせるだけで、出来事を「そのとき何歳だったか」で読めます。
-            自分史や年表の変更は、このブラウザ内に保存できます。
+            生年を合わせるだけで、出来事を「そのとき何歳だったか」で読めます。
+            自分史や年表の変更は、ブラウザ内に保存できます。
           </div>
 
           <div
@@ -2608,7 +2612,7 @@ export default function App() {
                 color: "#5f5142",
               }}
             >
-              ① 生年・人生段階を設定
+              ①あなたの設定
             </button>
 
             <button
@@ -2644,7 +2648,7 @@ export default function App() {
                 color: "#5f4a72",
               }}
             >
-              ② 自分史を追加
+              ②自分史の編集
             </button>
 
             <button
@@ -2677,7 +2681,7 @@ export default function App() {
                 color: "#365f7d",
               }}
             >
-              ③ 年表の編集
+              ③共通年表の編集
             </button>
           </div>
         </section>
@@ -2723,48 +2727,111 @@ export default function App() {
           </div>
         </div>
 
-        {/* フィルタ・全開閉 */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap", alignItems: "center" }}>
+        {/* 共通年表の表示設定 */}
+        <div
+          role="group"
+          aria-label="共通年表の表示設定"
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: 24,
+            flexWrap: "wrap",
+            alignItems: "center",
+            background: "#fff",
+            border: "1px solid #e2e4e8",
+            borderRadius: 12,
+            padding: "12px 14px",
+          }}
+        >
+          <div
+            style={{
+              flexBasis: "100%",
+              fontSize: 14,
+              fontWeight: 800,
+              color: "#4b5563",
+              marginBottom: 3,
+            }}
+          >
+            共通年表の表示設定
+          </div>
           <div
             style={{
               display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-              width: "100%", marginBottom: 4,
+              width: "100%",
+              marginBottom: 2,
             }}
           >
-            <label htmlFor="timeline-search" style={{ fontSize: 13, fontWeight: 700 }}>
-              項目を検索
-            </label>
-            <input
-              id="timeline-search"
-              type="search"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="例: AI && 教育 / (DNA || RNA) && 研究"
-              autoComplete="off"
-              style={{
-                flex: "1 1 260px", minWidth: 180, maxWidth: 520,
-                fontFamily: font, fontSize: 13, padding: "7px 10px",
-                borderRadius: 8,
-                border: `1px solid ${grouped.searchError ? "#c2452d" : "#d5d8dd"}`,
-                background: "#fff", color: "#22272e",
-              }}
-            />
-            {searchText && (
-              <button onClick={() => setSearchText("")} style={miniBtn}>
-                検索をクリア
-              </button>
-            )}
             <span
               style={{
-                flexBasis: "100%", fontSize: 10.5,
-                color: grouped.searchError ? "#b33b2e" : "#8a8f98",
+                display: "inline-flex", alignItems: "baseline", gap: 5,
+                padding: "5px 10px", borderRadius: 8,
+                background: "#eef1f5", border: "1px solid #d7dce2",
+                color: "#37414f", fontSize: 12, fontWeight: 700,
               }}
-              role={grouped.searchError ? "alert" : undefined}
             >
-              {grouped.searchError || "&& = AND、|| = OR、( ) = 優先指定。空白・読点・カンマもANDです。"}
+              現在表示
+              <strong style={{ fontFamily: mono, fontSize: 20, lineHeight: 1 }}>
+                {grouped.shown + grouped.myShown}
+              </strong>
+              件
             </span>
-          </div>
+            {grouped.myShown > 0 && (
+              <span style={{ fontSize: 11, color: "#6b7280" }}>
+                公開{grouped.shown}件＋個人史{grouped.myShown}件
+              </span>
+            )}
+          {MAIN_CATS.map((k) => {
+            const on = catOn(k);
+            return (
+              <button
+                key={k}
+                onClick={() => toggleCat(k)}
+                style={{
+                  fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  padding: "6px 14px", borderRadius: 999,
+                  border: `1.5px solid ${CAT[k].border}`,
+                  background: on ? CAT[k].bg : CAT[k].soft,
+                  color: on ? CAT[k].fg : CAT[k].border,
+                }}
+              >
+                {CAT[k].label}
+              </button>
+            );
+          })}
+          <button
+            onClick={toggleMyEvents}
+            style={{
+              fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer",
+              padding: "6px 14px", borderRadius: 999,
+              border: `1.5px solid ${CAT.me.border}`,
+              background: showMe ? CAT.me.bg : CAT.me.soft,
+              color: showMe ? CAT.me.fg : CAT.me.border,
+            }}
+          >
+            {CAT.me.label}
+          </button>
 
+          <button
+            type="button"
+            onClick={openThreadWindow}
+            style={{
+              fontFamily: font,
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              padding: "6px 14px",
+              borderRadius: 999,
+              marginLeft: 0,
+              marginRight: 20,
+              border: "1.5px solid #d1d5db",
+              background: "#f3f4f6",
+              color: "#6b7280",
+            }}
+          >
+            テーマの糸
+          </button>
+
+          </div>
           <div
             role="group"
             aria-label="分類の一括表示切替"
@@ -3013,61 +3080,57 @@ export default function App() {
             </div>
           </div>
 
-          {/* 一括操作と個別選択を分離 */}
-          <span
-            aria-hidden="true"
-            style={{ flexBasis: "100%", height: 2 }}
-          />
-
-          {MAIN_CATS.map((k) => {
-            const on = catOn(k);
-            return (
-              <button
-                key={k}
-                onClick={() => toggleCat(k)}
-                style={{
-                  fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                  padding: "6px 14px", borderRadius: 999,
-                  border: `1.5px solid ${CAT[k].border}`,
-                  background: on ? CAT[k].bg : CAT[k].soft,
-                  color: on ? CAT[k].fg : CAT[k].border,
-                }}
-              >
-                {CAT[k].label}
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+              width: "100%", marginTop: 6,
+            }}
+          >
+            <label
+              htmlFor="timeline-search"
+              style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}
+            >
+              検索
+            </label>
+            <input
+              id="timeline-search"
+              type="search"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="例: AI && 教育 / (DNA || RNA) && 研究"
+              autoComplete="off"
+              style={{
+                flex: "0 1 300px", minWidth: 180, maxWidth: 300,
+                fontFamily: font, fontSize: 13, padding: "7px 10px",
+                borderRadius: 8,
+                border: `1px solid ${grouped.searchError ? "#c2452d" : "#d5d8dd"}`,
+                background: "#fff", color: "#22272e",
+              }}
+            />
+            {searchText && (
+              <button onClick={() => setSearchText("")} style={miniBtn}>
+                検索をクリア
               </button>
-            );
-          })}
-          <button
-            onClick={toggleMyEvents}
-            style={{
-              fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer",
-              padding: "6px 14px", borderRadius: 999,
-              border: `1.5px solid ${CAT.me.border}`,
-              background: showMe ? CAT.me.bg : CAT.me.soft,
-              color: showMe ? CAT.me.fg : CAT.me.border,
-            }}
-          >
-            {CAT.me.label}
-          </button>
-
-          <button
-            type="button"
-            onClick={openThreadWindow}
-            style={{
-              fontFamily: font,
-              fontSize: 12,
-              fontWeight: 800,
-              cursor: "pointer",
-              padding: "6px 14px",
-              borderRadius: 999,
-              marginLeft: 30,
-              border: "1.5px solid #d1d5db",
-              background: "#f3f4f6",
-              color: "#6b7280",
-            }}
-          >
-            テーマの糸
-          </button>
+            )}
+            <span
+              style={{
+                flex: "1 1 230px",
+                minWidth: 210,
+                fontSize: 10.5,
+                lineHeight: 1.45,
+                color: grouped.searchError ? "#b33b2e" : "#8a8f98",
+              }}
+              role={grouped.searchError ? "alert" : undefined}
+            >
+              {grouped.searchError || (
+                <>
+                  {"&& = AND、|| = OR、( ) = 優先指定。"}
+                  <br />
+                  {"空白・読点・カンマもANDです。"}
+                </>
+              )}
+            </span>
+          </div>
 
           <div
             style={{
@@ -3095,6 +3158,7 @@ export default function App() {
               <ImportanceBadge level={1} /> L1 補足
             </span>
           </div>
+
         </div>
 
         {/* 学齢期グループ */}
@@ -3737,7 +3801,7 @@ export default function App() {
               color: "#365f7d",
             }}
           >
-            年表の編集
+            ③共通年表の編集
           </div>
 
           <div
@@ -4199,7 +4263,7 @@ export default function App() {
           }}
         >
           <div style={{ fontSize: 14, fontWeight: 800, color: CAT.me.bg }}>
-            自分史の編集
+            ②自分史の編集
           </div>
           <div
             style={{
@@ -4708,19 +4772,32 @@ export default function App() {
           )}
         </div>
 
-        <div id="timeline-settings" style={{ scrollMarginTop: 16 }}>
+        <div
+          id="timeline-settings"
+          style={{
+            scrollMarginTop: 16,
+            background: "#fff",
+            border: "1px solid #e2e4e8",
+            borderRadius: 12,
+            marginBottom: 14,
+            overflow: "hidden",
+          }}
+        >
         {/* 入力欄(畳めるようにしている) */}
         <button
           onClick={() => setSetupOpen((v) => !v)}
           aria-expanded={setupOpen}
           style={{
             display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%",
-            background: "#fff", border: "1px solid #e2e4e8", borderRadius: 12,
-            padding: "10px 16px", marginBottom: setupOpen ? 14 : 14,
+            background: "#fff",
+            border: "none",
+            borderBottom: setupOpen ? "1px solid #e2e4e8" : "none",
+            borderRadius: 0,
+            padding: "10px 16px",
             cursor: "pointer", textAlign: "left", fontFamily: font, color: "#22272e",
           }}
         >
-          <span style={{ fontSize: 13, fontWeight: 700 }}>あなたの設定</span>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>①あなたの設定</span>
           <span style={{ fontFamily: mono, fontSize: 12, color: "#6b7280" }}>
             {birth}年{month ? `${month}月` : ""}生まれ
             {higherEdY
@@ -4743,8 +4820,8 @@ export default function App() {
         <div
           style={{
             display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-            background: "#fff", border: "1px solid #e2e4e8", borderRadius: 12,
-            padding: "14px 16px", marginBottom: 14,
+            padding: "14px 16px",
+            borderBottom: "1px solid #eceef1",
           }}
         >
           <label style={{ fontSize: 13, fontWeight: 700 }}>生まれた年</label>
@@ -4780,8 +4857,7 @@ export default function App() {
         <div
           style={{
             display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap",
-            background: "#fff", border: "1px solid #e2e4e8", borderRadius: 12,
-            padding: "12px 16px", marginBottom: 14,
+            padding: "12px 16px 14px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
@@ -4919,32 +4995,107 @@ export default function App() {
 
         </div>
 
-        <footer style={{ fontSize: 11, color: "#8a8f98", marginTop: 28, lineHeight: 1.8 }}>
-          学齢は誕生年と誕生月から概算します。1〜3月生まれは早生まれとして学年を補正します。
-          大学等・大学院・社会人になった年を指定すると、その境界年に応じて人生段階を再計算します。定年退職した年を指定すると、その年以後は「自由人」と表示します。
-          「自分の出来事」はBasic認証後に非公開の個人史データから読み込み、公開イベントとは別に表示します。
-          <div style={{ marginTop: 8 }}>
-            このアプリは松尾公也氏の{" "}
-            <a
-              href="https://github.com/matsuo-koya/sf-tech-lifeline"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#6b7280" }}
-            >
-              sf-tech-lifeline
-            </a>
-            {" "}を基にKunio Koshigiriが改変しています。
+        <footer
+          style={{
+            fontSize: 11,
+            color: "#8a8f98",
+            marginTop: 28,
+            lineHeight: 1.8,
+            background: "#fff",
+            border: "1px solid #e2e4e8",
+            borderRadius: 12,
+            padding: "12px 14px",
+          }}
+        >
+          <div
+            style={{
+              color: "#59616c",
+              fontWeight: 800,
+              fontSize: 13,
+            }}
+          >
+            このサイトについて
           </div>
-          <div>
-            原作品 © 2026 Koya Matsuo ／ 改変部分 © 2026 Kunio Koshigiri ／{" "}
-            <a
-              href={`${import.meta.env.BASE_URL}LICENSE.txt`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#6b7280" }}
+
+          <div style={{ marginTop: 8 }}>
+            公開された歴史的出来事を、生年・学齢期・人生段階に重ねて表示するインタラクティブ年表です。
+            学齢は誕生年と誕生月から概算し、大学等・大学院・社会人・退職年を指定すると人生段階を再計算します。
+          </div>
+
+          {DOWNLOAD_URL && (
+            <div
+              style={{
+                marginTop: 10,
+                paddingTop: 10,
+                borderTop: "1px solid #eceef1",
+              }}
             >
-              MIT License
-            </a>
+              <a
+                href={DOWNLOAD_URL}
+                download="koshix-timeline-starter.zip"
+                style={{ color: "#374151", fontWeight: 700 }}
+              >
+                ダウンロード版
+              </a>
+              <span style={{ marginLeft: 8 }}>
+                自分の年表としてWebサーバーへ設置できる静的Web版です。
+              </span>
+            </div>
+          )}
+
+          <div
+            style={{
+              marginTop: 10,
+              paddingTop: 10,
+              borderTop: "1px solid #eceef1",
+            }}
+          >
+            <div>
+              <span style={{ color: "#8a8f98", fontWeight: 700 }}>
+                著作権表示：
+              </span>
+              {" "}
+              このアプリは松尾公也氏の{" "}
+              <a
+                href="https://matsuo-koya.github.io/sf-tech-lifeline/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#6b7280" }}
+              >
+                SF × テクノロジー 自分史年表
+              </a>
+              {"（"}
+              <a
+                href="https://github.com/matsuo-koya/sf-tech-lifeline"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#6b7280" }}
+              >
+                sf-tech-lifeline
+              </a>
+              {"）を基にKunio Koshigiriが改変しています。"}
+            </div>
+
+            <div>
+              原作品 © 2026 Koya Matsuo ／ 改変部分 © 2026 Kunio Koshigiri ／{" "}
+              <a
+                href={`${import.meta.env.BASE_URL}LICENSE.txt`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#6b7280" }}
+              >
+                MIT License
+              </a>
+              {" ／ "}
+              <a
+                href={`${import.meta.env.BASE_URL}THIRD-PARTY-NOTICES.md`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#6b7280" }}
+              >
+                第三者ソフトウェア表示
+              </a>
+            </div>
           </div>
         </footer>
       </div>

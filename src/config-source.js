@@ -2,6 +2,7 @@ const BUILTIN_CONFIG = {
   title: "自分史プロジェクション",
   hashtag: "#自分史プロジェクション",
   shareUrl: "",
+  downloadUrl: "",
   defaults: {
     birthYear: 1965,
     birthMonth: 0,
@@ -84,6 +85,11 @@ function normalizeConfig(raw) {
       typeof raw?.shareUrl === "string"
         ? raw.shareUrl.trim()
         : BUILTIN_CONFIG.shareUrl,
+
+    downloadUrl:
+      typeof raw?.downloadUrl === "string"
+        ? raw.downloadUrl.trim()
+        : BUILTIN_CONFIG.downloadUrl,
 
     defaults: normalizedDefaults,
   };
