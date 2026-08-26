@@ -4797,8 +4797,22 @@ export default function App() {
             cursor: "pointer", textAlign: "left", fontFamily: font, color: "#22272e",
           }}
         >
-          <span style={{ fontSize: 13, fontWeight: 700 }}>①あなたの設定</span>
-          <span style={{ fontFamily: mono, fontSize: 12, color: "#6b7280" }}>
+          <span
+            style={{
+              flexBasis: "100%",
+              fontSize: 14,
+              fontWeight: 800,
+            }}
+          >
+            ①あなたの設定
+          </span>
+          <span
+            style={{
+              fontSize: 11.5,
+              lineHeight: 1.7,
+              color: "#6b7280",
+            }}
+          >
             {birth}年{month ? `${month}月` : ""}生まれ
             {higherEdY
               ? `・${higherEdY}年 ${HIGHER_ED_TYPES[higherEdType]?.label}`
