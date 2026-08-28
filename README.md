@@ -18,8 +18,8 @@ MIT Licenseの条件に従って、ソースコードを修正・再配布でき
 リポジトリをcloneして依存関係をインストールします。
 
 ```bash
-git clone https://github.com/koshix/koshix-timeline-starter.git
-cd koshix-timeline-starter
+git clone https://github.com/koshix/koshix-timeline-public.git
+cd koshix-timeline-public
 npm install
 npm run dev
 ```
