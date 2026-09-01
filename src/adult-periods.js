@@ -56,7 +56,7 @@ export function validateAdultPeriods(
 
     if (adultYear != null && from < adultYear) {
       errors.push(
-        `${line}行目: 開始年は自由期間の開始年 ${adultYear}年以後にしてください。`
+        `${line}行目: 開始年は成人期の開始年 ${adultYear}年以後にしてください。`
       );
       return;
     }

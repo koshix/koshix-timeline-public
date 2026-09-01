@@ -217,21 +217,21 @@ export function buildLifeModel({
     warnings.push("大学院に入学した年は、大学等の入学年より後にしてください。");
   }
   if (adultYear !== "" && explicitAdult == null) {
-    warnings.push("自由期間の開始年を1930〜2100年で指定してください。");
+    warnings.push("成人期の開始年を1930〜2100年で指定してください。");
   }
   if (
     explicitAdult != null &&
     higherStart != null &&
     explicitAdult <= higherStart
   ) {
-    warnings.push("自由期間の開始年が大学等の入学年以前のため、大学等の期間は表示しません。");
+    warnings.push("成人期の開始年が大学等の入学年以前のため、大学等の期間は表示しません。");
   }
   if (
     explicitAdult != null &&
     graduateStart != null &&
     explicitAdult <= graduateStart
   ) {
-    warnings.push("自由期間の開始年が大学院の入学年以前のため、大学院の期間は表示しません。");
+    warnings.push("成人期の開始年が大学院の入学年以前のため、大学院の期間は表示しません。");
   }
 
   const usableGraduateStart =

@@ -10,7 +10,6 @@ const BUILTIN_CONFIG = {
     higherEdType: "university",
     graduateYear: "",
     graduateType: "masters",
-    adultYear: "",
     retirementYear: "",
   },
 };
@@ -59,7 +58,6 @@ function normalizeConfig(raw) {
       ["masters", "mastersDoctorate"],
       BUILTIN_CONFIG.defaults.graduateType
     ),
-    adultYear: yearOrBlank(defaults.adultYear),
     retirementYear: yearOrBlank(defaults.retirementYear),
   };
 

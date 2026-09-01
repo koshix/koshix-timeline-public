@@ -1195,7 +1195,6 @@ export default function App() {
   const [graduateType, setGraduateType] = useState(
     INITIAL_EDUCATION.graduateType
   );
-  const [adultY, setAdultY] = useState(INITIAL_EDUCATION.adultYear);
   const [adultPeriodsEnabled, setAdultPeriodsEnabled] = useState(
     SAVED.adultPeriodsEnabled ?? false
   );
@@ -1290,7 +1289,6 @@ export default function App() {
       higherEdType,
       graduateYear: graduateY,
       graduateType,
-      adultYear: adultY,
       adultPeriodsEnabled,
       adultPeriods,
       catOff,
@@ -1302,7 +1300,7 @@ export default function App() {
       tts,
       speed,
     });
-  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, subOff, closedStages, setupOpen, tts, speed]);
+  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, subOff, closedStages, setupOpen, tts, speed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2335,7 +2333,7 @@ export default function App() {
       higherEdType,
       graduateYear: graduateY,
       graduateType,
-      adultYear: adultY,
+      adultYear: "",
     });
 
     const adultPeriodValidation = validateAdultPeriods(
@@ -2488,7 +2486,7 @@ export default function App() {
       myShown: visibleItems.filter((e) => e.cat === "me").length,
       searchError: searchExpression.error,
     };
-  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, adultPeriodsEnabled, adultPeriods, myEvents, effectiveEvents, catOff, sfOnly, importanceMin, showMe, subOff, searchText, closedStages]);
+  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, myEvents, effectiveEvents, catOff, sfOnly, importanceMin, showMe, subOff, searchText, closedStages]);
 
   const updateAdultPeriod = (index, key, value) => {
     setAdultPeriods((previous) =>
@@ -5868,9 +5866,7 @@ export default function App() {
             {graduateY
               ? `・${graduateY}年 大学院（${GRADUATE_TYPES[graduateType]?.label}）`
               : ""}
-            {adultY
-              ? `・自由期間${adultY}年〜`
-              : `・自由期間${grouped.adultYear}年〜（自動）`}
+            ・成人期{grouped.adultYear}年〜（自動）
             {adultPeriodsEnabled
               ? `・社会人区分${adultPeriods.length}件`
               : ""}
@@ -5917,7 +5913,7 @@ export default function App() {
           />
         </div>
 
-        {/* 大学等・大学院・自由期間の境界年 */}
+        {/* 大学等・大学院の境界年 */}
         <div
           style={{
             display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap",
@@ -5992,30 +5988,6 @@ export default function App() {
                   );
                 })}
               </div>
-            )}
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
-            <label style={{ fontSize: 13, fontWeight: 700 }}>自由期間の開始年（西暦）</label>
-            <input
-              type="number" inputMode="numeric" min="1930" max="2100" placeholder={`自動: ${grouped.adultYear}`}
-              value={adultY}
-              onChange={(e) => setAdultY(e.target.value)}
-              style={{
-                fontFamily: mono, fontSize: 14, width: 84, padding: "7px 8px",
-                borderRadius: 8, border: "1px solid #d5d8dd",
-              }}
-              aria-label="自由期間の開始年（西暦）"
-            />
-            {adultY !== "" && (
-              <button onClick={() => setAdultY("")} style={resetBtnStyle}>
-                未設定に戻す
-              </button>
-            )}
-            {adultY === "" && (
-              <span style={{ fontSize: 11, color: "#8a8f98" }}>
-                現在の自動計算: {grouped.adultYear}年
-              </span>
             )}
           </div>
 
@@ -6317,7 +6289,7 @@ export default function App() {
           </div>
 
           <div style={{ fontSize: 11, color: "#8a8f98", width: "100%", marginTop: -6, lineHeight: 1.7 }}>
-            入力した境界年を優先します。自由期間の開始年が空欄なら、大学等・大学院の標準年数から自動計算します。以後は必要に応じて自由に期間を分割でき、最後の期間は終了年を空欄にすると現在まで続きます。
+            大学等・大学院の設定から成人期の開始年を自動計算します。成人期は必要に応じて自由に期間を分割でき、最後の期間は終了年を空欄にすると現在まで続きます。
           </div>
           {grouped.warnings.length > 0 && (
             <div
@@ -6373,7 +6345,7 @@ export default function App() {
 
           <div style={{ marginTop: 8 }}>
             公開された歴史的出来事を、生年・学齢期・人生段階に重ねて表示するインタラクティブ年表です。
-            学齢は誕生年と誕生月から概算し、大学等・大学院・自由期間の開始年を指定すると人生段階を再計算します。自由期間は必要に応じて任意に分割できます。
+            学齢は誕生年と誕生月から概算し、大学等・大学院の設定から人生段階と成人期の開始年を自動計算します。成人期は必要に応じて任意に分割できます。
           </div>
 
           {DOWNLOAD_URL && (
