@@ -31,6 +31,7 @@ import {
 } from "./life-stages";
 import {
   adultPeriodOf,
+  parseAdultPeriodsTsv,
   serializeAdultPeriodsTsv,
   validateAdultPeriods,
 } from "./adult-periods";
@@ -38,6 +39,8 @@ import {
 const CONFIG = loadConfig();
 const PROFILE_DEFAULTS = CONFIG.defaults || {};
 const EVENTS = loadEvents();
+const APP_VERSION = __APP_VERSION__;
+const APP_UPDATED_DATE = __APP_UPDATED_DATE__;
 
 // ---- ラインアイコン(全て自作SVG・権利フリー) ----
 const ICON_NAMES = new Set([
@@ -1247,6 +1250,7 @@ export default function App() {
   });
   const eventCustomizationFileInputRef = useRef(null);
   const personalFileInputRef = useRef(null);
+  const adultPeriodFileInputRef = useRef(null);
   // 大分類フィルタ。true が入っているカテゴリーだけを非表示にする
   const [catOff, setCatOff] = useState(SAVED.catOff ?? {});
   // 「作品」のうちSFタグを持つ項目だけに絞る補助フィルタ
@@ -2530,6 +2534,60 @@ export default function App() {
       previous.filter((_, i) => i !== index)
     );
     setAdultPeriodStatus("");
+  };
+
+  const importAdultPeriodsFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsed = parseAdultPeriodsTsv(text);
+
+      const { periods, errors } = validateAdultPeriods(
+        parsed,
+        {
+          adultYear: grouped.adultYear,
+        }
+      );
+
+      if (errors.length > 0) {
+        throw new Error(errors.join("\n"));
+      }
+
+      if (periods.length === 0) {
+        throw new Error("期間設定が1件もありません");
+      }
+
+      const rows = periods.map((period) => ({
+        start: String(period.from),
+        end: period.to == null ? "" : String(period.to),
+        label: period.label,
+      }));
+
+      const ok = window.confirm(
+        `「${file.name}」から期間設定 ${rows.length}件を読み込み、` +
+        `現在の成人期分割を置き換えますか？`
+      );
+
+      if (!ok) return;
+
+      setAdultPeriods(rows);
+      setAdultPeriodsEnabled(true);
+      setAdultPeriodStatus(
+        `${file.name} から期間設定 ${rows.length}件を読み込み、このブラウザに保存しました。`
+      );
+    } catch (err) {
+      console.error(
+        "Adult periods could not be imported:",
+        err
+      );
+      setAdultPeriodStatus(
+        `TSV読み込み失敗: ${err?.message || String(err)}`
+      );
+    }
   };
 
   const exportAdultPeriodsFile = () => {
@@ -6001,6 +6059,52 @@ export default function App() {
             >
               必要な場合だけ使います。勤務地、勤務先、職階、役割など、
               自分に合う名称を自由に付けられます。
+              設定はこのブラウザに保存されます。別のブラウザや端末へ移す場合は、
+              <code>koshix-timeline-life-periods.tsv</code>
+              に保存し、移行先で読み込んでください。
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+                marginTop: 8,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  adultPeriodFileInputRef.current?.click()
+                }
+                style={{
+                  ...miniBtn,
+                  fontWeight: 800,
+                  background: "#f0f6fd",
+                  border: "1px solid #bdd0e5",
+                  color: "#41698f",
+                }}
+              >
+                ファイルから読込
+              </button>
+
+              <input
+                ref={adultPeriodFileInputRef}
+                type="file"
+                accept=".tsv,text/tab-separated-values,text/plain"
+                onChange={importAdultPeriodsFile}
+                style={{ display: "none" }}
+              />
+
+              <span
+                style={{
+                  fontSize: 10.5,
+                  color: "#8a8f98",
+                }}
+              >
+                koshix-timeline-life-periods.tsv
+              </span>
             </div>
 
             {adultPeriodsEnabled && (
@@ -6170,7 +6274,7 @@ export default function App() {
                       color: "#4b7356",
                     }}
                   >
-                    期間設定をファイルに保存
+                    ファイルに保存
                   </button>
                 </div>
 
@@ -6255,6 +6359,16 @@ export default function App() {
             }}
           >
             このサイトについて
+          </div>
+
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 10.5,
+              color: "#8a8f98",
+            }}
+          >
+            Webアプリ v{APP_VERSION}　最終更新 {APP_UPDATED_DATE}
           </div>
 
           <div style={{ marginTop: 8 }}>
