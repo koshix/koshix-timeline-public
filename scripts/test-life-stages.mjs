@@ -20,6 +20,17 @@ function model(overrides = {}) {
 }
 
 {
+  const life = model();
+
+  assert.equal(life.stageOf(1957).label, "幼児期");
+  assert.equal(life.stageOf(1958).label, "幼稚園");
+  assert.equal(life.stageOf(1959).label, "幼稚園");
+  assert.equal(life.stageOf(1960).label, "小学校");
+  assert.equal(life.stageOf(1966).label, "中学校");
+  assert.equal(life.stageOf(1969).label, "高校");
+}
+
+{
   const life = model({
     higherEdYear: "1972",
     graduateYear: "1976",
@@ -28,11 +39,11 @@ function model(overrides = {}) {
     retirementYear: "2019",
   });
 
-  assert.equal(life.stageOf(1972).label, "大学生");
+  assert.equal(life.stageOf(1972).label, "大学");
   assert.equal(life.gradeLabel(1975), "大4");
   assert.equal(life.gradeLabel(1976), "修1");
   assert.equal(life.gradeLabel(1978), "博1");
-  assert.equal(life.stageOf(1981).label, "社会人");
+  assert.equal(life.stageOf(1981).label, "成人期");
   assert.equal(life.stageOf(2019).label, "自由人");
 }
 
@@ -44,7 +55,7 @@ function model(overrides = {}) {
   });
 
   assert.equal(life.gradeLabel(2002), "専3");
-  assert.equal(life.stageOf(2003).label, "社会人");
+  assert.equal(life.stageOf(2003).label, "成人期");
 }
 
 {
@@ -54,7 +65,7 @@ function model(overrides = {}) {
   });
 
   assert.equal(life.adultYear, 2002);
-  assert.equal(life.stageOf(2002).label, "社会人");
+  assert.equal(life.stageOf(2002).label, "成人期");
 }
 
 {
@@ -99,7 +110,7 @@ function model(overrides = {}) {
   });
 
   assert.equal(life.stageOf(1976).label, "大学院に入学する前");
-  assert.equal(life.stageOf(1980).label, "社会人になる前");
+  assert.equal(life.stageOf(1980).label, "次の段階に進む前");
 }
 
 {
@@ -111,7 +122,7 @@ function model(overrides = {}) {
   });
 
   assert.equal(life.gradeLabel(1978), "博1");
-  assert.equal(life.stageOf(1979).label, "社会人");
+  assert.equal(life.stageOf(1979).label, "成人期");
 }
 
 {

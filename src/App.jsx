@@ -29,6 +29,11 @@ import {
   buildLifeModel,
   migrateEducationSettings,
 } from "./life-stages";
+import {
+  adultPeriodOf,
+  serializeAdultPeriodsTsv,
+  validateAdultPeriods,
+} from "./adult-periods";
 
 const CONFIG = loadConfig();
 const PROFILE_DEFAULTS = CONFIG.defaults || {};
@@ -128,7 +133,7 @@ const SUB_BY_IC = {
 };
 const subOf = (e) => e.s || SUB_BY_IC[e.ic] || "other";
 
-const ADULT_STAGE = { key: "adult", label: "社会人", color: "#37414f", bg: "#eef1f5" };
+const ADULT_STAGE = { key: "adult", label: "成人期", color: "#37414f", bg: "#eef1f5" };
 
 // ---- 社会人の年齢ラベル色 ----
 // 30代は従来色を保ち、10歳ごとに少しずつ無彩色・明色側へ移す。
@@ -151,19 +156,106 @@ const gradeBadgeStyle = (stage, age) => {
   return { background: tone.bg, color: tone.fg };
 };
 
-// ---- 社会人と生まれる前は長くなりすぎるので、技術史の時代でさらに区切る ----
-const ERAS = [
-  { key: "recovery",   label: "戦後復興期",                         to: 1954 },
-  { key: "growth",     label: "高度経済成長期",                     to: 1973 },
-  { key: "stable",     label: "安定成長・情報化前夜",               to: 1988 },
-  { key: "postcold",   label: "冷戦終結・ネット黎明",     to: 2000 },
-  { key: "broadband",  label: "ブロードバンド・Web時代",            to: 2007 },
-  { key: "smartphone", label: "スマートフォン・SNS時代",            to: 2019 },
-  { key: "pandemic",   label: "パンデミック期",                     to: 2021 },
-  { key: "genai",      label: "生成AI時代",                         to: Infinity },
+// ---- 共通の背景史。個人史とは独立した時間層として扱う ----
+const BACKGROUND_ERAS = [
+  { key: "scientific-revolution", from: 1601, to: 1687, label: "科学革命と近代世界の形成" },
+  { key: "enlightenment", from: 1688, to: 1788, label: "啓蒙と古典科学" },
+  { key: "revolution-industry", from: 1789, to: 1847, label: "革命と産業化" },
+  { key: "modern-science", from: 1848, to: 1900, label: "近代科学と産業社会" },
+  { key: "early-20c", from: 1901, to: 1913, label: "20世紀世界の成立" },
+  { key: "world-wars", from: 1914, to: 1945, label: "世界戦争と大衆社会" },
+  { key: "postwar", from: 1946, to: 1972, label: "戦後体制・冷戦・科学技術社会" },
+  { key: "information-coldwar", from: 1973, to: 1990, label: "情報化と後期冷戦" },
+  { key: "internet-global", from: 1991, to: 2007, label: "インターネットとグローバル化" },
+  { key: "smartphone-data", from: 2008, to: 2019, label: "スマートフォン・SNS・データ社会" },
+  { key: "ai-postpandemic", from: 2020, to: Infinity, label: "AI・パンデミック後の世界" },
 ];
-const eraOf = (y) => ERAS.find((e) => y <= e.to);
-const SPLIT_STAGES = new Set(["pre", "adult", "retired"]);
+
+const backgroundEraOf = (year) =>
+  BACKGROUND_ERAS.find(
+    (era) => year >= era.from && year <= era.to
+  ) ?? null;
+
+const TIMELINE_START_YEAR = 1601;
+
+// 出生前は世紀ごとの前半・後半に分けて、個別に開閉できるようにする。
+const preBirthPeriodsOf = (birthYear) => {
+  const endYear = Number(birthYear) - 1;
+
+  if (!Number.isFinite(endYear) || endYear < TIMELINE_START_YEAR) {
+    return [];
+  }
+
+  const periods = [];
+  const lastCentury = Math.floor((endYear - 1) / 100) + 1;
+
+  for (let century = 17; century <= lastCentury; century += 1) {
+    const centuryStart = (century - 1) * 100 + 1;
+
+    const halves = [
+      {
+        key: "first",
+        label: `${century}世紀前半`,
+        from: centuryStart,
+        to: centuryStart + 49,
+      },
+      {
+        key: "second",
+        label: `${century}世紀後半`,
+        from: centuryStart + 50,
+        to: centuryStart + 99,
+      },
+    ];
+
+    for (const half of halves) {
+      const from = Math.max(TIMELINE_START_YEAR, half.from);
+      const to = Math.min(endYear, half.to);
+
+      if (from <= to) {
+        periods.push({
+          key: `pre-${century}-${half.key}`,
+          label: half.label,
+          from,
+          to,
+        });
+      }
+    }
+  }
+
+  return periods;
+};
+
+// 日本の近現代は、背景史とは別の地層として元号も示す。
+// 年表本体が年単位なので、改元年を境界年として扱う。
+const JAPANESE_ERAS = [
+  { key: "meiji", label: "明治", from: 1868, to: 1911 },
+  { key: "taisho", label: "大正", from: 1912, to: 1925 },
+  { key: "showa", label: "昭和", from: 1926, to: 1988 },
+  { key: "heisei", label: "平成", from: 1989, to: 2018 },
+  { key: "reiwa", label: "令和", from: 2019, to: Infinity },
+];
+
+const japaneseEraOf = (year) =>
+  JAPANESE_ERAS.find(
+    (era) => year >= era.from && year <= era.to
+  ) ?? null;
+
+// 出生後も大きな世紀境界は補助地層として示す。
+// 現時点では21世紀前半が該当する。
+const HALF_CENTURY_MARKERS = [
+  {
+    key: "21c-first",
+    label: "21世紀前半",
+    from: 2001,
+    to: 2050,
+  },
+];
+
+const halfCenturyMarkerOf = (year) =>
+  HALF_CENTURY_MARKERS.find(
+    (period) => year >= period.from && year <= period.to
+  ) ?? null;
+
 
 function formatEventDate(value) {
   const [year, month, day] = String(value ?? "").split("-");
@@ -1101,9 +1193,24 @@ export default function App() {
     INITIAL_EDUCATION.graduateType
   );
   const [adultY, setAdultY] = useState(INITIAL_EDUCATION.adultYear);
-  const [retirementY, setRetirementY] = useState(
-    INITIAL_EDUCATION.retirementYear
+  const [adultPeriodsEnabled, setAdultPeriodsEnabled] = useState(
+    SAVED.adultPeriodsEnabled ?? false
   );
+  const [adultPeriods, setAdultPeriods] = useState(() =>
+    Array.isArray(SAVED.adultPeriods)
+      ? SAVED.adultPeriods.map((period) => ({
+          start: String(period.start ?? period.from ?? ""),
+          end:
+            period.end != null
+              ? String(period.end)
+              : period.to != null
+                ? String(period.to)
+                : "",
+          label: String(period.label ?? ""),
+        }))
+      : []
+  );
+  const [adultPeriodStatus, setAdultPeriodStatus] = useState("");
   const [myEvents, setMyEvents] = useState([]);
 
   const [eventCustomizations, setEventCustomizations] = useState(
@@ -1142,13 +1249,23 @@ export default function App() {
   const personalFileInputRef = useRef(null);
   // 大分類フィルタ。true が入っているカテゴリーだけを非表示にする
   const [catOff, setCatOff] = useState(SAVED.catOff ?? {});
+  // 「作品」のうちSFタグを持つ項目だけに絞る補助フィルタ
+  const [sfOnly, setSfOnly] = useState(SAVED.sfOnly ?? false);
   // 公開イベントの表示量。3=重要、2=標準、1=全部
   const [importanceMin, setImportanceMin] = useState(SAVED.importanceMin ?? 2);
   const [showMe, setShowMe] = useState(false);
   // 分野フィルタ。falseが入っている分野だけを非表示にする(未知の分野は既定でオン)
   const [subOff, setSubOff] = useState(SAVED.subOff ?? {});
-  // 畳んでいる期間(帯)のキー
-  const [closedStages, setClosedStages] = useState(() => new Set(SAVED.closed ?? []));
+  // 畳んでいる期間(帯)のキー。
+  // 新規起動時は出生前を閉じ、出生年以降を開く「半」を既定値にする。
+  // 保存済みの開閉状態がある場合は、それを優先する。
+  const [closedStages, setClosedStages] = useState(() =>
+    new Set(
+      Array.isArray(SAVED.closed)
+        ? SAVED.closed
+        : preBirthPeriodsOf(INITIAL_BIRTH).map((period) => period.key)
+    )
+  );
   // 生年や進学・就職年の入力欄。一度入れたら畳んでおける(初回訪問時だけ開いた状態)
   const [setupOpen, setSetupOpen] = useState(SAVED.setupOpen ?? !SAVED.birth);
   const [open, setOpen] = useState(() => new Set());
@@ -1159,6 +1276,7 @@ export default function App() {
   const [speed, setSpeed] = useState(SAVED.speed ?? 1);
   // 年表内検索は一時的な表示条件として扱い、ブラウザ保存はしない。
   const [searchText, setSearchText] = useState("");
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
 
   useEffect(() => {
     store.save({
@@ -1169,8 +1287,10 @@ export default function App() {
       graduateYear: graduateY,
       graduateType,
       adultYear: adultY,
-      retirementYear: retirementY,
+      adultPeriodsEnabled,
+      adultPeriods,
       catOff,
+      sfOnly,
       importanceMin,
       subOff,
       closed: [...closedStages],
@@ -1178,7 +1298,7 @@ export default function App() {
       tts,
       speed,
     });
-  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, retirementY, catOff, importanceMin, subOff, closedStages, setupOpen, tts, speed]);
+  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, subOff, closedStages, setupOpen, tts, speed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1248,12 +1368,18 @@ export default function App() {
   const toggleCat = (k) =>
     setCatOff((prev) => ({ ...prev, [k]: !prev[k] }));
 
+  const toggleSfOnly = () => {
+    setSfOnly((prev) => !prev);
+    setCatOff((prev) => ({ ...prev, work: false }));
+  };
+
   const setAllCats = (on) => {
     setCatOff(
       on
         ? {}
         : Object.fromEntries(MAIN_CATS.map((k) => [k, true]))
     );
+    if (on) setSfOnly(false);
   };
 
   const startEditingEvent = (event) => {
@@ -2206,8 +2332,21 @@ export default function App() {
       graduateYear: graduateY,
       graduateType,
       adultYear: adultY,
-      retirementYear: retirementY,
     });
+
+    const adultPeriodValidation = validateAdultPeriods(
+      adultPeriodsEnabled ? adultPeriods : [],
+      {
+        adultYear: life.adultYear,
+      }
+    );
+
+    const usableAdultPeriods =
+      adultPeriodsEnabled &&
+      adultPeriodValidation.errors.length === 0
+        ? adultPeriodValidation.periods
+        : [];
+
     const RANK = {
       me: 0,
       sf: 1,
@@ -2222,12 +2361,15 @@ export default function App() {
       ...effectiveEvents
         // 大分類フィルタは主分類で判定する。
         // sf などの副分類はタグ・色ドットとして保持する。
-        .filter(
-          (e) =>
-            catOn(primaryCatOf(e)) &&
+        .filter((e) => {
+          const primary = primaryCatOf(e);
+          return (
+            catOn(primary) &&
+            (primary !== "work" || !sfOnly || catsOf(e).includes("sf")) &&
             (e.importance ?? 2) >= importanceMin &&
             matchesSearch(e)
-        )
+          );
+        })
         // 既存表示コードとの互換のため cat に主分類を入れる
         .map((e) => ({
           ...e,
@@ -2246,31 +2388,381 @@ export default function App() {
     ]
       .map((e) => ({ ...e, age: e.y - birth }))
       .sort((a, b) => a.y - b.y || RANK[a.cat] - RANK[b.cat]);
-    const groups = [];
+    const preBirthPeriods = preBirthPeriodsOf(birth);
+    const preBirthStage = life.stageOf(birth - 1);
+
+    const groups = preBirthPeriods.map((period) => ({
+      key: period.key,
+      stage: {
+        ...preBirthStage,
+        key: period.key,
+        label: period.label,
+      },
+      adultPeriod: null,
+      rangeFrom: period.from,
+      rangeTo: period.to,
+      items: [],
+    }));
+
+    const preBirthGroups = new Map(
+      groups.map((group) => [group.key, group])
+    );
+
     for (const ev of list) {
-      const st = life.stageOf(ev.y);
-      const era = SPLIT_STAGES.has(st.key) ? eraOf(ev.y) : null;
-      const key = era ? `${st.key}:${era.key}` : st.key;
+      const baseStage = life.stageOf(ev.y);
+
+      if (baseStage.key === "pre") {
+        if (ev.y < TIMELINE_START_YEAR) continue;
+
+        const period = preBirthPeriods.find(
+          (candidate) =>
+            ev.y >= candidate.from &&
+            ev.y <= candidate.to
+        );
+
+        if (period) {
+          preBirthGroups.get(period.key)?.items.push(ev);
+        }
+
+        continue;
+      }
+
+      const customAdultPeriod =
+        baseStage.key === "adult"
+          ? adultPeriodOf(ev.y, usableAdultPeriods)
+          : null;
+
+      const st = customAdultPeriod
+        ? {
+            ...baseStage,
+            label: customAdultPeriod.label,
+          }
+        : baseStage;
+
+      const periodKey = customAdultPeriod
+        ? `adult-period:${customAdultPeriod.from}:${
+            customAdultPeriod.to ?? "open"
+          }`
+        : baseStage.key;
+
+      const key = periodKey;
+
       const last = groups[groups.length - 1];
-      if (last && last.key === key) last.items.push(ev);
-      else groups.push({ key, stage: st, era, items: [ev] });
+
+      if (last && last.key === key) {
+        last.items.push(ev);
+      } else {
+        groups.push({
+          key,
+          stage: st,
+          adultPeriod: customAdultPeriod,
+          items: [ev],
+        });
+      }
     }
-    // 学齢期の帯は分割しないが、またいでいる時代の名前は見出しに併記する
+    // 個人史の期間帯は背景史と独立させる。
+    // 検索中は従来どおり全グループを開いた状態として扱う。
     for (const g of groups) {
-      if (g.era) continue;
-      const names = [...new Set(g.items.map((e) => eraOf(e.y).label))];
-      g.eraSpan = names.join(" → ");
+      g.closed = !searchText.trim() && closedStages.has(g.key);
     }
+
+    // 実際に画面上へ表示されている項目だけを数える。
+    // この配列は「現在表示をTSV保存」にも利用する。
+    const visibleItems = groups
+      .filter((g) => !g.closed)
+      .flatMap((g) => g.items);
+
     return {
       groups,
+      visibleItems,
       gradeLabel: life.gradeLabel,
       adultYear: life.adultYear,
+      adultPeriodErrors: adultPeriodValidation.errors,
+      adultPeriods: usableAdultPeriods,
       warnings: life.warnings,
-      shown: list.filter((e) => e.cat !== "me").length,
-      myShown: list.filter((e) => e.cat === "me").length,
+      shown: visibleItems.filter((e) => e.cat !== "me").length,
+      myShown: visibleItems.filter((e) => e.cat === "me").length,
       searchError: searchExpression.error,
     };
-  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, retirementY, myEvents, effectiveEvents, catOff, importanceMin, showMe, subOff, searchText]);
+  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultY, adultPeriodsEnabled, adultPeriods, myEvents, effectiveEvents, catOff, sfOnly, importanceMin, showMe, subOff, searchText, closedStages]);
+
+  const updateAdultPeriod = (index, key, value) => {
+    setAdultPeriods((previous) =>
+      previous.map((period, i) =>
+        i === index
+          ? { ...period, [key]: value }
+          : period
+      )
+    );
+    setAdultPeriodStatus("");
+  };
+
+  const addAdultPeriod = () => {
+    setAdultPeriods((previous) => {
+      const last = previous.at(-1);
+      const lastEnd = last?.end ?? "";
+
+      const start =
+        previous.length === 0
+          ? String(grouped.adultYear)
+          : lastEnd !== "" &&
+              Number.isFinite(Number(lastEnd))
+            ? String(Number(lastEnd) + 1)
+            : "";
+
+      const end = "";
+
+      return [
+        ...previous,
+        {
+          start,
+          end,
+          label: "",
+        },
+      ];
+    });
+
+    setAdultPeriodStatus("");
+  };
+
+  const removeAdultPeriod = (index) => {
+    setAdultPeriods((previous) =>
+      previous.filter((_, i) => i !== index)
+    );
+    setAdultPeriodStatus("");
+  };
+
+  const exportAdultPeriodsFile = () => {
+    try {
+      if (adultPeriods.length === 0) {
+        setAdultPeriodStatus(
+          "書き出す期間がありません。まず期間を追加してください。"
+        );
+        return;
+      }
+
+      if (grouped.adultPeriodErrors.length > 0) {
+        setAdultPeriodStatus(
+          "入力内容にエラーがあるため、まだ書き出せません。"
+        );
+        return;
+      }
+
+      const text = serializeAdultPeriodsTsv(adultPeriods);
+      const blob = new Blob(
+        ["\uFEFF", text],
+        {
+          type: "text/tab-separated-values;charset=utf-8",
+        }
+      );
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = "koshix-timeline-life-periods.tsv";
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+
+      setAdultPeriodStatus(
+        `期間設定 ${adultPeriods.length}件をTSVへ書き出しました。`
+      );
+    } catch (err) {
+      console.error(
+        "Adult periods could not be exported:",
+        err
+      );
+      setAdultPeriodStatus(
+        `TSV書き出し失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const exportVisibleEventsTsv = (target = "auto") => {
+    const cleanCell = (value) =>
+      String(value ?? "")
+        .replace(/\t/g, " ")
+        .replace(/\r?\n/g, " ")
+        .trim();
+
+    const listCell = (value) =>
+      Array.isArray(value)
+        ? value.map(cleanCell).filter(Boolean).join("|")
+        : cleanCell(value);
+
+    const downloadUtf16Tsv = (filename, header, rows) => {
+      const lines = [
+        header.join("\t"),
+        ...rows.map((row) =>
+          row.map(cleanCell).join("\t")
+        ),
+      ];
+
+      const text = lines.join("\r\n") + "\r\n";
+      const bytes = new Uint8Array(2 + text.length * 2);
+
+      // UTF-16LE BOM
+      bytes[0] = 0xff;
+      bytes[1] = 0xfe;
+
+      for (let i = 0; i < text.length; i += 1) {
+        const code = text.charCodeAt(i);
+        bytes[2 + i * 2] = code & 0xff;
+        bytes[3 + i * 2] = code >> 8;
+      }
+
+      const blob = new Blob(
+        [bytes],
+        { type: "text/plain;charset=utf-16le" }
+      );
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = filename;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    const visiblePublicItems = grouped.visibleItems.filter(
+      (event) => event.cat !== "me"
+    );
+    const visiblePersonalItems = grouped.visibleItems.filter(
+      (event) => event.cat === "me"
+    );
+
+    let exportTarget = target;
+
+    if (exportTarget === "auto") {
+      if (
+        visiblePublicItems.length > 0 &&
+        visiblePersonalItems.length > 0
+      ) {
+        setDownloadMenuOpen(true);
+        return;
+      }
+
+      exportTarget =
+        visiblePersonalItems.length > 0 ? "personal" : "public";
+    }
+
+    const now = new Date();
+    const stamp =
+      String(now.getFullYear()) +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      String(now.getDate()).padStart(2, "0");
+
+    if (
+      exportTarget === "public" &&
+      visiblePublicItems.length > 0
+    ) {
+      const header = [
+        "id",
+        "date",
+        "end_date",
+        "title",
+        "cats",
+        "primary",
+        "subs",
+        "region",
+        "importance",
+        "icon",
+        "summary",
+        "sources",
+        "search",
+        "note",
+        "core",
+        "age",
+        "grade",
+      ];
+
+      const rows = visiblePublicItems.map((event) => [
+        event.id ?? "",
+        event.date ?? "",
+        event.end_date ?? "",
+        event.t ?? "",
+        listCell(catsOf(event)),
+        event.primary ?? event.cat ?? "",
+        listCell(event.subs),
+        event.region ?? "",
+        event.importance ?? 2,
+        event.ic ?? "",
+        event.n ?? "",
+        listCell(event.l),
+        event.q ?? "",
+        event.note ?? "",
+        event.core ? "1" : "0",
+        event.age,
+        grouped.gradeLabel(event.y),
+      ]);
+
+      downloadUtf16Tsv(
+        `koshix-timeline-visible-public-${stamp}.txt`,
+        header,
+        rows
+      );
+    }
+
+    if (
+      exportTarget === "personal" &&
+      visiblePersonalItems.length > 0
+    ) {
+      const header = [
+        "id",
+        "date",
+        "end_date",
+        "title",
+        "cats",
+        "primary",
+        "subs",
+        "region",
+        "importance",
+        "icon",
+        "summary",
+        "sources",
+        "search",
+        "note",
+        "age",
+        "grade",
+      ];
+
+      const rows = visiblePersonalItems.map((event) => [
+        event.id ?? "",
+        event.date ?? "",
+        event.end_date ?? "",
+        event.t ?? "",
+        listCell(event.cats ?? ["me"]),
+        event.primary ?? "me",
+        listCell(event.subs),
+        event.region ?? "",
+        event.importance ?? 2,
+        event.ic ?? "flag",
+        event.n ?? "",
+        listCell(event.l),
+        event.q ?? "",
+        event.note ?? "",
+        event.age,
+        grouped.gradeLabel(event.y),
+      ]);
+
+      downloadUtf16Tsv(
+        `koshix-timeline-visible-personal-${stamp}.txt`,
+        header,
+        rows
+      );
+    }
+
+    setDownloadMenuOpen(false);
+  };
 
   const font =
     '"Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif';
@@ -2746,42 +3238,132 @@ export default function App() {
           <div
             style={{
               flexBasis: "100%",
-              fontSize: 14,
-              fontWeight: 800,
-              color: "#4b5563",
+              display: "flex",
+              alignItems: "baseline",
+              gap: 16,
+              flexWrap: "wrap",
               marginBottom: 3,
             }}
           >
-            共通年表の表示設定
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 800,
+                color: "#4b5563",
+              }}
+            >
+              共通年表の表示設定
+            </span>
+
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: "#9aa0a8",
+              }}
+            >
+              公開{grouped.shown}件
+              {grouped.myShown > 0
+                ? `＋個人史${grouped.myShown}件`
+                : ""}
+            </span>
           </div>
+
           <div
             style={{
-              display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexWrap: "wrap",
               width: "100%",
               marginBottom: 2,
             }}
           >
             <span
               style={{
-                display: "inline-flex", alignItems: "baseline", gap: 5,
-                padding: "5px 10px", borderRadius: 8,
-                background: "#eef1f5", border: "1px solid #d7dce2",
-                color: "#37414f", fontSize: 12, fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "baseline",
+                gap: 5,
+                padding: "5px 10px",
+                borderRadius: 8,
+                background: "#eef1f5",
+                border: "1px solid #d7dce2",
+                color: "#37414f",
+                fontSize: 12,
+                fontWeight: 700,
               }}
             >
-              現在表示
-              <strong style={{ fontFamily: mono, fontSize: 20, lineHeight: 1 }}>
+              表示中
+              <strong
+                style={{
+                  fontFamily: mono,
+                  fontSize: 20,
+                  lineHeight: 1,
+                }}
+              >
                 {grouped.shown + grouped.myShown}
               </strong>
               件
             </span>
-            {grouped.myShown > 0 && (
-              <span style={{ fontSize: 11, color: "#6b7280" }}>
-                公開{grouped.shown}件＋個人史{grouped.myShown}件
-              </span>
-            )}
+
           {MAIN_CATS.map((k) => {
             const on = catOn(k);
+
+            if (k === "work") {
+              return (
+                <span
+                  key={k}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "stretch",
+                    border: `1.5px solid ${CAT[k].border}`,
+                    borderRadius: 999,
+                    overflow: "hidden",
+                    background: on ? CAT[k].bg : CAT[k].soft,
+                    color: on ? CAT[k].fg : CAT[k].border,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleCat(k)}
+                    aria-pressed={on}
+                    style={{
+                      fontFamily: font,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      padding: "6px 2px 6px 11px",
+                      border: "none",
+                      background: "transparent",
+                      color: "inherit",
+                    }}
+                  >
+                    {CAT[k].label}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleSfOnly}
+                    aria-pressed={sfOnly}
+                    aria-label={sfOnly ? "SF作品のみ表示を解除" : "SF作品のみ表示"}
+                    title={sfOnly ? "SF作品のみ表示中" : "SF作品だけに絞る"}
+                    style={{
+                      fontFamily: font,
+                      fontSize: 11.5,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      padding: "6px 9px 6px 2px",
+                      border: "none",
+                      background: "transparent",
+                      color: "inherit",
+                    }}
+                  >
+                    | {sfOnly ? "✓" : "□"}SF
+                  </button>
+                </span>
+              );
+            }
+
             return (
               <button
                 key={k}
@@ -2819,10 +3401,10 @@ export default function App() {
               fontSize: 12,
               fontWeight: 800,
               cursor: "pointer",
-              padding: "6px 14px",
+              padding: "6px 11px",
               borderRadius: 999,
               marginLeft: 0,
-              marginRight: 20,
+              marginRight: 4,
               border: "1.5px solid #d1d5db",
               background: "#f3f4f6",
               color: "#6b7280",
@@ -2833,196 +3415,247 @@ export default function App() {
 
           </div>
           <div
-            role="group"
-            aria-label="分類の一括表示切替"
+            aria-label="年表表示操作"
             style={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
-              gap: 4,
-              padding: 4,
-              borderRadius: 10,
-              background: "#edf7f0",
-              border: "1px solid #d9eadf",
-              marginRight: 6,
+              gap: 18,
+              flexWrap: "nowrap",
+              width: "fit-content",
+              maxWidth: "100%",
+              minHeight: 38,
+              boxSizing: "border-box",
+              paddingBottom: 0,
             }}
           >
-            <span
+            <div
+              role="group"
+              aria-label="分類の一括表示切替"
               style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+                padding: 3,
+                borderRadius: 9,
+                background: "#edf7f0",
+                border: "1px solid #d9eadf",
+                flexShrink: 0,
+              }}
+            >
+              <span style={{
                 fontSize: 11.5,
                 fontWeight: 800,
                 color: "#4f765d",
-                padding: "0 4px",
+                padding: "0 3px",
+              }}>
+                分類
+              </span>
+
+              <span style={{
+                display: "inline-flex",
+                overflow: "hidden",
+                borderRadius: 7,
+                border: "1.5px solid #6f8a78",
+              }}>
+                <button
+                  onClick={() => setAllCats(true)}
+                  style={{
+                    fontFamily: font,
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    padding: "4px 9px",
+                    border: "none",
+                    background: "#fff",
+                    color: "#42654f",
+                    cursor: "pointer",
+                  }}
+                >
+                  全ON
+                </button>
+
+                <span aria-hidden="true"
+                  style={{ width: 1, background: "#b9c9be" }}
+                />
+
+                <button
+                  onClick={() => setAllCats(false)}
+                  style={{
+                    fontFamily: font,
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    padding: "4px 9px",
+                    border: "none",
+                    background: "#e9f2eb",
+                    color: "#657a6c",
+                    cursor: "pointer",
+                  }}
+                >
+                  全OFF
+                </button>
+              </span>
+            </div>
+
+            <div
+              role="group"
+              aria-label="表示"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+                padding: 3,
+                borderRadius: 9,
+                background: "#f5f1e8",
+                border: "1px solid #e7dfcf",
+                flexShrink: 0,
               }}
             >
-              分類
-            </span>
-
-            <button
-              onClick={() => setAllCats(true)}
-              style={{
-                ...miniBtn,
-                fontSize: 12,
+              <span style={{
+                fontSize: 11.5,
                 fontWeight: 800,
-                border: "1.5px solid #4f765d",
-                background: "#ffffff",
-                color: "#42654f",
-              }}
-            >
-              全てON
-            </button>
-
-            <button
-              onClick={() => setAllCats(false)}
-              style={{
-                ...miniBtn,
-                fontSize: 12,
-                border: "1px dashed #8da394",
-                background: "#e4efe7",
-                color: "#657a6c",
-              }}
-            >
-              全てOFF
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              padding: 4,
-              borderRadius: 10,
-              background: "#f5f1e8",
-              border: "1px solid #e7dfcf",
-              marginRight: 6,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 12,
                 color: "#776d5c",
-                marginLeft: 3,
-                marginRight: 3,
-              }}
-            >
-              表示量
-            </span>
+                padding: "0 3px",
+              }}>
+                表示
+              </span>
 
-            <button
-              onClick={() => setImportanceMin(3)}
-              aria-pressed={importanceMin === 3}
-              style={
-                importanceMin === 3
-                  ? {
-                      ...miniBtn,
-                      fontSize: 12,
-                      background: "#e6e9ee",
-                      borderColor: "#8a93a3",
-                      fontWeight: 800,
-                    }
-                  : { ...miniBtn, fontSize: 12 }
-              }
-            >
-              重要
-            </button>
+              <span style={{
+                display: "inline-flex",
+                overflow: "hidden",
+                borderRadius: 7,
+                border: "1.5px solid #b4aa98",
+              }}>
+                {[3, 2, 1].map((level, index) => (
+                  <span key={level} style={{ display: "inline-flex" }}>
+                    {index > 0 && (
+                      <span
+                        aria-hidden="true"
+                        style={{ width: 1, background: "#d1c9ba" }}
+                      />
+                    )}
+                    <button
+                      onClick={() => setImportanceMin(level)}
+                      aria-pressed={importanceMin === level}
+                      style={{
+                        fontFamily: font,
+                        fontSize: 11.5,
+                        fontWeight: importanceMin === level ? 800 : 700,
+                        padding: "4px 9px",
+                        border: "none",
+                        background:
+                          importanceMin === level ? "#e6e9ee" : "#fff",
+                        color: "#667085",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {level === 3 ? "重要" : level === 2 ? "標準" : "全部"}
+                    </button>
+                  </span>
+                ))}
+              </span>
+            </div>
 
-            <button
-              onClick={() => setImportanceMin(2)}
-              aria-pressed={importanceMin === 2}
-              style={
-                importanceMin === 2
-                  ? {
-                      ...miniBtn,
-                      fontSize: 12,
-                      background: "#e6e9ee",
-                      borderColor: "#8a93a3",
-                      fontWeight: 800,
-                    }
-                  : { ...miniBtn, fontSize: 12 }
-              }
-            >
-              標準
-            </button>
-
-            <button
-              onClick={() => setImportanceMin(1)}
-              aria-pressed={importanceMin === 1}
-              style={
-                importanceMin === 1
-                  ? {
-                      ...miniBtn,
-                      fontSize: 12,
-                      background: "#e6e9ee",
-                      borderColor: "#8a93a3",
-                      fontWeight: 800,
-                    }
-                  : { ...miniBtn, fontSize: 12 }
-              }
-            >
-              全部
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              flexWrap: "wrap",
-            }}
-          >
             <div
               role="group"
               aria-label="期間の一括開閉"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 4,
-                padding: 4,
-                borderRadius: 10,
+                gap: 3,
+                padding: 3,
+                borderRadius: 9,
                 background: "#f7f2ea",
                 border: "1px solid #eadfce",
+                flexShrink: 0,
               }}
             >
-              <span
-                style={{
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  color: "#7a6a55",
-                  padding: "0 4px",
-                }}
-              >
+              <span style={{
+                fontSize: 11.5,
+                fontWeight: 800,
+                color: "#7a6a55",
+                padding: "0 3px",
+              }}>
                 期間
               </span>
 
-              <button
-                onClick={() => setClosedStages(new Set())}
-                style={{
-                  ...miniBtn,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  border: "1.5px solid #7a6a55",
-                  background: "#ffffff",
-                  color: "#6b5a45",
-                }}
-              >
-                開
-              </button>
+              <span style={{
+                display: "inline-flex",
+                overflow: "hidden",
+                borderRadius: 7,
+                border: "1.5px solid #9a8b76",
+              }}>
+                <button
+                  onClick={() => setClosedStages(new Set())}
+                  style={{
+                    fontFamily: font,
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    padding: "4px 9px",
+                    border: "none",
+                    background: "#fff",
+                    color: "#6b5a45",
+                    cursor: "pointer",
+                  }}
+                >
+                  開
+                </button>
 
-              <button
-                onClick={() =>
-                  setClosedStages(new Set(grouped.groups.map((g) => g.key)))
-                }
-                style={{
-                  ...miniBtn,
-                  fontSize: 12,
-                  border: "1px dashed #a99b88",
-                  background: "#eee8dd",
-                  color: "#7d7468",
-                }}
-              >
-                閉
-              </button>
+                <span aria-hidden="true"
+                  style={{ width: 1, background: "#d1c5b3" }}
+                />
+
+                <button
+                  onClick={() =>
+                    setClosedStages(
+                      new Set(
+                        grouped.groups
+                          .filter(
+                            (g) =>
+                              g.rangeTo != null &&
+                              g.rangeTo < birth
+                          )
+                          .map((g) => g.key)
+                      )
+                    )
+                  }
+                  title="出生前を閉じ、出生年以降を開きます"
+                  style={{
+                    fontFamily: font,
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    padding: "4px 9px",
+                    border: "none",
+                    background: "#f7f3ec",
+                    color: "#74644f",
+                    cursor: "pointer",
+                  }}
+                >
+                  半
+                </button>
+
+                <span aria-hidden="true"
+                  style={{ width: 1, background: "#d1c5b3" }}
+                />
+
+                <button
+                  onClick={() =>
+                    setClosedStages(
+                      new Set(grouped.groups.map((g) => g.key))
+                    )
+                  }
+                  style={{
+                    fontFamily: font,
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    padding: "4px 9px",
+                    border: "none",
+                    background: "#eee8dd",
+                    color: "#7d7468",
+                    cursor: "pointer",
+                  }}
+                >
+                  閉
+                </button>
+              </span>
             </div>
 
             <div
@@ -3031,67 +3664,137 @@ export default function App() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 4,
-                padding: 4,
-                borderRadius: 10,
+                gap: 3,
+                padding: 3,
+                borderRadius: 9,
                 background: "#eef4f8",
                 border: "1px solid #dce6ee",
+                flexShrink: 0,
               }}
             >
-              <span
-                style={{
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  color: "#4f7089",
-                  padding: "0 4px",
-                }}
-              >
+              <span style={{
+                fontSize: 11.5,
+                fontWeight: 800,
+                color: "#4f7089",
+                padding: "0 3px",
+              }}>
                 解説
               </span>
 
-              <button
-                onClick={() =>
-                  setOpen(new Set(grouped.groups.flatMap((g) => g.items.map(eid))))
-                }
-                style={{
-                  ...miniBtn,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  border: "1.5px solid #4f7089",
-                  background: "#ffffff",
-                  color: "#405f76",
-                }}
-              >
-                開
-              </button>
+              <span style={{
+                display: "inline-flex",
+                overflow: "hidden",
+                borderRadius: 7,
+                border: "1.5px solid #6f8798",
+              }}>
+                <button
+                  onClick={() =>
+                    setOpen(
+                      new Set(
+                        grouped.groups.flatMap(
+                          (g) => g.items.map(eid)
+                        )
+                      )
+                    )
+                  }
+                  style={{
+                    fontFamily: font,
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    padding: "4px 9px",
+                    border: "none",
+                    background: "#fff",
+                    color: "#405f76",
+                    cursor: "pointer",
+                  }}
+                >
+                  開
+                </button>
 
-              <button
-                onClick={() => setOpen(new Set())}
-                style={{
-                  ...miniBtn,
-                  fontSize: 12,
-                  border: "1px dashed #90a2b0",
-                  background: "#e3edf4",
-                  color: "#647785",
-                }}
-              >
-                閉
-              </button>
+                <span aria-hidden="true"
+                  style={{ width: 1, background: "#bfd0dc" }}
+                />
+
+                <button
+                  onClick={() =>
+                    setOpen(
+                      new Set(
+                        grouped.groups
+                          .flatMap((g) => g.items)
+                          .filter((ev) => ev.y >= birth)
+                          .map(eid)
+                      )
+                    )
+                  }
+                  title="出生前の解説を閉じ、出生年以降の解説を開きます"
+                  style={{
+                    fontFamily: font,
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    padding: "4px 9px",
+                    border: "none",
+                    background: "#f3f7fa",
+                    color: "#4f6a7e",
+                    cursor: "pointer",
+                  }}
+                >
+                  半
+                </button>
+
+                <span aria-hidden="true"
+                  style={{ width: 1, background: "#bfd0dc" }}
+                />
+
+                <button
+                  onClick={() => setOpen(new Set())}
+                  style={{
+                    fontFamily: font,
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    padding: "4px 9px",
+                    border: "none",
+                    background: "#e3edf4",
+                    color: "#647785",
+                    cursor: "pointer",
+                  }}
+                >
+                  閉
+                </button>
+              </span>
             </div>
           </div>
 
           <div
+            role="group"
+            aria-label="検索"
             style={{
-              display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-              width: "100%", marginTop: 6,
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              flexWrap: "nowrap",
+              width: "calc(100% - 50px)",
+              minHeight: 38,
+              boxSizing: "border-box",
+              marginTop: 3,
+              padding: "3px 9px",
+              borderRadius: 10,
+              overflowX: "auto",
+              border: "1px solid #dfe3e8",
+              background: "#f6f7f9",
             }}
           >
             <label
               htmlFor="timeline-search"
-              style={{ fontSize: 13, fontWeight: 700, color: "#6b7280" }}
+              style={{
+                fontSize: 11.5,
+                fontWeight: 800,
+                color: "#626c78",
+                padding: "0 2px",
+              }}
             >
               検索
             </label>
+
             <input
               id="timeline-search"
               type="search"
@@ -3100,33 +3803,50 @@ export default function App() {
               placeholder="例: AI && 教育 / (DNA || RNA) && 研究"
               autoComplete="off"
               style={{
-                flex: "0 1 300px", minWidth: 180, maxWidth: 300,
-                fontFamily: font, fontSize: 13, padding: "7px 10px",
-                borderRadius: 8,
-                border: `1px solid ${grouped.searchError ? "#c2452d" : "#d5d8dd"}`,
-                background: "#fff", color: "#22272e",
+                flex: "0 0 225px",
+                minWidth: 220,
+                maxWidth: 225,
+                fontFamily: font,
+                fontSize: 12,
+                padding: "5px 9px",
+                borderRadius: 7,
+                border: `1px solid ${
+                  grouped.searchError ? "#c2452d" : "#cfd5dc"
+                }`,
+                background: "#fff",
+                color: "#22272e",
               }}
             />
+
             {searchText && (
-              <button onClick={() => setSearchText("")} style={miniBtn}>
-                検索をクリア
+              <button
+                onClick={() => setSearchText("")}
+                style={{
+                  ...miniBtn,
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  padding: "4px 8px",
+                }}
+              >
+                クリア
               </button>
             )}
+
             <span
               style={{
-                flex: "1 1 230px",
-                minWidth: 210,
+                flex: "1 1 auto",
+                minWidth: 0,
                 fontSize: 10.5,
-                lineHeight: 1.45,
-                color: grouped.searchError ? "#b33b2e" : "#8a8f98",
+                lineHeight: 1.4,
+                whiteSpace: "nowrap",
+                color: grouped.searchError ? "#b33b2e" : "#7f8791",
               }}
               role={grouped.searchError ? "alert" : undefined}
             >
               {grouped.searchError || (
                 <>
                   {"&& = AND、|| = OR、( ) = 優先指定。"}
-                  <br />
-                  {"空白・読点・カンマもANDです。"}
+                  {" 空白・読点・カンマもANDです。"}
                 </>
               )}
             </span>
@@ -3157,13 +3877,64 @@ export default function App() {
               <ImportanceBadge level={2} /> L2 標準
               <ImportanceBadge level={1} /> L1 補足
             </span>
+
+            <button
+              type="button"
+              onClick={() => exportVisibleEventsTsv()}
+              title={`現在表示中の項目 ${grouped.shown + grouped.myShown}件をダウンロード`}
+              style={{
+                ...miniBtn,
+                marginLeft: "auto",
+                fontSize: 11.5,
+                fontWeight: 800,
+                border: "1px solid #9aa4b2",
+                background: "#ffffff",
+                color: "#4b5563",
+              }}
+            >
+              表示項目のＤＬ
+            </button>
+
+            {downloadMenuOpen && (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => exportVisibleEventsTsv("public")}
+                  style={{
+                    ...miniBtn,
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                  }}
+                >
+                  共通年表
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => exportVisibleEventsTsv("personal")}
+                  style={{
+                    ...miniBtn,
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                  }}
+                >
+                  自分史
+                </button>
+              </span>
+            )}
           </div>
 
         </div>
 
-        {/* 学齢期グループ */}
+        {/* 個人史グループ */}
         {grouped.groups.map((g, gi) => {
-        const stageClosed = searchText.trim() ? false : closedStages.has(g.key);
+        const stageClosed = g.closed;
         return (
           <section key={gi} style={{ marginBottom: 22 }}>
             <button
@@ -3180,14 +3951,11 @@ export default function App() {
             >
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: g.stage.color }}>
                 {g.stage.label}
-                {(g.era || g.eraSpan) && (
-                  <span style={{ fontSize: 13, fontWeight: 700, opacity: 0.75 }}>
-                    {" / "}{g.era ? g.era.label : g.eraSpan}
-                  </span>
-                )}
               </h2>
               <span style={{ fontFamily: mono, fontSize: 12, color: "#6b7280" }}>
-                {g.items[0].y}–{g.items[g.items.length - 1].y}
+                {g.rangeFrom != null
+                  ? `${g.rangeFrom}–${g.rangeTo}`
+                  : `${g.items[0].y}–${g.items[g.items.length - 1].y}`}
               </span>
               <span style={{ flex: 1 }} />
               <span style={{ fontFamily: mono, fontSize: 11.5, color: "#8a8f98" }}>
@@ -3200,6 +3968,222 @@ export default function App() {
             {!stageClosed && (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {g.items.map((ev, i) => {
+                const backgroundEra = backgroundEraOf(ev.y);
+                const previousBackgroundEra =
+                  i > 0
+                    ? backgroundEraOf(g.items[i - 1].y)
+                    : null;
+
+                const showBackgroundHeading =
+                  backgroundEra &&
+                  (
+                    i === 0 ||
+                    previousBackgroundEra?.key !== backgroundEra.key
+                  );
+
+                const backgroundHeading =
+                  showBackgroundHeading ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                        padding: "7px 10px 7px 58px",
+                        borderTop: "2px solid #758395",
+                        borderBottom: "1px solid #d3dae2",
+                        background:
+                          "linear-gradient(90deg, #e9eef3 0%, #f7f8fa 80%)",
+                        color: "#3f4b59",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          padding: "2px 7px",
+                          borderRadius: 999,
+                          background: "#748294",
+                          color: "#fff",
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          letterSpacing: "0.05em",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        背景史
+                      </span>
+
+                      <strong
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: "#384553",
+                        }}
+                      >
+                        {backgroundEra.label}
+                      </strong>
+
+                      <span
+                        style={{
+                          fontFamily: mono,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "#78838f",
+                        }}
+                      >
+                        {backgroundEra.from}–
+                        {Number.isFinite(backgroundEra.to)
+                          ? backgroundEra.to
+                          : ""}
+                      </span>
+                    </div>
+                  ) : null;
+
+                const japaneseEra = japaneseEraOf(ev.y);
+                const previousJapaneseEra =
+                  i > 0
+                    ? japaneseEraOf(g.items[i - 1].y)
+                    : null;
+
+                const showJapaneseEraHeading =
+                  japaneseEra &&
+                  (
+                    i === 0 ||
+                    previousJapaneseEra?.key !== japaneseEra.key
+                  );
+
+                const japaneseEraHeading =
+                  showJapaneseEraHeading ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                        padding: "6px 10px 6px 58px",
+                        borderTop: "2px solid #957782",
+                        borderBottom: "1px solid #e0d4d9",
+                        background:
+                          "linear-gradient(90deg, #f2e9ed 0%, #faf8f9 80%)",
+                        color: "#56434a",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          padding: "2px 7px",
+                          borderRadius: 999,
+                          background: "#91717c",
+                          color: "#fff",
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          letterSpacing: "0.05em",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        元号
+                      </span>
+
+                      <strong
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: "#503d44",
+                        }}
+                      >
+                        {japaneseEra.label}
+                      </strong>
+
+                      <span
+                        style={{
+                          fontFamily: mono,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "#89737b",
+                        }}
+                      >
+                        {japaneseEra.from}–
+                        {Number.isFinite(japaneseEra.to)
+                          ? japaneseEra.to
+                          : ""}
+                      </span>
+                    </div>
+                  ) : null;
+
+                const halfCenturyMarker =
+                  halfCenturyMarkerOf(ev.y);
+
+                const previousHalfCenturyMarker =
+                  i > 0
+                    ? halfCenturyMarkerOf(g.items[i - 1].y)
+                    : null;
+
+                const showHalfCenturyHeading =
+                  halfCenturyMarker &&
+                  (
+                    i === 0 ||
+                    previousHalfCenturyMarker?.key !== halfCenturyMarker.key
+                  );
+
+                const halfCenturyHeading =
+                  showHalfCenturyHeading ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        flexWrap: "wrap",
+                        padding: "6px 10px 6px 58px",
+                        borderTop: "2px solid #8d949e",
+                        borderBottom: "1px solid #dadde2",
+                        background:
+                          "linear-gradient(90deg, #eff1f4 0%, #fafafa 80%)",
+                        color: "#555e69",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          padding: "2px 7px",
+                          borderRadius: 999,
+                          background: "#8d949e",
+                          color: "#fff",
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          letterSpacing: "0.05em",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        世紀
+                      </span>
+
+                      <strong
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: "#4f5863",
+                        }}
+                      >
+                        {halfCenturyMarker.label}
+                      </strong>
+
+                      <span
+                        style={{
+                          fontFamily: mono,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: "#808892",
+                        }}
+                      >
+                        {halfCenturyMarker.from}–
+                        {halfCenturyMarker.to}
+                      </span>
+                    </div>
+                  ) : null;
+
                 if (ev.cat === "me") {
                   const id = eid(ev);
                   const isOpen = open.has(id);
@@ -3209,6 +4193,9 @@ export default function App() {
                       id={`ev-${id}`}
                       style={{ borderBottom: "1px solid #ececea", background: "#f2faf6" }}
                     >
+                      {backgroundHeading}
+                      {halfCenturyHeading}
+                      {japaneseEraHeading}
                       <button
                         onClick={() => toggle(id)}
                         aria-expanded={isOpen}
@@ -3330,6 +4317,9 @@ export default function App() {
                 );
                 return (
                   <li key={i} id={`ev-${id}`} style={{ borderBottom: "1px solid #ececea" }}>
+                    {backgroundHeading}
+                    {halfCenturyHeading}
+                    {japaneseEraHeading}
                     <button
                       onClick={() => toggle(id)}
                       aria-expanded={isOpen}
@@ -4821,9 +5811,11 @@ export default function App() {
               ? `・${graduateY}年 大学院（${GRADUATE_TYPES[graduateType]?.label}）`
               : ""}
             {adultY
-              ? `・社会人${adultY}年〜`
-              : `・社会人${grouped.adultYear}年〜（自動）`}
-            {retirementY ? `・自由人${retirementY}年〜` : ""}
+              ? `・自由期間${adultY}年〜`
+              : `・自由期間${grouped.adultYear}年〜（自動）`}
+            {adultPeriodsEnabled
+              ? `・社会人区分${adultPeriods.length}件`
+              : ""}
           </span>
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: 11, color: "#8a8f98" }}>{setupOpen ? "畳む ▼" : "変更する ▶"}</span>
@@ -4867,7 +5859,7 @@ export default function App() {
           />
         </div>
 
-        {/* 大学等・大学院・社会人・退職の境界年 */}
+        {/* 大学等・大学院・自由期間の境界年 */}
         <div
           style={{
             display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap",
@@ -4946,7 +5938,7 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
-            <label style={{ fontSize: 13, fontWeight: 700 }}>社会人になった年（西暦）</label>
+            <label style={{ fontSize: 13, fontWeight: 700 }}>自由期間の開始年（西暦）</label>
             <input
               type="number" inputMode="numeric" min="1930" max="2100" placeholder={`自動: ${grouped.adultYear}`}
               value={adultY}
@@ -4955,7 +5947,7 @@ export default function App() {
                 fontFamily: mono, fontSize: 14, width: 84, padding: "7px 8px",
                 borderRadius: 8, border: "1px solid #d5d8dd",
               }}
-              aria-label="社会人になった年（西暦）"
+              aria-label="自由期間の開始年（西暦）"
             />
             {adultY !== "" && (
               <button onClick={() => setAdultY("")} style={resetBtnStyle}>
@@ -4968,26 +5960,260 @@ export default function App() {
               </span>
             )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
-            <label style={{ fontSize: 13, fontWeight: 700 }}>定年退職した年（西暦）</label>
-            <input
-              type="number" inputMode="numeric" min="1930" max="2100" placeholder="例: 2019"
-              value={retirementY}
-              onChange={(e) => setRetirementY(e.target.value)}
+
+          <div
+            style={{
+              width: "100%",
+              paddingTop: 10,
+              borderTop: "1px dashed #d9dde2",
+            }}
+          >
+            <label
               style={{
-                fontFamily: mono, fontSize: 14, width: 84, padding: "7px 8px",
-                borderRadius: 8, border: "1px solid #d5d8dd",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 800,
+                cursor: "pointer",
+                color: "#4b5563",
               }}
-              aria-label="定年退職した年（西暦）"
-            />
-            {retirementY !== "" && (
-              <button onClick={() => setRetirementY("")} style={resetBtnStyle}>
-                未設定に戻す
-              </button>
+            >
+              <input
+                type="checkbox"
+                checked={adultPeriodsEnabled}
+                onChange={(e) => {
+                  setAdultPeriodsEnabled(e.target.checked);
+                  setAdultPeriodStatus("");
+                }}
+                style={{ accentColor: "#37414f" }}
+              />
+              成人後の期間を分割する
+            </label>
+
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 11,
+                lineHeight: 1.7,
+                color: "#8a8f98",
+              }}
+            >
+              必要な場合だけ使います。勤務地、勤務先、職階、役割など、
+              自分に合う名称を自由に付けられます。
+            </div>
+
+            {adultPeriodsEnabled && (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: 10,
+                  border: "1px solid #dce0e5",
+                  borderRadius: 9,
+                  background: "#fafbfc",
+                }}
+              >
+                {adultPeriods.length === 0 && (
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      color: "#7b828c",
+                      marginBottom: 8,
+                    }}
+                  >
+                    まだ分割されていません。「＋期間を追加」から始めてください。
+                  </div>
+                )}
+
+                {adultPeriods.map((period, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      flexWrap: "wrap",
+                      padding: "6px 0",
+                      borderBottom:
+                        index < adultPeriods.length - 1
+                          ? "1px solid #eceef1"
+                          : "none",
+                    }}
+                  >
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1930"
+                      max="2100"
+                      value={period.start}
+                      onChange={(e) =>
+                        updateAdultPeriod(
+                          index,
+                          "start",
+                          e.target.value
+                        )
+                      }
+                      placeholder="開始年"
+                      aria-label={`${index + 1}番目の社会人期間の開始年`}
+                      style={{
+                        fontFamily: mono,
+                        fontSize: 12,
+                        width: 74,
+                        padding: "6px 7px",
+                        borderRadius: 7,
+                        border: "1px solid #cfd3d8",
+                      }}
+                    />
+
+                    <span
+                      style={{
+                        fontSize: 11.5,
+                        color: "#8a8f98",
+                      }}
+                    >
+                      ～
+                    </span>
+
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1930"
+                      max="2100"
+                      value={period.end}
+                      onChange={(e) =>
+                        updateAdultPeriod(
+                          index,
+                          "end",
+                          e.target.value
+                        )
+                      }
+                      placeholder="終了年"
+                      aria-label={`${index + 1}番目の社会人期間の終了年`}
+                      style={{
+                        fontFamily: mono,
+                        fontSize: 12,
+                        width: 74,
+                        padding: "6px 7px",
+                        borderRadius: 7,
+                        border: "1px solid #cfd3d8",
+                      }}
+                    />
+
+                    <input
+                      type="text"
+                      value={period.label}
+                      onChange={(e) =>
+                        updateAdultPeriod(
+                          index,
+                          "label",
+                          e.target.value
+                        )
+                      }
+                      placeholder="例：奈良勤務、管理職、大学勤務"
+                      aria-label={`${index + 1}番目の社会人期間の名称`}
+                      style={{
+                        flex: "1 1 190px",
+                        minWidth: 160,
+                        fontFamily: font,
+                        fontSize: 12,
+                        padding: "6px 8px",
+                        borderRadius: 7,
+                        border: "1px solid #cfd3d8",
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => removeAdultPeriod(index)}
+                      style={{
+                        ...miniBtn,
+                        color: "#8b4a35",
+                        border: "1px solid #d6b3a5",
+                        background: "#fff8f5",
+                      }}
+                    >
+                      削除
+                    </button>
+                  </div>
+                ))}
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    marginTop: 10,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={addAdultPeriod}
+                    style={{
+                      ...miniBtn,
+                      fontWeight: 800,
+                      background: "#eef1f5",
+                      border: "1px solid #aab2bd",
+                      color: "#4b5563",
+                    }}
+                  >
+                    ＋期間を追加
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={exportAdultPeriodsFile}
+                    style={{
+                      ...miniBtn,
+                      fontWeight: 800,
+                      background: "#f0f8f2",
+                      border: "1px solid #bed8c5",
+                      color: "#4b7356",
+                    }}
+                  >
+                    期間設定をファイルに保存
+                  </button>
+                </div>
+
+                {grouped.adultPeriodErrors.length > 0 && (
+                  <div
+                    role="alert"
+                    style={{
+                      marginTop: 9,
+                      padding: "7px 9px",
+                      borderRadius: 7,
+                      background: "#fff3f1",
+                      color: "#a13d31",
+                      fontSize: 11,
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    {grouped.adultPeriodErrors.map(
+                      (error, index) => (
+                        <div key={index}>{error}</div>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {adultPeriodStatus && (
+                  <div
+                    role="status"
+                    style={{
+                      marginTop: 8,
+                      fontSize: 11,
+                      lineHeight: 1.6,
+                      color: "#65706f",
+                    }}
+                  >
+                    {adultPeriodStatus}
+                  </div>
+                )}
+              </div>
             )}
           </div>
+
           <div style={{ fontSize: 11, color: "#8a8f98", width: "100%", marginTop: -6, lineHeight: 1.7 }}>
-            入力した境界年を優先します。社会人年が空欄なら、大学等・大学院の標準年数から自動計算します。短大・専門は、次の境界年が入学3年後なら3年、それ以外は2年を標準とします。
+            入力した境界年を優先します。自由期間の開始年が空欄なら、大学等・大学院の標準年数から自動計算します。以後は必要に応じて自由に期間を分割でき、最後の期間は終了年を空欄にすると現在まで続きます。
           </div>
           {grouped.warnings.length > 0 && (
             <div
@@ -5033,7 +6259,7 @@ export default function App() {
 
           <div style={{ marginTop: 8 }}>
             公開された歴史的出来事を、生年・学齢期・人生段階に重ねて表示するインタラクティブ年表です。
-            学齢は誕生年と誕生月から概算し、大学等・大学院・社会人・退職年を指定すると人生段階を再計算します。
+            学齢は誕生年と誕生月から概算し、大学等・大学院・自由期間の開始年を指定すると人生段階を再計算します。自由期間は必要に応じて任意に分割できます。
           </div>
 
           {DOWNLOAD_URL && (

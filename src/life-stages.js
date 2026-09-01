@@ -1,7 +1,7 @@
 export const HIGHER_ED_TYPES = {
   university: {
     label: "大学・4年",
-    stageLabel: "大学生",
+    stageLabel: "大学",
     years: 4,
     gradePrefix: "大",
   },
@@ -20,7 +20,7 @@ export const HIGHER_ED_TYPES = {
   },
   medical: {
     label: "医歯薬獣医・6年",
-    stageLabel: "大学生（6年制）",
+    stageLabel: "大学（6年制）",
     years: 6,
     gradePrefix: "大",
   },
@@ -217,21 +217,21 @@ export function buildLifeModel({
     warnings.push("大学院に入学した年は、大学等の入学年より後にしてください。");
   }
   if (adultYear !== "" && explicitAdult == null) {
-    warnings.push("社会人になった年を1930〜2100年で指定してください。");
+    warnings.push("自由期間の開始年を1930〜2100年で指定してください。");
   }
   if (
     explicitAdult != null &&
     higherStart != null &&
     explicitAdult <= higherStart
   ) {
-    warnings.push("社会人になった年が大学等の入学年以前のため、大学等の期間は表示しません。");
+    warnings.push("自由期間の開始年が大学等の入学年以前のため、大学等の期間は表示しません。");
   }
   if (
     explicitAdult != null &&
     graduateStart != null &&
     explicitAdult <= graduateStart
   ) {
-    warnings.push("社会人になった年が大学院の入学年以前のため、大学院の期間は表示しません。");
+    warnings.push("自由期間の開始年が大学院の入学年以前のため、大学院の期間は表示しません。");
   }
 
   const usableGraduateStart =
@@ -266,15 +266,20 @@ export function buildLifeModel({
     requestedRetirement < resolvedAdultYear
   ) {
     warnings.push("定年退職年は社会人になった年以後にしてください。");
-  } else if (retirementYear !== "" && requestedRetirement == null) {
+  } else if (
+    retirementYear != null &&
+    retirementYear !== "" &&
+    requestedRetirement == null
+  ) {
     warnings.push("定年退職年を1930〜2100年で指定してください。");
   }
 
   let stages = [
-    stage("infant", "幼少期", birth, cohortBirth + 6, "#b0771e", "#fdf3e0"),
-    stage("elem", "小学生", cohortBirth + 7, cohortBirth + 12, "#c2452d", "#fdeae5"),
-    stage("jhs", "中学生", cohortBirth + 13, cohortBirth + 15, "#1f7a4d", "#e6f5ec"),
-    stage("hs", "高校生", cohortBirth + 16, cohortBirth + 18, "#1e5fa8", "#e7f0fb"),
+    stage("infant", "幼児期", birth, cohortBirth + 4, "#b0771e", "#fdf3e0"),
+    stage("kindergarten", "幼稚園", cohortBirth + 5, cohortBirth + 6, "#b87835", "#fbefdf"),
+    stage("elem", "小学校", cohortBirth + 7, cohortBirth + 12, "#c2452d", "#fdeae5"),
+    stage("jhs", "中学校", cohortBirth + 13, cohortBirth + 15, "#1f7a4d", "#e6f5ec"),
+    stage("hs", "高校", cohortBirth + 16, cohortBirth + 18, "#1e5fa8", "#e7f0fb"),
   ];
 
   if (higherStart != null) {
@@ -327,12 +332,12 @@ export function buildLifeModel({
 
   stages = truncateBefore(stages, resolvedAdultYear);
   const educationEnd = stages.at(-1)?.to ?? birth - 1;
-  addGap(stages, educationEnd + 1, resolvedAdultYear - 1, "社会人になる前");
+  addGap(stages, educationEnd + 1, resolvedAdultYear - 1, "次の段階に進む前");
   addStage(
     stages,
     stage(
       "adult",
-      "社会人",
+      "成人期",
       resolvedAdultYear,
       retirement == null ? Infinity : retirement - 1,
       "#37414f",
