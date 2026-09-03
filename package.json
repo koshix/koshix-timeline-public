@@ -1,21 +1,30 @@
 {
   "name": "koshix-timeline",
   "private": true,
-  "version": "2.1.1",
+  "version": "2.2.0",
   "type": "module",
   "scripts": {
     "build:events": "node scripts/build-events.mjs",
-    "predev": "npm run build:events && npm run build:private && npm run test:life-stages && npm run test:adult-periods",
+    "predev": "npm run lint && npm run build:events && npm run build:private && npm run test:life-stages && npm run test:adult-periods && npm run test:life-settings && npm run test:event-customizations && npm run test:event-customizations-tsv && npm run test:education-history && npm run test:search-query && npm run test:timeline-eras && npm run test:event-links",
     "dev": "vite",
-    "prebuild": "npm run build:events && npm run build:private && npm run test:life-stages && npm run test:adult-periods",
+    "prebuild": "npm run lint && npm run build:events && npm run build:private && npm run test:life-stages && npm run test:adult-periods && npm run test:life-settings && npm run test:event-customizations && npm run test:event-customizations-tsv && npm run test:education-history && npm run test:search-query && npm run test:timeline-eras && npm run test:event-links",
     "build": "vite build && node scripts/remove-private-build-data.mjs && node scripts/copy-legal-files.mjs",
     "preview": "vite preview",
+    "audit:code": "node scripts/audit-codebase.mjs",
+    "lint": "eslint src scripts vite.config.js",
     "add:event": "node scripts/add-event.mjs",
     "build:private": "node scripts/build-private-events.mjs",
     "test:life-stages": "node scripts/test-life-stages.mjs",
+    "test:adult-periods": "node scripts/test-adult-periods.mjs",
+    "test:life-settings": "node scripts/test-life-settings.mjs",
+    "test:event-customizations": "node scripts/test-event-customizations.mjs",
+    "test:event-customizations-tsv": "node scripts/test-event-customizations-tsv.mjs",
+    "test:education-history": "node scripts/test-education-history.mjs",
+    "test:search-query": "node scripts/test-search-query.mjs",
+    "test:timeline-eras": "node scripts/test-timeline-eras.mjs",
+    "test:event-links": "node scripts/test-event-links.mjs",
     "add:event:interactive": "node scripts/add-event-interactive.mjs",
-    "build:starter": "npm run build && node scripts/build-starter.mjs",
-    "test:adult-periods": "node scripts/test-adult-periods.mjs"
+    "build:starter": "npm run build && node scripts/build-starter.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -23,6 +32,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^10.9.1",
+    "globals": "^16.5.0",
     "vite": "^6.4.3"
   }
 }

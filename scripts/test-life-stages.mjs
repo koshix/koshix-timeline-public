@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  GRADUATE_TYPES,
   buildLifeModel,
   migrateEducationSettings,
 } from "../src/life-stages.js";
@@ -9,16 +10,24 @@ function model(overrides = {}) {
   return buildLifeModel({
     birth: 1953,
     month: 4,
-    higherEdYear: "",
-    higherEdType: "university",
-    graduateYear: "",
-    graduateType: "masters",
+    higherEducationHistory: [],
+    graduateEducationHistory: [],
     adultYear: "",
     retirementYear: "",
     ...overrides,
   });
 }
 
+// 大学院の公開選択肢は「修士・専門職・博士」の3つだけ。
+{
+  assert.deepEqual(Object.keys(GRADUATE_TYPES), [
+    "masters",
+    "professional",
+    "doctorate",
+  ]);
+}
+
+// 基本の学齢区分。
 {
   const life = model();
 
@@ -30,12 +39,65 @@ function model(overrides = {}) {
   assert.equal(life.stageOf(1969).label, "高校");
 }
 
+// 幼保歴が未設定なら従来どおり幼稚園2年間を表示する。
+{
+  const life = model();
+
+  assert.equal(life.stageOf(1958).label, "幼稚園");
+  assert.equal(life.stageOf(1959).label, "幼稚園");
+  assert.equal(life.stageOf(1960).label, "小学校");
+}
+
+// 明示的に幼保歴を空配列へ戻した場合は幼稚園を表示しない。
 {
   const life = model({
-    higherEdYear: "1972",
-    graduateYear: "1976",
-    graduateType: "mastersDoctorate",
-    adultYear: "1981",
+    earlyChildhoodHistory: [],
+  });
+
+  assert.equal(life.stageOf(1958).label, "幼児期");
+  assert.equal(life.stageOf(1959).label, "幼児期");
+  assert.equal(life.stageOf(1960).label, "小学校");
+}
+
+// 保育所から幼稚園への移行を複数行で表せる。
+{
+  const life = model({
+    earlyChildhoodHistory: [
+      { start: "1955", years: "3", type: "nursery" },
+      { start: "1958", years: "2", type: "kindergarten" },
+    ],
+  });
+
+  assert.equal(life.stageOf(1955).label, "保育所");
+  assert.equal(life.stageOf(1957).label, "保育所");
+  assert.equal(life.stageOf(1958).label, "幼稚園");
+  assert.equal(life.stageOf(1959).label, "幼稚園");
+  assert.equal(life.stageOf(1960).label, "小学校");
+}
+
+// こども園も独立した幼保区分として扱う。
+{
+  const life = model({
+    earlyChildhoodHistory: [
+      { start: "1957", years: "3", type: "kodomoen" },
+    ],
+  });
+
+  assert.equal(life.stageOf(1957).label, "こども園");
+  assert.equal(life.stageOf(1959).label, "こども園");
+  assert.equal(life.stageOf(1960).label, "小学校");
+}
+
+// 大学4年＋修士2年＋博士3年を別行で表す。
+{
+  const life = model({
+    higherEducationHistory: [
+      { start: "1972", years: "4", type: "university" },
+    ],
+    graduateEducationHistory: [
+      { start: "1976", years: "2", type: "masters" },
+      { start: "1978", years: "3", type: "doctorate" },
+    ],
     retirementYear: "2019",
   });
 
@@ -43,69 +105,130 @@ function model(overrides = {}) {
   assert.equal(life.gradeLabel(1975), "大4");
   assert.equal(life.gradeLabel(1976), "修1");
   assert.equal(life.gradeLabel(1978), "博1");
+  assert.equal(life.adultYear, 1981);
   assert.equal(life.stageOf(1981).label, "成人期");
   assert.equal(life.stageOf(2019).label, "自由人");
 }
 
+// 高専から大学への編入を2行で表す。
 {
   const life = model({
-    higherEdYear: "2000",
-    higherEdType: "vocational",
-    adultYear: "2003",
-  });
-
-  assert.equal(life.gradeLabel(2002), "専3");
-  assert.equal(life.stageOf(2003).label, "成人期");
-}
-
-{
-  const life = model({
-    higherEdYear: "2000",
-    higherEdType: "vocational",
-  });
-
-  assert.equal(life.adultYear, 2002);
-  assert.equal(life.stageOf(2002).label, "成人期");
-}
-
-{
-  const life = model({
-    higherEdYear: "1969",
-    higherEdType: "kosen",
+    higherEducationHistory: [
+      { start: "1969", years: "5", type: "kosen" },
+      { start: "1974", years: "2", type: "university" },
+    ],
   });
 
   assert.equal(life.gradeLabel(1969), "高専1");
   assert.equal(life.gradeLabel(1973), "高専5");
-  assert.equal(life.adultYear, 1974);
+  assert.equal(life.stageOf(1974).label, "大学");
+  assert.equal(life.gradeLabel(1975), "大2");
+  assert.equal(life.adultYear, 1976);
 }
 
+// 大学等を複数行にして複数の課程を連続して表せる。
 {
   const life = model({
-    higherEdYear: "1972",
-    higherEdType: "medical",
+    higherEducationHistory: [
+      { start: "1972", years: "4", type: "university" },
+      { start: "1976", years: "2", type: "university" },
+    ],
+  });
+
+  assert.equal(life.gradeLabel(1975), "大4");
+  assert.equal(life.gradeLabel(1976), "大1");
+  assert.equal(life.gradeLabel(1977), "大2");
+  assert.equal(life.adultYear, 1978);
+}
+
+// 専門・短大も修学年数を固定せず入力値で扱う。
+{
+  const vocational = model({
+    higherEducationHistory: [
+      { start: "1972", years: "3", type: "vocational" },
+    ],
+  });
+  assert.equal(vocational.stageOf(1972).label, "専門");
+  assert.equal(vocational.gradeLabel(1974), "専3");
+  assert.equal(vocational.adultYear, 1975);
+
+  const juniorCollege = model({
+    higherEducationHistory: [
+      { start: "1972", years: "2", type: "juniorCollege" },
+    ],
+  });
+  assert.equal(juniorCollege.stageOf(1972).label, "短大");
+  assert.equal(juniorCollege.gradeLabel(1973), "短2");
+}
+
+// 6年制大学も「大学＋修学年数6年」で表現できる。
+{
+  const life = model({
+    higherEducationHistory: [
+      { start: "1972", years: "6", type: "university" },
+    ],
   });
 
   assert.equal(life.gradeLabel(1977), "大6");
   assert.equal(life.adultYear, 1978);
 }
 
+// 専門職大学院。
 {
   const life = model({
-    higherEdYear: "1972",
-    graduateYear: "1975",
-    graduateType: "masters",
+    higherEducationHistory: [
+      { start: "1972", years: "4", type: "university" },
+    ],
+    graduateEducationHistory: [
+      { start: "1976", years: "2", type: "professional" },
+    ],
   });
 
-  assert.equal(life.gradeLabel(1974), "大3");
-  assert.equal(life.gradeLabel(1975), "修1");
-  assert.equal(life.adultYear, 1977);
+  assert.equal(life.stageOf(1976).label, "大学院（専門職）");
+  assert.equal(life.gradeLabel(1976), "専職1");
+  assert.equal(life.adultYear, 1978);
 }
 
+// 大学院も複数行にでき、修士と博士を独立して設定できる。
 {
   const life = model({
-    higherEdYear: "1972",
-    graduateYear: "1978",
-    graduateType: "masters",
+    higherEducationHistory: [
+      { start: "1972", years: "4", type: "university" },
+    ],
+    graduateEducationHistory: [
+      { start: "1976", years: "2", type: "masters" },
+      { start: "1978", years: "3", type: "doctorate" },
+    ],
+  });
+
+  assert.equal(life.gradeLabel(1976), "修1");
+  assert.equal(life.gradeLabel(1978), "博1");
+  assert.equal(life.gradeLabel(1980), "博3");
+  assert.equal(life.adultYear, 1981);
+}
+
+// v2.1.1までの内部値「修士＋博士」は互換用として読み込める。
+{
+  const life = model({
+    graduateEducationHistory: [
+      { start: "1976", years: "5", type: "mastersDoctorate" },
+    ],
+  });
+
+  assert.equal(life.gradeLabel(1976), "修1");
+  assert.equal(life.gradeLabel(1978), "博1");
+  assert.equal(life.adultYear, 1981);
+}
+
+// 入学までに空白があれば勝手に前の課程を延長しない。
+{
+  const life = model({
+    higherEducationHistory: [
+      { start: "1972", years: "4", type: "university" },
+    ],
+    graduateEducationHistory: [
+      { start: "1978", years: "2", type: "masters" },
+    ],
     adultYear: "1982",
   });
 
@@ -113,18 +236,34 @@ function model(overrides = {}) {
   assert.equal(life.stageOf(1980).label, "次の段階に進む前");
 }
 
+// 重複期間は警告し、後から始まる行を優先する。
 {
   const life = model({
-    higherEdYear: "1972",
-    graduateYear: "1976",
-    graduateType: "mastersDoctorate",
-    adultYear: "1979",
+    higherEducationHistory: [
+      { start: "1969", years: "5", type: "kosen" },
+      { start: "1973", years: "2", type: "university" },
+    ],
   });
 
-  assert.equal(life.gradeLabel(1978), "博1");
-  assert.equal(life.stageOf(1979).label, "成人期");
+  assert.ok(life.warnings.some((warning) => warning.includes("重なっています")));
+  assert.equal(life.stageOf(1972).label, "高専");
+  assert.equal(life.stageOf(1973).label, "大学");
 }
 
+// 入学年と修学年数の片方だけでは期間として採用しない。
+{
+  const life = model({
+    higherEducationHistory: [
+      { start: "1972", years: "", type: "university" },
+    ],
+  });
+
+  assert.ok(life.warnings.some((warning) => warning.includes("両方指定")));
+  assert.equal(life.adultYear, 1972);
+}
+
+// 旧path設定から新しい配列形式へ移行する。
+// life-stages側では旧内部値を互換用に保持し、ブラウザUI初期化時に2行へ展開する。
 {
   const migrated = migrateEducationSettings(
     {
@@ -135,35 +274,50 @@ function model(overrides = {}) {
       retirementY: "2019",
     },
     {
-      higherEdYear: "",
-      higherEdType: "university",
-      graduateYear: "",
-      graduateType: "masters",
-      adultYear: "",
-      retirementYear: "",
+      path: "univ",
     },
     1953,
     4
   );
 
-  assert.deepEqual(migrated, {
-    higherEdYear: "1973",
-    higherEdType: "university",
-    graduateYear: "1977",
-    graduateType: "mastersDoctorate",
-    adultYear: "",
-    retirementYear: "2019",
-  });
+  assert.deepEqual(migrated.higherEducationHistory, [
+    { start: "1973", years: "4", type: "university" },
+  ]);
+  assert.deepEqual(migrated.graduateEducationHistory, [
+    { start: "1977", years: "2", type: "masters" },
+    { start: "1979", years: "3", type: "doctorate" },
+  ]);
+  assert.equal(migrated.retirementYear, "2019");
 }
 
+// v2.1.1の配列形式に残っている「修士＋博士」も2行へ展開する。
+{
+  const migrated = migrateEducationSettings(
+    {
+      graduateEducationHistory: [
+        { start: "1976", years: "5", type: "mastersDoctorate" },
+      ],
+    },
+    {},
+    1953,
+    4
+  );
+
+  assert.deepEqual(migrated.graduateEducationHistory, [
+    { start: "1976", years: "2", type: "masters" },
+    { start: "1978", years: "3", type: "doctorate" },
+  ]);
+}
+
+// 直前版の単一設定からも自動移行する。
 {
   const migrated = migrateEducationSettings(
     {
       higherEdYear: "1972",
-      higherEdType: "university",
-      graduateYear: "1976",
+      higherEdType: "medical",
+      graduateYear: "1978",
       graduateType: "masters",
-      adultYear: "1978",
+      adultYear: "1980",
       retirementYear: "2019",
     },
     {},
@@ -171,26 +325,35 @@ function model(overrides = {}) {
     4
   );
 
-  assert.equal(migrated.adultYear, "1978");
-  assert.equal(migrated.retirementYear, "2019");
+  assert.deepEqual(migrated.higherEducationHistory, [
+    { start: "1972", years: "6", type: "university" },
+  ]);
+  assert.deepEqual(migrated.graduateEducationHistory, [
+    { start: "1978", years: "2", type: "masters" },
+  ]);
+  assert.equal(migrated.adultYear, "1980");
 }
 
+// 明示的に空配列へ戻した場合、古い単一設定が残っていても復活させない。
 {
   const migrated = migrateEducationSettings(
-    {},
     {
-      path: "kosen",
-      roninYears: 0,
-      ryunenYears: 0,
-      adultYear: "",
-      retirementYear: "",
+      earlyChildhoodHistory: [],
+      higherEducationHistory: [],
+      graduateEducationHistory: [],
+      higherEdYear: "1972",
+      graduateYear: "1976",
     },
+    {},
     1953,
     4
   );
 
-  assert.equal(migrated.higherEdYear, "1969");
-  assert.equal(migrated.higherEdType, "kosen");
+  assert.deepEqual(migrated.earlyChildhoodHistory, []);
+  assert.deepEqual(migrated.higherEducationHistory, []);
+  assert.deepEqual(migrated.graduateEducationHistory, []);
+  assert.equal(migrated.higherEdYear, "");
+  assert.equal(migrated.graduateYear, "");
 }
 
-console.log("OK: 人生段階の境界年と旧設定移行を検査しました");
+console.log("OK: 複数行の教育歴・人生段階・旧設定移行を検査しました");

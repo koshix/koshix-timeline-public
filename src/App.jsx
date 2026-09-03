@@ -31,10 +31,31 @@ import {
 } from "./life-stages";
 import {
   adultPeriodOf,
-  parseAdultPeriodsTsv,
-  serializeAdultPeriodsTsv,
   validateAdultPeriods,
 } from "./adult-periods";
+import {
+  mergeLifeSettings,
+  parseLifeSettingsTsv,
+  serializeLifeSettingsTsv,
+} from "./life-settings";
+import EducationHistoryEditor from "./EducationHistoryEditor";
+import {
+  matchesSearchExpression,
+  normalizeSearchText,
+  parseSearchExpression,
+} from "./search-query";
+import {
+  TIMELINE_START_YEAR,
+  backgroundEraOf,
+  halfCenturyMarkerOf,
+  japaneseEraOf,
+  preBirthPeriodsOf,
+} from "./timeline-eras";
+import {
+  eventId,
+  findEventByShareParam,
+} from "./event-links";
+import ShareBar from "./ShareBar";
 
 const CONFIG = loadConfig();
 const PROFILE_DEFAULTS = CONFIG.defaults || {};
@@ -159,107 +180,6 @@ const gradeBadgeStyle = (stage, age) => {
   return { background: tone.bg, color: tone.fg };
 };
 
-// ---- 共通の背景史。個人史とは独立した時間層として扱う ----
-const BACKGROUND_ERAS = [
-  { key: "scientific-revolution", from: 1601, to: 1687, label: "科学革命と近代世界の形成" },
-  { key: "enlightenment", from: 1688, to: 1788, label: "啓蒙と古典科学" },
-  { key: "revolution-industry", from: 1789, to: 1847, label: "革命と産業化" },
-  { key: "modern-science", from: 1848, to: 1900, label: "近代科学と産業社会" },
-  { key: "early-20c", from: 1901, to: 1913, label: "20世紀世界の成立" },
-  { key: "world-wars", from: 1914, to: 1945, label: "世界戦争と大衆社会" },
-  { key: "postwar", from: 1946, to: 1972, label: "戦後体制・冷戦・科学技術社会" },
-  { key: "information-coldwar", from: 1973, to: 1990, label: "情報化と後期冷戦" },
-  { key: "internet-global", from: 1991, to: 2007, label: "インターネットとグローバル化" },
-  { key: "smartphone-data", from: 2008, to: 2019, label: "スマートフォン・SNS・データ社会" },
-  { key: "ai-postpandemic", from: 2020, to: Infinity, label: "AI・パンデミック後の世界" },
-];
-
-const backgroundEraOf = (year) =>
-  BACKGROUND_ERAS.find(
-    (era) => year >= era.from && year <= era.to
-  ) ?? null;
-
-const TIMELINE_START_YEAR = 1601;
-
-// 出生前は世紀ごとの前半・後半に分けて、個別に開閉できるようにする。
-const preBirthPeriodsOf = (birthYear) => {
-  const endYear = Number(birthYear) - 1;
-
-  if (!Number.isFinite(endYear) || endYear < TIMELINE_START_YEAR) {
-    return [];
-  }
-
-  const periods = [];
-  const lastCentury = Math.floor((endYear - 1) / 100) + 1;
-
-  for (let century = 17; century <= lastCentury; century += 1) {
-    const centuryStart = (century - 1) * 100 + 1;
-
-    const halves = [
-      {
-        key: "first",
-        label: `${century}世紀前半`,
-        from: centuryStart,
-        to: centuryStart + 49,
-      },
-      {
-        key: "second",
-        label: `${century}世紀後半`,
-        from: centuryStart + 50,
-        to: centuryStart + 99,
-      },
-    ];
-
-    for (const half of halves) {
-      const from = Math.max(TIMELINE_START_YEAR, half.from);
-      const to = Math.min(endYear, half.to);
-
-      if (from <= to) {
-        periods.push({
-          key: `pre-${century}-${half.key}`,
-          label: half.label,
-          from,
-          to,
-        });
-      }
-    }
-  }
-
-  return periods;
-};
-
-// 日本の近現代は、背景史とは別の地層として元号も示す。
-// 年表本体が年単位なので、改元年を境界年として扱う。
-const JAPANESE_ERAS = [
-  { key: "meiji", label: "明治", from: 1868, to: 1911 },
-  { key: "taisho", label: "大正", from: 1912, to: 1925 },
-  { key: "showa", label: "昭和", from: 1926, to: 1988 },
-  { key: "heisei", label: "平成", from: 1989, to: 2018 },
-  { key: "reiwa", label: "令和", from: 2019, to: Infinity },
-];
-
-const japaneseEraOf = (year) =>
-  JAPANESE_ERAS.find(
-    (era) => year >= era.from && year <= era.to
-  ) ?? null;
-
-// 出生後も大きな世紀境界は補助地層として示す。
-// 現時点では21世紀前半が該当する。
-const HALF_CENTURY_MARKERS = [
-  {
-    key: "21c-first",
-    label: "21世紀前半",
-    from: 2001,
-    to: 2050,
-  },
-];
-
-const halfCenturyMarkerOf = (year) =>
-  HALF_CENTURY_MARKERS.find(
-    (period) => year >= period.from && year <= period.to
-  ) ?? null;
-
-
 function formatEventDate(value) {
   const [year, month, day] = String(value ?? "").split("-");
   if (!year) return "";
@@ -302,119 +222,6 @@ const SHARE_URL = (() => {
   const { origin, pathname } = window.location;
   return origin + pathname;
 })();
-
-// 項目の識別子。共有URLに載るのでASCIIのみ(全角カッコや空白が入ると、
-// 貼り付け先の自動リンク化で末尾が欠けてリンクが壊れる)
-// TSVに保存された id を永久IDとして使う。
-// idを持たない一時的な個人イベント等だけ従来方式でIDを生成する。
-const legacyEid = (e) => {
-  const s = `${e.y}-${e.t}`;
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
-  return `${e.y}-${h.toString(36)}`;
-};
-
-const eid = (e) => e.id || legacyEid(e);
-
-// ?e= の値から項目を探す。旧形式(年-タイトル)のリンクも救済する。
-// 旧形式は括弧や空白を含むため、貼り付け先で末尾が欠けたり全角に変換されることがあるので、
-// NFKC正規化して空白を落としたうえで前方一致も見る
-const norm = (s) => s.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
-const findByShareParam = (raw) => {
-  if (!raw) return null;
-  let dec = raw;
-  try { dec = decodeURIComponent(raw); } catch {}
-  const key = norm(dec);
-  return (
-    EVENTS.find((e) => eid(e) === dec) ||
-    EVENTS.find((e) => norm(`${e.y}-${e.t}`) === key) ||
-    EVENTS.find((e) => key.length > 6 && norm(`${e.y}-${e.t}`).startsWith(key)) ||
-    null
-  );
-};
-
-// Xの文字数計算に合わせた重み(全角2・半角1)。URLは長さに関わらず23として扱われる
-const weigh = (s) => [...s].reduce((n, c) => n + (/[\x00-\x7e]/.test(c) ? 1 : 2), 0);
-const clipTo = (s, budget) => {
-  if (weigh(s) <= budget) return s;
-  let out = "", w = 0;
-  for (const c of [...s]) {
-    const cw = /[\x00-\x7e]/.test(c) ? 1 : 2;
-    if (w + cw > budget - 2) break; // 末尾の「…」の分を残す
-    out += c;
-    w += cw;
-  }
-  return out.replace(/[、。]$/, "") + "…";
-};
-
-function ShareBar({ text, url = SHARE_URL, compact = false, small = false, color = "#37414f", note, labelOnly = false }) {
-  const [copiedAll, setCopiedAll] = useState(false);
-  const t = encodeURIComponent(text);
-  const u = encodeURIComponent(url);
-  const targets = [
-    ["X", `https://x.com/intent/post?text=${t}&url=${u}`],
-    ["Bluesky", `https://bsky.app/intent/compose?text=${encodeURIComponent(`${text} ${url}`)}`],
-    ...(compact
-      ? []
-      : [
-          ["Facebook", `https://www.facebook.com/sharer/sharer.php?u=${u}`],
-          ["LINE", `https://social-plugins.line.me/lineit/share?url=${u}&text=${t}`],
-        ]),
-  ];
-  // 解説つきの投稿文。280(Xの上限)からURL分23と本文を引いた残りに解説を収める
-  const head = text.replace(` ${HASHTAG}`, "");
-  const room = 280 - 23 - weigh(head) - weigh(HASHTAG) - 5; // 改行3つ分と余裕
-  const noteText = note ? `${head}\n\n${clipTo(note, Math.max(40, room))}\n${HASHTAG}` : "";
-  const fullText = note ? `${head}\n\n${note}\n${HASHTAG}` : "";
-  const copyTo = async (s, setter) => {
-    try {
-      await navigator.clipboard.writeText(s);
-      setter(true);
-      setTimeout(() => setter(false), 1600);
-    } catch {}
-  };
-  const base = {
-    fontSize: compact || small ? 11 : 11.5, fontWeight: 700, textDecoration: "none",
-    borderRadius: labelOnly ? 0 : 999,
-    padding: labelOnly ? "2px 3px" : (compact || small ? "3px 10px" : "4px 12px"),
-    border: labelOnly ? "none" : `1px solid ${color}44`,
-    background: labelOnly ? "transparent" : "#ffffffaa",
-    color,
-    cursor: "pointer", lineHeight: 1.6, fontFamily: "inherit",
-  };
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-        {note && <span style={{ fontSize: 10.5, color: "#9aa0a8", flexShrink: 0 }}>タイトルのみ</span>}
-        {targets.map(([label, href]) => (
-          <a key={label} href={href} target="_blank" rel="noopener noreferrer" style={base}>
-            {labelOnly ? (label === "LINE" ? "Line" : label) : `${label}で共有`}
-          </a>
-        ))}
-      </div>
-      {note && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-          <span style={{ fontSize: 10.5, color: "#9aa0a8", flexShrink: 0 }}>解説つき</span>
-          <a
-            href={`https://x.com/intent/post?text=${encodeURIComponent(noteText)}&url=${u}`}
-            target="_blank" rel="noopener noreferrer" style={base}
-          >
-            Xに投稿
-          </a>
-          <a
-            href={`https://bsky.app/intent/compose?text=${encodeURIComponent(`${noteText}\n${url}`)}`}
-            target="_blank" rel="noopener noreferrer" style={base}
-          >
-            Blueskyに投稿
-          </a>
-          <button onClick={() => copyTo(`${fullText}\n${url}`, setCopiedAll)} style={base}>
-            {copiedAll ? "コピーしました" : "解説を全文コピー"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 const CAT = {
   // 7大分類は虹色順。bg=選択時・年表、soft=通常時、border=枠線、fg=選択時文字。
@@ -463,101 +270,6 @@ const primaryCatOf = (e) =>
   );
 
 const catKey = (e) => primaryCatOf(e);
-
-// ---- 年表内検索 ----
-// NFKCで全角・半角差を吸収し、英字は大文字小文字を区別しない。
-const normalizeSearchText = (value) =>
-  String(value ?? "").normalize("NFKC").toLowerCase();
-
-// &&、||、丸括弧を使う論理検索。空白・読点・カンマは従来どおりANDとして扱う。
-// 優先順位は && > ||。丸括弧で明示的にまとまりを指定できる。
-const tokenizeSearchQuery = (value) => {
-  const input = normalizeSearchText(value)
-    .replace(/[、,]+/g, " ")
-    .replace(/&&/g, " && ")
-    .replace(/\|\|/g, " || ")
-    .replace(/\(/g, " ( ")
-    .replace(/\)/g, " ) ")
-    .trim();
-
-  if (!input) return [];
-
-  const raw = input.split(/\s+/).filter(Boolean);
-  const tokens = [];
-  const isOperandEnd = (token) =>
-    token && token !== "&&" && token !== "||" && token !== "(";
-  const isOperandStart = (token) =>
-    token && token !== "&&" && token !== "||" && token !== ")";
-
-  for (const token of raw) {
-    const prev = tokens.at(-1);
-    if (isOperandEnd(prev) && isOperandStart(token)) {
-      tokens.push("&&");
-    }
-    tokens.push(token);
-  }
-  return tokens;
-};
-
-const parseSearchExpression = (value) => {
-  const tokens = tokenizeSearchQuery(value);
-  if (!tokens.length) return { root: null, error: null };
-
-  let pos = 0;
-
-  const parsePrimary = () => {
-    const token = tokens[pos];
-    if (token === "(") {
-      pos += 1;
-      const node = parseOr();
-      if (tokens[pos] !== ")") throw new Error("missing )");
-      pos += 1;
-      return node;
-    }
-    if (!token || token === ")" || token === "&&" || token === "||") {
-      throw new Error("term expected");
-    }
-    pos += 1;
-    return { type: "term", value: token };
-  };
-
-  const parseAnd = () => {
-    let node = parsePrimary();
-    while (tokens[pos] === "&&") {
-      pos += 1;
-      node = { type: "and", left: node, right: parsePrimary() };
-    }
-    return node;
-  };
-
-  const parseOr = () => {
-    let node = parseAnd();
-    while (tokens[pos] === "||") {
-      pos += 1;
-      node = { type: "or", left: node, right: parseAnd() };
-    }
-    return node;
-  };
-
-  try {
-    const root = parseOr();
-    if (pos !== tokens.length) throw new Error("unexpected token");
-    return { root, error: null };
-  } catch {
-    return { root: null, error: "検索式を確認してください" };
-  }
-};
-
-const matchesSearchExpression = (node, haystack) => {
-  if (!node) return true;
-  if (node.type === "term") return haystack.includes(node.value);
-  if (node.type === "and") {
-    return matchesSearchExpression(node.left, haystack) &&
-      matchesSearchExpression(node.right, haystack);
-  }
-  return matchesSearchExpression(node.left, haystack) ||
-    matchesSearchExpression(node.right, haystack);
-};
 
 // ---- テーマの糸(年表に散らばった項目を、一本の流れとして自動再生する) ----
 // 新しい定義は永久ID { id } で参照する。
@@ -953,11 +665,11 @@ function Theater({ thread, gradeLabel, birth, tts, setTts, speed, setSpeed, onCl
   // 背景の左右に流す、同じころの別カテゴリーの項目(その糸に入っているものは除く)。
   // 何が同時に起きていた時代なのかを、読まなくても感じられるようにするための層
   const bgRows = useMemo(() => {
-    const inThread = new Set(evs.map(eid));
+    const inThread = new Set(evs.map(eventId));
     const year = evs[idx].y;
     let near = [];
     for (let win = 3; win <= 40 && near.length < 21; win += 3) {
-      near = EVENTS.filter((e) => Math.abs(e.y - year) <= win && !inThread.has(eid(e)));
+      near = EVENTS.filter((e) => Math.abs(e.y - year) <= win && !inThread.has(eventId(e)));
     }
     const rows = Array.from({ length: BG_ROWS }, () => []);
     near.forEach((e, i) => rows[i % BG_ROWS].push(e));
@@ -1054,7 +766,7 @@ function Theater({ thread, gradeLabel, birth, tts, setTts, speed, setSpeed, onCl
             const color = CAT[catKey(ev)]?.bg || "#6b7280";
             return (
               <div
-                key={eid(ev)}
+                key={eventId(ev)}
                 data-i={i}
                 onClick={() => go(i)}
                 style={{
@@ -1162,12 +874,14 @@ function Theater({ thread, gradeLabel, birth, tts, setTts, speed, setSpeed, onCl
 }
 
 // ---- 保存(ブラウザのみ。使えない環境では黙ってメモリ動作) ----
+const LIFE_SETTINGS_STORAGE_KEY = "sf-lifeline";
+
 const store = {
   load() {
-    try { return JSON.parse(window.localStorage.getItem("sf-lifeline") || "null"); } catch { return null; }
+    try { return JSON.parse(window.localStorage.getItem(LIFE_SETTINGS_STORAGE_KEY) || "null"); } catch { return null; }
   },
   save(data) {
-    try { window.localStorage.setItem("sf-lifeline", JSON.stringify(data)); } catch {}
+    try { window.localStorage.setItem(LIFE_SETTINGS_STORAGE_KEY, JSON.stringify(data)); } catch {}
   },
 };
 const SAVED = (typeof window !== "undefined" && store.load()) || {};
@@ -1183,6 +897,15 @@ const INITIAL_EDUCATION = migrateEducationSettings(
 export default function App() {
   const [birth, setBirth] = useState(INITIAL_BIRTH);
   const [month, setMonth] = useState(INITIAL_MONTH); // 0=未設定(任意入力)
+  const [earlyChildhoodHistory, setEarlyChildhoodHistory] = useState(
+    INITIAL_EDUCATION.earlyChildhoodHistory
+  );
+  const [higherEducationHistory, setHigherEducationHistory] = useState(
+    INITIAL_EDUCATION.higherEducationHistory
+  );
+  const [graduateEducationHistory, setGraduateEducationHistory] = useState(
+    INITIAL_EDUCATION.graduateEducationHistory
+  );
   const [higherEdY, setHigherEdY] = useState(
     INITIAL_EDUCATION.higherEdYear
   );
@@ -1212,7 +935,7 @@ export default function App() {
         }))
       : []
   );
-  const [adultPeriodStatus, setAdultPeriodStatus] = useState("");
+  const [lifeSettingsStatus, setLifeSettingsStatus] = useState("");
   const [myEvents, setMyEvents] = useState([]);
 
   const [eventCustomizations, setEventCustomizations] = useState(
@@ -1249,7 +972,7 @@ export default function App() {
   });
   const eventCustomizationFileInputRef = useRef(null);
   const personalFileInputRef = useRef(null);
-  const adultPeriodFileInputRef = useRef(null);
+  const lifeSettingsFileInputRef = useRef(null);
   // 大分類フィルタ。true が入っているカテゴリーだけを非表示にする
   const [catOff, setCatOff] = useState(SAVED.catOff ?? {});
   // 「作品」のうちSFタグを持つ項目だけに絞る補助フィルタ
@@ -1280,11 +1003,24 @@ export default function App() {
   // 年表内検索は一時的な表示条件として扱い、ブラウザ保存はしない。
   const [searchText, setSearchText] = useState("");
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  // 配列形式を正本とし、移行期間中の旧単一値は先頭行へ同期する。
+  useEffect(() => {
+    const firstHigher = higherEducationHistory[0] ?? null;
+    const firstGraduate = graduateEducationHistory[0] ?? null;
+
+    setHigherEdY(firstHigher?.start ?? "");
+    setHigherEdType(firstHigher?.type ?? "university");
+    setGraduateY(firstGraduate?.start ?? "");
+    setGraduateType(firstGraduate?.type ?? "masters");
+  }, [higherEducationHistory, graduateEducationHistory]);
 
   useEffect(() => {
     store.save({
       birth,
       month,
+      earlyChildhoodHistory,
+      higherEducationHistory,
+      graduateEducationHistory,
       higherEdYear: higherEdY,
       higherEdType,
       graduateYear: graduateY,
@@ -1300,7 +1036,7 @@ export default function App() {
       tts,
       speed,
     });
-  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, subOff, closedStages, setupOpen, tts, speed]);
+  }, [birth, month, earlyChildhoodHistory, higherEducationHistory, graduateEducationHistory, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, subOff, closedStages, setupOpen, tts, speed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2214,7 +1950,7 @@ export default function App() {
 
       setOpen((prev) => {
         const next = new Set(prev);
-        next.delete(eid(event));
+        next.delete(eventId(event));
         return next;
       });
 
@@ -2281,9 +2017,12 @@ export default function App() {
     const q = new URLSearchParams(window.location.search);
     const th = findThread(q.get("t"));
     if (th) setThread(th);
-    const ev = findByShareParam(q.get("e"));
+    const ev = findEventByShareParam(
+      EVENTS,
+      q.get("e")
+    );
     if (!ev) return;
-    const id = eid(ev);
+    const id = eventId(ev);
     setOpen((prev) => new Set(prev).add(id));
     setClosedStages(new Set()); // 共有リンクで来たときは帯を畳んだままにしない
     const timer = setTimeout(() => {
@@ -2329,6 +2068,9 @@ export default function App() {
     const life = buildLifeModel({
       birth,
       month,
+      earlyChildhoodHistory,
+      higherEducationHistory,
+      graduateEducationHistory,
       higherEdYear: higherEdY,
       higherEdType,
       graduateYear: graduateY,
@@ -2486,7 +2228,7 @@ export default function App() {
       myShown: visibleItems.filter((e) => e.cat === "me").length,
       searchError: searchExpression.error,
     };
-  }, [birth, month, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, myEvents, effectiveEvents, catOff, sfOnly, importanceMin, showMe, subOff, searchText, closedStages]);
+  }, [birth, month, earlyChildhoodHistory, higherEducationHistory, graduateEducationHistory, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, myEvents, effectiveEvents, catOff, sfOnly, importanceMin, showMe, subOff, searchText, closedStages]);
 
   const updateAdultPeriod = (index, key, value) => {
     setAdultPeriods((previous) =>
@@ -2496,7 +2238,7 @@ export default function App() {
           : period
       )
     );
-    setAdultPeriodStatus("");
+    setLifeSettingsStatus("");
   };
 
   const addAdultPeriod = () => {
@@ -2524,87 +2266,22 @@ export default function App() {
       ];
     });
 
-    setAdultPeriodStatus("");
+    setLifeSettingsStatus("");
   };
 
   const removeAdultPeriod = (index) => {
     setAdultPeriods((previous) =>
       previous.filter((_, i) => i !== index)
     );
-    setAdultPeriodStatus("");
+    setLifeSettingsStatus("");
   };
 
-  const importAdultPeriodsFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-
-    if (!file) return;
-
+  const exportLifeSettingsFile = () => {
     try {
-      const text = await file.text();
-      const parsed = parseAdultPeriodsTsv(text);
-
-      const { periods, errors } = validateAdultPeriods(
-        parsed,
-        {
-          adultYear: grouped.adultYear,
-        }
+      const text = serializeLifeSettingsTsv(
+        store.load() || {}
       );
 
-      if (errors.length > 0) {
-        throw new Error(errors.join("\n"));
-      }
-
-      if (periods.length === 0) {
-        throw new Error("期間設定が1件もありません");
-      }
-
-      const rows = periods.map((period) => ({
-        start: String(period.from),
-        end: period.to == null ? "" : String(period.to),
-        label: period.label,
-      }));
-
-      const ok = window.confirm(
-        `「${file.name}」から期間設定 ${rows.length}件を読み込み、` +
-        `現在の成人期分割を置き換えますか？`
-      );
-
-      if (!ok) return;
-
-      setAdultPeriods(rows);
-      setAdultPeriodsEnabled(true);
-      setAdultPeriodStatus(
-        `${file.name} から期間設定 ${rows.length}件を読み込み、このブラウザに保存しました。`
-      );
-    } catch (err) {
-      console.error(
-        "Adult periods could not be imported:",
-        err
-      );
-      setAdultPeriodStatus(
-        `TSV読み込み失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const exportAdultPeriodsFile = () => {
-    try {
-      if (adultPeriods.length === 0) {
-        setAdultPeriodStatus(
-          "書き出す期間がありません。まず期間を追加してください。"
-        );
-        return;
-      }
-
-      if (grouped.adultPeriodErrors.length > 0) {
-        setAdultPeriodStatus(
-          "入力内容にエラーがあるため、まだ書き出せません。"
-        );
-        return;
-      }
-
-      const text = serializeAdultPeriodsTsv(adultPeriods);
       const blob = new Blob(
         ["\uFEFF", text],
         {
@@ -2616,24 +2293,105 @@ export default function App() {
       const link = document.createElement("a");
 
       link.href = url;
-      link.download = "koshix-timeline-life-periods.tsv";
+      link.download =
+        "koshix-timeline-life-settings.tsv";
 
       document.body.appendChild(link);
       link.click();
       link.remove();
 
-      setTimeout(() => URL.revokeObjectURL(url), 0);
+      setTimeout(
+        () => URL.revokeObjectURL(url),
+        0
+      );
 
-      setAdultPeriodStatus(
-        `期間設定 ${adultPeriods.length}件をTSVへ書き出しました。`
+      setLifeSettingsStatus(
+        "人生設定全体をTSVへ書き出しました。"
       );
     } catch (err) {
       console.error(
-        "Adult periods could not be exported:",
+        "Life settings could not be exported:",
         err
       );
-      setAdultPeriodStatus(
+
+      setLifeSettingsStatus(
         `TSV書き出し失敗: ${err?.message || String(err)}`
+      );
+    }
+  };
+
+  const importLifeSettingsFile = async (event) => {
+    const file = event.target.files?.[0];
+
+    event.target.value = "";
+
+    if (!file) return;
+
+    try {
+      const imported =
+        parseLifeSettingsTsv(
+          await file.text()
+        );
+
+      const ok = window.confirm(
+        `「${file.name}」から人生設定を読み込み、` +
+        "現在の生年・幼保歴・大学等・大学院・成人期分割を置き換えますか？"
+      );
+
+      if (!ok) return;
+
+      const current =
+        store.load() || {};
+
+      const next =
+        mergeLifeSettings(
+          current,
+          imported
+        );
+
+      const storage =
+        window.localStorage;
+
+      const backup =
+        storage.getItem(
+          LIFE_SETTINGS_STORAGE_KEY
+        );
+
+      try {
+        storage.removeItem(
+          LIFE_SETTINGS_STORAGE_KEY
+        );
+
+        storage.setItem(
+          LIFE_SETTINGS_STORAGE_KEY,
+          JSON.stringify(next)
+        );
+      } catch (err) {
+        try {
+          storage.removeItem(
+            LIFE_SETTINGS_STORAGE_KEY
+          );
+
+          if (backup != null) {
+            storage.setItem(
+              LIFE_SETTINGS_STORAGE_KEY,
+              backup
+            );
+          }
+        } catch {}
+
+        throw err;
+      }
+
+      window.location.reload();
+    } catch (err) {
+      console.error(
+        "Life settings could not be imported:",
+        err
+      );
+
+      setLifeSettingsStatus(
+        `TSV読み込み失敗: ${err?.message || String(err)}`
       );
     }
   };
@@ -3040,6 +2798,8 @@ export default function App() {
               <ShareBar
                 small
                 labelOnly
+                hashtag={HASHTAG}
+                url={SHARE_URL}
                 text={`${APP_TITLE}——6つのテーマで時代を自分の年齢から読む(${EVENTS.length}項目) ${HASHTAG}`}
               />
             </div>
@@ -3059,10 +2819,10 @@ export default function App() {
                 最近の追加({RECENT.date}・{RECENT.items.length}項目)
               </span>{" "}
               {RECENT.picks.map((e, i) => (
-                <span key={eid(e)}>
+                <span key={eventId(e)}>
                   {i > 0 && " / "}
                   <a
-                    href={`?e=${eid(e)}`}
+                    href={`?e=${eventId(e)}`}
                     style={{ color: "#6b7280", textDecoration: "none", borderBottom: "1px dotted #b0771e" }}
                   >
                     {e.y} {e.t.replace(/[((].*$/, "")}
@@ -3748,7 +3508,7 @@ export default function App() {
                     setOpen(
                       new Set(
                         grouped.groups.flatMap(
-                          (g) => g.items.map(eid)
+                          (g) => g.items.map(eventId)
                         )
                       )
                     )
@@ -3778,7 +3538,7 @@ export default function App() {
                         grouped.groups
                           .flatMap((g) => g.items)
                           .filter((ev) => ev.y >= birth)
-                          .map(eid)
+                          .map(eventId)
                       )
                     )
                   }
@@ -4241,7 +4001,7 @@ export default function App() {
                   ) : null;
 
                 if (ev.cat === "me") {
-                  const id = eid(ev);
+                  const id = eventId(ev);
                   const isOpen = open.has(id);
                   return (
                     <li
@@ -4361,7 +4121,7 @@ export default function App() {
                     </li>
                   );
                 }
-                const id = eid(ev);
+                const id = eventId(ev);
                 const isOpen = open.has(id);
                 const grade = grouped.gradeLabel(ev.y);
                 const shareText =
@@ -4628,6 +4388,7 @@ export default function App() {
 
                           <ShareBar
                             compact
+                            hashtag={HASHTAG}
                             color={CAT[ev.cat].bg}
                             text={shareText}
                             note={ev.n}
@@ -4781,52 +4542,6 @@ export default function App() {
           </section>
         );
         })}
-
-        <div
-          style={{
-            display: "none", alignItems: "center", gap: 10, flexWrap: "wrap",
-            background: "#fff", border: "1px solid #e2e4e8", borderRadius: 12,
-            padding: "12px 16px", marginTop: 8,
-          }}
-        >
-          <span style={{ fontSize: 13, fontWeight: 700 }}>この年表を共有</span>
-          <a
-            href="https://www.techno-edge.net/article/2026/08/05/5365.html"
-            target="_blank" rel="noopener noreferrer"
-            style={{
-              fontSize: 11.5, fontWeight: 700, textDecoration: "none",
-              borderRadius: 999, padding: "4px 12px",
-              border: "1px solid #b0771e", background: "#b0771e", color: "#fff",
-            }}
-          >
-            この年表の解説記事(CloseBox)
-          </a>
-          <a
-            href="https://www.techno-edge.net/article/2026/08/04/5360.html"
-            target="_blank" rel="noopener noreferrer"
-            style={{
-              fontSize: 11.5, fontWeight: 700, textDecoration: "none",
-              borderRadius: 999, padding: "4px 12px",
-              border: "1px solid #b0771e44", background: "#fdf3e0", color: "#8a5a12",
-            }}
-          >
-            公開時の記事
-          </a>
-          <a
-            href="https://www.techno-edge.net/special/388/recent/CloseBox"
-            target="_blank" rel="noopener noreferrer"
-            style={{
-              fontSize: 11.5, fontWeight: 700, textDecoration: "none",
-              borderRadius: 999, padding: "4px 12px",
-              border: "1px solid #b0771e44", background: "#fdf3e0", color: "#8a5a12",
-            }}
-          >
-            連載「CloseBox」を読む
-          </a>
-          <ShareBar
-            text={`${APP_TITLE}——6つのテーマで時代を自分の年齢から読む(${EVENTS.length}項目) ${HASHTAG}`}
-          />
-        </div>
 
         <div
           id="timeline-customization"
@@ -5913,91 +5628,63 @@ export default function App() {
           />
         </div>
 
-        {/* 大学等・大学院の境界年 */}
+        {/* 幼保・大学等・大学院の複数行教育歴 */}
         <div
           style={{
-            display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap",
+            display: "flex", alignItems: "center", gap: 0, flexWrap: "wrap",
             padding: "12px 16px 14px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
-            <label style={{ fontSize: 13, fontWeight: 700 }}>大学等に入学した年（西暦）</label>
-            <input
-              type="number" inputMode="numeric" min="1930" max="2100" placeholder="例: 1972"
-              value={higherEdY}
-              onChange={(e) => setHigherEdY(e.target.value)}
-              style={{
-                fontFamily: mono, fontSize: 14, width: 84, padding: "7px 8px",
-                borderRadius: 8, border: "1px solid #d5d8dd",
-              }}
-              aria-label="大学等に入学した年（西暦）"
-            />
-            {higherEdY !== "" && (
-              <button onClick={() => setHigherEdY("")} style={resetBtnStyle}>
-                未設定に戻す
-              </button>
-            )}
-            <span aria-hidden="true" style={{ flexBasis: "100%", height: 0 }} />
-            <div role="group" aria-label="大学等の種類" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {Object.entries(HIGHER_ED_TYPES).map(([key, value]) => {
-                const selected = higherEdType === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setHigherEdType(key)}
-                    aria-pressed={selected}
-                    style={segmentBtnStyle(selected, "#6b3fa0", "#f1e9fa")}
-                  >
-                    {value.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", width: "100%" }}>
-            <label style={{ fontSize: 13, fontWeight: 700 }}>大学院に入学した年（西暦）</label>
-            <input
-              type="number" inputMode="numeric" min="1930" max="2100" placeholder="例: 1976"
-              value={graduateY}
-              onChange={(e) => setGraduateY(e.target.value)}
-              style={{
-                fontFamily: mono, fontSize: 14, width: 84, padding: "7px 8px",
-                borderRadius: 8, border: "1px solid #d5d8dd",
-              }}
-              aria-label="大学院に入学した年（西暦）"
-            />
-            {graduateY !== "" && (
-              <button onClick={() => setGraduateY("")} style={resetBtnStyle}>
-                未設定に戻す
-              </button>
-            )}
-            {graduateY !== "" && (
-              <div role="group" aria-label="大学院課程" style={{ display: "flex", gap: 6 }}>
-                {Object.entries(GRADUATE_TYPES).map(([key, value]) => {
-                  const selected = graduateType === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setGraduateType(key)}
-                      aria-pressed={selected}
-                      style={segmentBtnStyle(selected, "#4a5fb0", "#eaeefb")}
-                    >
-                      {value.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <EducationHistoryEditor
+            earlyChildhoodHistory={earlyChildhoodHistory}
+            higherEducationHistory={higherEducationHistory}
+            graduateEducationHistory={graduateEducationHistory}
+            onEarlyChildhoodHistoryChange={setEarlyChildhoodHistory}
+            onHigherEducationHistoryChange={setHigherEducationHistory}
+            onGraduateEducationHistoryChange={setGraduateEducationHistory}
+          />
 
           <div
             style={{
               width: "100%",
-              paddingTop: 10,
-              borderTop: "1px dashed #d9dde2",
+              padding: "10px 0",
+              borderBottom: "1px solid #eceef1",
             }}
           >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+                marginBottom: 7,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#4b5563",
+                }}
+              >
+                4. 成人期
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAdultPeriodsEnabled(false);
+                  setAdultPeriods([]);
+                  setLifeSettingsStatus("");
+                }}
+                style={{
+                  ...resetBtnStyle,
+                  marginLeft: "auto",
+                }}
+              >
+                未設定に戻す
+              </button>
+            </div>
+
             <label
               style={{
                 display: "inline-flex",
@@ -6014,11 +5701,11 @@ export default function App() {
                 checked={adultPeriodsEnabled}
                 onChange={(e) => {
                   setAdultPeriodsEnabled(e.target.checked);
-                  setAdultPeriodStatus("");
+                  setLifeSettingsStatus("");
                 }}
                 style={{ accentColor: "#37414f" }}
               />
-              成人後の期間を分割する
+              成人期を分割する
             </label>
 
             <div
@@ -6031,52 +5718,7 @@ export default function App() {
             >
               必要な場合だけ使います。勤務地、勤務先、職階、役割など、
               自分に合う名称を自由に付けられます。
-              設定はこのブラウザに保存されます。別のブラウザや端末へ移す場合は、
-              <code>koshix-timeline-life-periods.tsv</code>
-              に保存し、移行先で読み込んでください。
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-                marginTop: 8,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  adultPeriodFileInputRef.current?.click()
-                }
-                style={{
-                  ...miniBtn,
-                  fontWeight: 800,
-                  background: "#f0f6fd",
-                  border: "1px solid #bdd0e5",
-                  color: "#41698f",
-                }}
-              >
-                ファイルから読込
-              </button>
-
-              <input
-                ref={adultPeriodFileInputRef}
-                type="file"
-                accept=".tsv,text/tab-separated-values,text/plain"
-                onChange={importAdultPeriodsFile}
-                style={{ display: "none" }}
-              />
-
-              <span
-                style={{
-                  fontSize: 10.5,
-                  color: "#8a8f98",
-                }}
-              >
-                koshix-timeline-life-periods.tsv
-              </span>
+              最後の期間は終了年を空欄にすると現在まで続きます。
             </div>
 
             {adultPeriodsEnabled && (
@@ -6130,7 +5772,7 @@ export default function App() {
                         )
                       }
                       placeholder="開始年"
-                      aria-label={`${index + 1}番目の社会人期間の開始年`}
+                      aria-label={`${index + 1}番目の成人期区分の開始年`}
                       style={{
                         fontFamily: mono,
                         fontSize: 12,
@@ -6164,7 +5806,7 @@ export default function App() {
                         )
                       }
                       placeholder="終了年"
-                      aria-label={`${index + 1}番目の社会人期間の終了年`}
+                      aria-label={`${index + 1}番目の成人期区分の終了年`}
                       style={{
                         fontFamily: mono,
                         fontSize: 12,
@@ -6186,7 +5828,7 @@ export default function App() {
                         )
                       }
                       placeholder="例：奈良勤務、管理職、大学勤務"
-                      aria-label={`${index + 1}番目の社会人期間の名称`}
+                      aria-label={`${index + 1}番目の成人期区分の名称`}
                       style={{
                         flex: "1 1 190px",
                         minWidth: 160,
@@ -6235,19 +5877,6 @@ export default function App() {
                     ＋期間を追加
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={exportAdultPeriodsFile}
-                    style={{
-                      ...miniBtn,
-                      fontWeight: 800,
-                      background: "#f0f8f2",
-                      border: "1px solid #bed8c5",
-                      color: "#4b7356",
-                    }}
-                  >
-                    ファイルに保存
-                  </button>
                 </div>
 
                 {grouped.adultPeriodErrors.length > 0 && (
@@ -6271,26 +5900,123 @@ export default function App() {
                   </div>
                 )}
 
-                {adultPeriodStatus && (
-                  <div
-                    role="status"
-                    style={{
-                      marginTop: 8,
-                      fontSize: 11,
-                      lineHeight: 1.6,
-                      color: "#65706f",
-                    }}
-                  >
-                    {adultPeriodStatus}
-                  </div>
-                )}
               </div>
             )}
+
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 11,
+                lineHeight: 1.7,
+                color: "#8a8f98",
+              }}
+            >
+              大学等・大学院の設定から成人期の開始年を自動計算します。
+              成人期は必要に応じて自由に期間を分割できます。
+            </div>
           </div>
 
-          <div style={{ fontSize: 11, color: "#8a8f98", width: "100%", marginTop: -6, lineHeight: 1.7 }}>
-            大学等・大学院の設定から成人期の開始年を自動計算します。成人期は必要に応じて自由に期間を分割でき、最後の期間は終了年を空欄にすると現在まで続きます。
+          <div
+            style={{
+              width: "100%",
+              padding: "10px 0",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#4b5563",
+                marginBottom: 7,
+              }}
+            >
+              5. 人生設定
+            </div>
+
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 11,
+                  lineHeight: 1.7,
+                  color: "#8a8f98",
+                }}
+              >
+                生年・出生月と、上の1〜4の設定を1つのTSVに保存します。
+                別のブラウザや端末でも、このTSVを読み込むと同じ設定を再現できます。
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginTop: 8,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={exportLifeSettingsFile}
+                  style={{
+                    ...miniBtn,
+                    fontWeight: 800,
+                    background: "#f0f8f2",
+                    border: "1px solid #bed8c5",
+                    color: "#4b7356",
+                  }}
+                >
+                  ファイルに保存
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    lifeSettingsFileInputRef.current?.click()
+                  }
+                  style={{
+                    ...miniBtn,
+                    fontWeight: 800,
+                    background: "#f0f6fd",
+                    border: "1px solid #bdd0e5",
+                    color: "#41698f",
+                  }}
+                >
+                  ファイルから読込
+                </button>
+
+                <input
+                  ref={lifeSettingsFileInputRef}
+                  type="file"
+                  accept=".tsv,text/tab-separated-values,text/plain"
+                  onChange={importLifeSettingsFile}
+                  style={{ display: "none" }}
+                />
+
+                <span
+                  style={{
+                    fontSize: 10.5,
+                    color: "#8a8f98",
+                  }}
+                >
+                  koshix-timeline-life-settings.tsv
+                </span>
+              </div>
+
+              {lifeSettingsStatus && (
+                <div
+                  role="status"
+                  style={{
+                    marginTop: 7,
+                    fontSize: 11,
+                    lineHeight: 1.6,
+                    color: "#59616c",
+                  }}
+                >
+                  {lifeSettingsStatus}
+                </div>
+              )}
           </div>
+
           {grouped.warnings.length > 0 && (
             <div
               role="alert"
@@ -6313,8 +6039,8 @@ export default function App() {
 
         <footer
           style={{
-            fontSize: 11,
-            color: "#8a8f98",
+            fontSize: 12,
+            color: "#59616c",
             marginTop: 28,
             lineHeight: 1.8,
             background: "#fff",
@@ -6336,8 +6062,8 @@ export default function App() {
           <div
             style={{
               marginTop: 3,
-              fontSize: 10.5,
-              color: "#8a8f98",
+              fontSize: 12,
+              color: "#59616c",
             }}
           >
             Webアプリ v{APP_VERSION}　最終更新 {APP_UPDATED_DATE}
@@ -6359,7 +6085,7 @@ export default function App() {
               <a
                 href={DOWNLOAD_URL}
                 download="koshix-timeline-starter.zip"
-                style={{ color: "#374151", fontWeight: 700 }}
+                style={{ color: "#59616c" }}
               >
                 ダウンロード版
               </a>
@@ -6376,17 +6102,21 @@ export default function App() {
               borderTop: "1px solid #eceef1",
             }}
           >
-            <div>
-              <span style={{ color: "#8a8f98", fontWeight: 700 }}>
+            <div style={{ fontSize: 12, color: "#59616c" }}>
+              <div
+                style={{
+                  marginBottom: 2,
+                }}
+              >
                 著作権表示：
-              </span>
-              {" "}
-              このアプリは松尾公也氏の{" "}
+              </div>
+              <div>
+                このアプリは松尾公也氏の{" "}
               <a
                 href="https://matsuo-koya.github.io/sf-tech-lifeline/"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: "#6b7280" }}
+                style={{ color: "#59616c" }}
               >
                 SF × テクノロジー 自分史年表
               </a>
@@ -6395,20 +6125,21 @@ export default function App() {
                 href="https://github.com/matsuo-koya/sf-tech-lifeline"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: "#6b7280" }}
+                style={{ color: "#59616c" }}
               >
                 sf-tech-lifeline
               </a>
               {"）を基にKunio Koshigiriが改変しています。"}
+              </div>
             </div>
 
-            <div>
+            <div style={{ fontSize: 12, color: "#59616c" }}>
               原作品 © 2026 Koya Matsuo ／ 改変部分 © 2026 Kunio Koshigiri ／{" "}
               <a
                 href={`${import.meta.env.BASE_URL}LICENSE.txt`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: "#6b7280" }}
+                style={{ color: "#59616c" }}
               >
                 MIT License
               </a>
@@ -6417,7 +6148,7 @@ export default function App() {
                 href={`${import.meta.env.BASE_URL}THIRD-PARTY-NOTICES.md`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: "#6b7280" }}
+                style={{ color: "#59616c" }}
               >
                 第三者ソフトウェア表示
               </a>

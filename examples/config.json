@@ -5,10 +5,9 @@
   "defaults": {
     "birthYear": 1965,
     "birthMonth": 0,
-    "higherEdYear": "",
-    "higherEdType": "university",
-    "graduateYear": "",
-    "graduateType": "masters",
+    "earlyChildhoodHistory": [],
+    "higherEducationHistory": [],
+    "graduateEducationHistory": [],
     "retirementYear": ""
   },
   "downloadUrl": ""
