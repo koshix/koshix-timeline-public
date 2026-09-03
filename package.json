@@ -1,13 +1,13 @@
 {
   "name": "koshix-timeline",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.3.0",
   "type": "module",
   "scripts": {
     "build:events": "node scripts/build-events.mjs",
-    "predev": "npm run lint && npm run build:events && npm run build:private && npm run test:life-stages && npm run test:adult-periods && npm run test:life-settings && npm run test:event-customizations && npm run test:event-customizations-tsv && npm run test:education-history && npm run test:search-query && npm run test:timeline-eras && npm run test:event-links",
+    "predev": "npm run lint && npm run build:events && npm run build:private && npm run test:life-stages && npm run test:adult-periods && npm run test:life-settings && npm run test:event-customizations && npm run test:event-customizations-tsv && npm run test:education-history && npm run test:search-query && npm run test:timeline-eras && npm run test:event-links && npm run test:timeline-model",
     "dev": "vite",
-    "prebuild": "npm run lint && npm run build:events && npm run build:private && npm run test:life-stages && npm run test:adult-periods && npm run test:life-settings && npm run test:event-customizations && npm run test:event-customizations-tsv && npm run test:education-history && npm run test:search-query && npm run test:timeline-eras && npm run test:event-links",
+    "prebuild": "npm run lint && npm run build:events && npm run build:private && npm run test:life-stages && npm run test:adult-periods && npm run test:life-settings && npm run test:event-customizations && npm run test:event-customizations-tsv && npm run test:education-history && npm run test:search-query && npm run test:timeline-eras && npm run test:event-links && npm run test:timeline-model",
     "build": "vite build && node scripts/remove-private-build-data.mjs && node scripts/copy-legal-files.mjs",
     "preview": "vite preview",
     "audit:code": "node scripts/audit-codebase.mjs",
@@ -24,7 +24,8 @@
     "test:timeline-eras": "node scripts/test-timeline-eras.mjs",
     "test:event-links": "node scripts/test-event-links.mjs",
     "add:event:interactive": "node scripts/add-event-interactive.mjs",
-    "build:starter": "npm run build && node scripts/build-starter.mjs"
+    "build:starter": "npm run build && node scripts/build-starter.mjs",
+    "test:timeline-model": "node scripts/test-timeline-model.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

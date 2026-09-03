@@ -1,51 +1,36 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { loadEvents } from "./events-source";
 import { loadConfig } from "./config-source";
-import { loadPrivateEvents } from "./private-events-source";
-import {
-  parsePersonalEventsTsv,
-  serializePersonalEventsTsv,
-} from "./personal-events-tsv";
-import {
-  loadBrowserPersonalEvents,
-  saveBrowserPersonalEvents,
-  clearBrowserPersonalEvents,
-} from "./personal-events-store";
 import { applyEventCustomizations } from "./event-customizations";
-import {
-  parseEventCustomizationsTsv,
-  serializeEventCustomizationsTsv,
-} from "./event-customizations-tsv";
-import {
-  EMPTY_EVENT_CUSTOMIZATIONS,
-  loadBrowserEventCustomizations,
-  saveBrowserEventCustomizations,
-  clearBrowserEventCustomizations,
-} from "./event-customizations-store";
 import { THREADS } from "./threads";
 import {
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
-  buildLifeModel,
   migrateEducationSettings,
 } from "./life-stages";
-import {
-  adultPeriodOf,
-  validateAdultPeriods,
-} from "./adult-periods";
-import {
-  mergeLifeSettings,
-  parseLifeSettingsTsv,
-  serializeLifeSettingsTsv,
-} from "./life-settings";
+import AdultPeriodsEditor from "./AdultPeriodsEditor";
+import BirthSettingsEditor from "./BirthSettingsEditor";
 import EducationHistoryEditor from "./EducationHistoryEditor";
+import EventCustomizationAddForm from "./EventCustomizationAddForm";
+import EventCustomizationControls from "./EventCustomizationControls";
+import EventCustomizationEditForm from "./EventCustomizationEditForm";
+import EventCustomizationActions from "./EventCustomizationActions";
+import EventReferenceLinks from "./EventReferenceLinks";
+import EventCustomizationHiddenList from "./EventCustomizationHiddenList";
+import LifeSettingsFileControls from "./LifeSettingsFileControls";
+import PersonalHistoryControls from "./PersonalHistoryControls";
+import PersonalHistoryEventForm from "./PersonalHistoryEventForm";
+import PersonalHistoryEditorList from "./PersonalHistoryEditorList";
+import useTimelineModel from "./useTimelineModel";
+import usePersonalEvents from "./usePersonalEvents";
+import useEventCustomizations from "./useEventCustomizations";
+import useLifeSettings from "./useLifeSettings";
+import useDisplaySettings from "./useDisplaySettings";
+import useOpenEvents from "./useOpenEvents";
 import {
-  matchesSearchExpression,
-  normalizeSearchText,
-  parseSearchExpression,
-} from "./search-query";
+  settingsStore,
+} from "./settings-store";
 import {
-  TIMELINE_START_YEAR,
   backgroundEraOf,
   halfCenturyMarkerOf,
   japaneseEraOf,
@@ -56,6 +41,18 @@ import {
   findEventByShareParam,
 } from "./event-links";
 import ShareBar from "./ShareBar";
+import Icon from "./Icon";
+import {
+  CAT,
+  catsOf,
+  primaryCatOf,
+  catKey,
+} from "./categories";
+import Theater from "./Theater";
+import TimelineCategoryFilters from "./TimelineCategoryFilters";
+import TimelineDisplayControls from "./TimelineDisplayControls";
+import TimelineSearchControls from "./TimelineSearchControls";
+import useVisibleEventsExport from "./useVisibleEventsExport";
 
 const CONFIG = loadConfig();
 const PROFILE_DEFAULTS = CONFIG.defaults || {};
@@ -63,30 +60,14 @@ const EVENTS = loadEvents();
 const APP_VERSION = __APP_VERSION__;
 const APP_UPDATED_DATE = __APP_UPDATED_DATE__;
 
-// ---- ラインアイコン(全て自作SVG・権利フリー) ----
-const ICON_NAMES = new Set([
-  "book", "tv", "film", "robot", "watch",
-  "comm", "computer", "chip", "globe", "satellite",
-  "rocket", "hmd", "gamepad", "phone", "video",
-  "ai", "ghost", "music", "wifi", "flag",
-]);
-
-function Icon({ name, color, size = 18 }) {
-  const iconName = ICON_NAMES.has(name) ? name : "book";
-
-  return (
-    <svg
-      viewBox="0 0 24 24" width={size} height={size}
-      fill="none" stroke={color} strokeWidth="1.7"
-      strokeLinecap="round" strokeLinejoin="round"
-      style={{ flexShrink: 0, marginTop: 2 }}
-      aria-hidden="true"
-    >
-      <use href={`${import.meta.env.BASE_URL}icons.svg#icon-${iconName}`} />
-    </svg>
-  );
-}
-
+const MAIN_CATS = [
+  "work",
+  "science",
+  "education",
+  "computer",
+  "culture",
+  "society",
+];
 
 function ImportanceBadge({ level }) {
   const value = Math.max(1, Math.min(3, Number(level) || 2));
@@ -123,39 +104,6 @@ function ImportanceBadge({ level }) {
   );
 }
 
-
-// ---- 分野(興味に応じてオン・オフできるフィルタの単位) ----
-// PC・ワークステーション・ミニコン・メインフレームは「コンピューター」にまとめている
-const SUBS = {
-  pc: { label: "コンピューター", c: "tech" },
-  ai: { label: "AI", c: "tech" },
-  net: { label: "ネット・インフラ", c: "tech" },
-  sns: { label: "SNS・ネット文化", c: "tech" },
-  mobile: { label: "モバイル・通信", c: "tech" },
-  game: { label: "ゲーム", c: "tech" },
-  inst: { label: "楽器・DTM", c: "tech" },
-  audio: { label: "オーディオ", c: "tech" },
-  video: { label: "映像・カメラ・CG", c: "tech" },
-  wear: { label: "ウェアラブル", c: "tech" },
-  tablet: { label: "タブレット・電子書籍", c: "tech" },
-  xr: { label: "VR・AR", c: "tech" },
-  robot: { label: "ロボット", c: "tech" },
-  space: { label: "宇宙・測位", c: "tech" },
-  quantum: { label: "量子", c: "tech" },
-  boom: { label: "ブーム・社会現象", c: "tech" },
-  other: { label: "その他", c: "tech" },
-  artist_w: { label: "洋楽アーティスト", c: "music" },
-  artist_j: { label: "邦楽アーティスト", c: "music" },
-};
-
-// 旧データ用のフォールバック(sを持たない項目はアイコンから分野を推定する)
-const SUB_BY_IC = {
-  computer: "pc", chip: "pc", ai: "ai", globe: "net", wifi: "net", phone: "mobile",
-  gamepad: "game", music: "inst", video: "video", film: "video", tv: "video",
-  watch: "wear", comm: "wear", hmd: "xr", robot: "robot", satellite: "space",
-  rocket: "space", ghost: "other", book: "other",
-};
-const subOf = (e) => e.s || SUB_BY_IC[e.ic] || "other";
 
 const ADULT_STAGE = { key: "adult", label: "成人期", color: "#37414f", bg: "#eef1f5" };
 
@@ -223,54 +171,6 @@ const SHARE_URL = (() => {
   return origin + pathname;
 })();
 
-const CAT = {
-  // 7大分類は虹色順。bg=選択時・年表、soft=通常時、border=枠線、fg=選択時文字。
-  work:      { label: "作品", bg: "#C83F49", fg: "#FFFFFF", soft: "#F9E1E4", border: "#A92E37" },
-  science:   { label: "科学", bg: "#D8751A", fg: "#FFFFFF", soft: "#FAE6D1", border: "#B65A10" },
-  education: { label: "教育", bg: "#D0A000", fg: "#FFFFFF", soft: "#FBF2C9", border: "#A47E00" },
-  computer:  { label: "情報", bg: "#34844F", fg: "#FFFFFF", soft: "#E5F4E9", border: "#286D40" },
-  culture:   { label: "文化", bg: "#3779BC", fg: "#FFFFFF", soft: "#E5F0FA", border: "#2A6198" },
-  society:   { label: "社会", bg: "#4B56A6", fg: "#FFFFFF", soft: "#E4E6F5", border: "#3C478D" },
-  me:        { label: "自分", bg: "#7A4FA3", fg: "#FFFFFF", soft: "#EEE4F5", border: "#663D8B" },
-
-  // SFは大分類ではなく、作品を強調するタグとして保持する。
-  sf:        { label: "SF", bg: "#8B1E2D", fg: "#FFFFFF", soft: "#F7DDE1", border: "#761825" },
-
-  // 松尾版データとの暫定互換。新カテゴリーと同じ配色に投影する。
-  tech:      { label: "実テクノロジー", bg: "#34844F", fg: "#FFFFFF", soft: "#E5F4E9", border: "#286D40" },
-  music:     { label: "音楽・カルチャー", bg: "#3779BC", fg: "#FFFFFF", soft: "#E5F0FA", border: "#2A6198" },
-};
-
-// v0.1では松尾版の旧カテゴリーを新カテゴリーへ暫定投影する
-const CAT_ALIAS = {
-  tech: "computer",
-  music: "culture",
-};
-
-const normalizeCatKey = (k) => CAT_ALIAS[k] || k;
-
-// 1つの出来事は複数カテゴリーに所属できる。
-// 旧形式の cat にも当面対応する。
-const catsOf = (e) => {
-  const raw =
-    Array.isArray(e.cats) && e.cats.length
-      ? e.cats
-      : (e.cat ? [e.cat] : []);
-
-  return [...new Set(raw.map(normalizeCatKey))];
-};
-
-// アイコン色などに使う主分類
-const primaryCatOf = (e) =>
-  normalizeCatKey(
-    e.primary ||
-    e.cat ||
-    catsOf(e)[0] ||
-    "society"
-  );
-
-const catKey = (e) => primaryCatOf(e);
-
 // ---- テーマの糸(年表に散らばった項目を、一本の流れとして自動再生する) ----
 // 新しい定義は永久ID { id } で参照する。
 // 旧 threads.js の { y, m } 形式も移行中は読み込めるようにしておく。
@@ -288,603 +188,12 @@ const THREAD_LIST = THREADS.map((th) => ({
 
 const findThread = (key) => THREAD_LIST.find((t) => t.key === key) || null;
 
-// 読み上げに使う日本語の声(環境になければ既定の声のまま)
-const jpVoice = () => {
-  try {
-    return window.speechSynthesis.getVoices().find((v) => /ja[-_]JP/i.test(v.lang)) || null;
-  } catch {
-    return null;
-  }
-};
-
-// 読み上げ用のテキスト。
-// 型番のハイフン(PC-8801など)は音声合成が「の」と読んでしまうので、前後が英数字なら詰めて、
-// それ以外のダッシュ類は空白にして読ませない(長音符「ー」は残す)
-const DASH = /[-‐‑‒–—―]/;
-// 文中のダッシュ(——)は、読み上げでは半拍おく合図として扱う
-export const PAUSE = "\u241f";
-const deDash = (s) =>
-  s
-    .replace(new RegExp(`([A-Za-z0-9])${DASH.source}([A-Za-z0-9])`, "g"), "$1$2")
-    .replace(new RegExp(`${DASH.source}{2,}`, "g"), PAUSE)
-    .replace(new RegExp(DASH.source, "g"), " ");
-// 音声合成が読み違える語は、読みを当てておく(気づいたものを足していく)
-const READINGS = {
-  年表: "ネンピョウ",
-  Copilot: "コパイロット",
-  "Mac OS X": "マックオーエス テン",
-  VOCALOID: "ボーカロイド",
-  MEIKO: "メイコ",
-  KAITO: "カイト",
-  VISOR: "バイザー",
-  Visor: "バイザー",
-  MessagePad: "メッセージパッド",
-  PalmPilot: "パームパイロット",
-  小穴: "コアナ",
-  MIDI: "ミディ",
-  原型: "ゲンケイ",
-  ILM: "アイエルエム",
-  自撮り: "ジドリ",
-  生成物: "セイセイブツ",
-  SynthID: "シンスアイディー",
-  河口洋一郎: "カワグチヨウイチロウ",
-  松尾公也: "マツオコウヤ",
-  年振り: "ねんぶり",
-  人造物: "ジンゾウブツ",
-  読唇: "ドクシン",
-  三原則: "サンゲンソク",
-  ChatGPT: "チャットジーピーティー",
-  脱け: "ヌケ",
-  富田倫生: "トミタミチオ",
-  "Raspberry Pi": "ラズベリーパイ",
-  "DOS/V": "ドスブイ",
-  鴻海: "ホンハイ",
-  Altair: "アルテア",
-  の上で: "ノウエデ",
-  的な: "テキナ",
-  経験値: "ケイケンチ",
-  系統樹: "ケイトウジュ",
-  "The Elder Scrolls": "ジ・エルダー・スクロールズ",
-  NVIDIA: "エヌビディア",
-  eスポーツ: "イースポーツ",
-  eコマース: "イーコマース",
-  伺か: "ウカガカ",
-  "US Robotics": "ユーエス・ロボティクス",
-  Courier: "クーリエ",
-  "3Com": "スリーコム",
-  バベル魚: "バベルフィッシュ",
-  文化女中器: "ブンカジョチュウキ",
-  伊集院光: "イジュウインヒカル",
-  伊達杏子: "ダテキョウコ",
-  VTuber: "ブイチューバー",
-  // 「数〜」は「かず」と読まれがちなので、本文に出てくる形をまとめて指定する
-  数万人: "スウマンニン",
-  数千人: "スウセンニン",
-  数百万人: "スウヒャクマンニン",
-  数億人: "スウオクニン",
-  数千機: "スウセンキ",
-  数小節: "スウショウセツ",
-  数十万: "スウジュウマン",
-  数千万: "スウセンマン",
-  数百万: "スウヒャクマン",
-  数百億: "スウヒャクオク",
-  数万年: "スウマンネン",
-  数千年: "スウセンネン",
-  数十年: "スウジュウネン",
-  数十秒: "スウジュウビョウ",
-  数時間: "スウジカン",
-  数社: "スウシャ",
-  数人: "スウニン",
-  数年: "スウネン",
-  数秒: "スウビョウ",
-  数分: "スウフン",
-  数万: "スウマン",
-  数千: "スウセン",
-  数ミリ: "スウミリ",
-  数十センチ: "スウジュッセンチ",
-  弾けなくても: "ヒケナクテモ",
-  DAW: "ディーエーダブリュー",
-  この年: "コノトシ",
-  Splendor: "スプレンダー",
-  splendor: "スプレンダー",
-  PARC: "パーク",
-  "Synthesizer V": "シンセサイザーブイ",
-  "I/O": "アイオー",
-  "I'm perfect": "アイム・パーフェクト",
-  "Z・X・C・V": "ゼット、エックス、シー、ブイ",
-  ARPANET: "アーパネット",
-  "TCP/IP": "ティーシーピーアイピー",
-  JUNET: "ジェイユーネット",
-  "NIFTY-Serve": "ニフティーサーブ",
-  "バーナーズ=リー": "バーナーズリー",
-  "2-Way": "ツーウェイ",
-  方だ: "ホウダ",
-  一文字: "イチモジ",
-  一文で: "イチブンデ",
-  Museum: "ミュージアム",
-  museum: "ミュージアム",
-  Duplex: "デュープレックス",
-  Google: "グーグル",
-  google: "グーグル",
-  映像付き: "エイゾウツキ",
-  人間の方: "ニンゲンノホウ",
-  macOS: "マックオーエス",
-  aibo: "アイボ",
-  AIBO: "アイボ",
-};
-// 単独のローマ数字(MUSIC I、Apple II、ドラゴンクエストIV など)は「アイ」ではなく数として読ませる。
-// UNIXやASCIIの中のIやXを拾わないよう、前後に英字がない場合だけ置き換える(DOS/Vなどの「/」直後も除外。
-// Xは単独だとJIS XやX端末と紛らわしいので、対象から外してREADINGSで個別に見る)
-const ROMAN = {
-  I: "ワン", II: "ツー", III: "スリー", IV: "フォー", V: "ファイブ", VI: "シックス",
-  VII: "セブン", VIII: "エイト", IX: "ナイン", XI: "イレブン", XII: "トゥエルブ",
-  XIII: "サーティーン", XIV: "フォーティーン", XV: "フィフティーン",
-};
-const ROMAN_RE = new RegExp(
-  `(^|[^A-Za-z/_])(${Object.keys(ROMAN).sort((a, b) => b.length - a.length).join("|")})(?![A-Za-z'/])`,
-  "g"
-);
-// 単独の略語も読みを当てる(AIは「アイ」と読まれてしまうため)。OpenAIのように語の一部なら触らない
-const ABBR = { AI: "エーアイ", AGI: "エージーアイ", X1: "エックスワン", goo: "グー" };
-const ABBR_RE = new RegExp(
-  `(^|[^A-Za-z0-9])(${Object.keys(ABBR).sort((a, b) => b.length - a.length).join("|")})(?![A-Za-z0-9])`,
-  "g"
-);
-// 見出し語の読みは元の表記のまま当て(ハイフンを詰める前に実行する)、
-// ローマ数字と略語の規則はそのあとで見る
-const applyReadings = (s) => Object.entries(READINGS).reduce((t, [k, v]) => t.split(k).join(v), s);
-const applyTokens = (s) =>
-  s.replace(ROMAN_RE, (_, pre, r) => pre + ROMAN[r]).replace(ABBR_RE, (_, pre, a) => pre + ABBR[a]);
-// 括弧の中の補足(年号や原語表記)は読み飛ばす
-const dropParens = (s) => s.replace(/[((][^))]*[))]/g, "").replace(/[、,]\s*。/g, "。");
-const speakText = (ev) =>
-  applyTokens(deDash(applyReadings(dropParens(`${ev.y}年。${ev.t}。${ev.n || ""}`))));
-
-// 読み上げは文の切れ目で小分けにして順に渡す。長い文章を一度に渡すと、
-// 途中で打ち切られたり読み終わりの合図が来なくなるブラウザがあるため。
-// pause が立っている区切りのあとには一拍おく(本文の「——」の位置)
-const SEG_MAX = 110;
-const splitSentences = (t) =>
-  (t.match(/[^。!?！？]*[。!?！？]?/g) || [])
-    .filter(Boolean)
-    .flatMap((sn) =>
-      [...sn].length > SEG_MAX * 1.6
-        ? sn.split("、").map((x, i, a) => (i < a.length - 1 ? x + "、" : x)).filter(Boolean)
-        : sn
-    );
-const speakSegments = (text) => {
-  const out = [];
-  const chunks = text.split(PAUSE);
-  chunks.forEach((chunk, ci) => {
-    const t = chunk.trim();
-    if (t) {
-      let buf = "";
-      for (const sn of splitSentences(t)) {
-        if (buf && [...(buf + sn)].length > SEG_MAX) {
-          out.push({ t: buf, pause: false });
-          buf = sn;
-        } else buf += sn;
-      }
-      if (buf) out.push({ t: buf, pause: false });
-    }
-    if (ci < chunks.length - 1 && out.length) out[out.length - 1].pause = true;
-  });
-  return out;
-};
-
 // 背景に流す同時代の項目の色(暗い画面で読めるよう、カテゴリー色を明るくしたもの)
-const BG_COLOR = {
-  sf: "#EE8F97",
-  science: "#F0A35D",
-  education: "#E5C74F",
-  computer: "#7DBF91",
-  culture: "#80AFE0",
-  society: "#8D97D8",
-  me: "#B18AD0",
-  tech: "#7DBF91",
-  music: "#80AFE0",
-};
-const BG_ROWS = 7;
-
-// 文単位に分けて順に読み上げる。戻り値を呼ぶと止まる
-const speakChunks = (text, { rate = 1, onEnd } = {}) => {
-  const synth = typeof window !== "undefined" && window.speechSynthesis;
-  if (!synth) return () => {};
-  const segs = speakSegments(text);
-  const voice = jpVoice();
-  let stopped = false, timer = null, watchdog = null;
-  // 長い読み上げが勝手に止まるブラウザ対策(定期的に再開をつつく)
-  const keepAlive = setInterval(() => {
-    try { synth.resume(); } catch {}
-  }, 8000);
-  const stop = () => {
-    stopped = true;
-    clearTimeout(timer);
-    clearTimeout(watchdog);
-    clearInterval(keepAlive);
-    synth.cancel();
-  };
-  const speakFrom = (i) => {
-    if (stopped) return;
-    if (i >= segs.length) {
-      clearInterval(keepAlive);
-      onEnd?.();
-      return;
-    }
-    const seg = segs[i];
-    const u = new SpeechSynthesisUtterance(seg.t);
-    u.lang = "ja-JP";
-    u.rate = rate;
-    if (voice) u.voice = voice;
-    let settled = false;
-    const done = () => {
-      if (settled || stopped) return;
-      settled = true;
-      clearTimeout(watchdog);
-      timer = setTimeout(() => speakFrom(i + 1), seg.pause ? 500 / rate : 0);
-    };
-    u.onend = done;
-    u.onerror = done;
-    synth.speak(u);
-    // 読み終わりの合図が来ない場合でも止まらないよう、長さから見積もって打ち切る
-    watchdog = setTimeout(done, ([...seg.t].length * 260 + 5000) / rate);
-  };
-  synth.cancel();
-  speakFrom(0);
-  return stop;
-};
-
-// 同時に喋るのは一つだけにする。割り込まれた側にはonCancelで知らせる
-let active = null;
-const stopSpeaking = () => {
-  const a = active;
-  active = null;
-  if (!a) return;
-  a.cancel();
-  a.onCancel?.();
-};
-const startSpeaking = (text, { rate = 1, onEnd, onCancel } = {}) => {
-  stopSpeaking();
-  const entry = { onCancel };
-  entry.cancel = speakChunks(text, {
-    rate,
-    onEnd: () => {
-      if (active === entry) active = null;
-      onEnd?.();
-    },
-  });
-  active = entry;
-  // 呼び出し側から止めるときは、割り込み扱いにしない
-  return () => {
-    if (active === entry) active = null;
-    entry.cancel();
-  };
-};
-
-// 項目ごとの読み上げボタン(記事を書くときの読み合わせにも使える)
-function SpeakButton({ ev, rate, color }) {
-  const [on, setOn] = useState(false);
-  const stopRef = useRef(null);
-  useEffect(() => () => stopRef.current?.(), []);
-  const toggle = () => {
-    if (on) {
-      stopRef.current?.();
-      stopRef.current = null;
-      setOn(false);
-      return;
-    }
-    const off = () => {
-      stopRef.current = null;
-      setOn(false);
-    };
-    stopRef.current = startSpeaking(speakText(ev), { rate, onEnd: off, onCancel: off });
-    setOn(true);
-  };
-  return (
-    <button
-      onClick={toggle}
-      style={{
-        fontSize: 11.5, fontWeight: 700, cursor: "pointer", padding: "3px 12px",
-        borderRadius: 999, border: `1px solid ${color}44`,
-        background: on ? color : "#ffffffaa", color: on ? "#fff" : color,
-      }}
-    >
-      {on ? "■ 停止" : "🔊 読み上げ"}
-    </button>
-  );
-}
-
-function Theater({ thread, gradeLabel, birth, tts, setTts, speed, setSpeed, onClose }) {
-  const evs = thread.events;
-  const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const [done, setDone] = useState(false);
-  const listRef = useRef(null);
-
-  const font =
-    '"Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif';
-  const mono = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
-
-  const go = (i) => {
-    setDone(false);
-    setIdx(Math.max(0, Math.min(evs.length - 1, i)));
-  };
-
-  // 自動送り。読み上げが有効なら読み終わりで、無効なら文字数に応じた時間で次へ
-  useEffect(() => {
-    if (!playing || done) return;
-    const next = () => {
-      if (idx + 1 < evs.length) setIdx(idx + 1);
-      else {
-        setDone(true);
-        setPlaying(false);
-      }
-    };
-    const text = speakText(evs[idx]);
-    if (tts && typeof window !== "undefined" && window.speechSynthesis) {
-      return startSpeaking(text, { rate: speed, onEnd: next });
-    }
-    const ms = Math.min(16000, 1800 + [...text.split(PAUSE).join("")].length * 70) / speed;
-    const timer = setTimeout(next, ms);
-    return () => clearTimeout(timer);
-  }, [idx, playing, done, tts, speed, evs]);
-
-  // 現在の項目を画面の中央へ送る(これが「自動スクロール」の見え方になる)
-  useEffect(() => {
-    listRef.current?.querySelector(`[data-i="${idx}"]`)?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-  }, [idx]);
-
-  // 開いている間は背後の年表を動かさない
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose();
-      else if (e.key === " ") {
-        e.preventDefault();
-        setPlaying((p) => !p);
-      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") go(idx + 1);
-      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") go(idx - 1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [idx, onClose]);
-
-  const gradeOf = (ev) =>
-    ev.y < birth ? "生まれる前" : gradeLabel(ev.y);
-
-  // 背景の左右に流す、同じころの別カテゴリーの項目(その糸に入っているものは除く)。
-  // 何が同時に起きていた時代なのかを、読まなくても感じられるようにするための層
-  const bgRows = useMemo(() => {
-    const inThread = new Set(evs.map(eventId));
-    const year = evs[idx].y;
-    let near = [];
-    for (let win = 3; win <= 40 && near.length < 21; win += 3) {
-      near = EVENTS.filter((e) => Math.abs(e.y - year) <= win && !inThread.has(eventId(e)));
-    }
-    const rows = Array.from({ length: BG_ROWS }, () => []);
-    near.forEach((e, i) => rows[i % BG_ROWS].push(e));
-    return rows.filter((r) => r.length);
-  }, [evs, idx]);
-
-  const ctlBtn = (on = false) => ({
-    fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "6px 12px",
-    borderRadius: 999, fontFamily: font, lineHeight: 1.2,
-    border: `1px solid ${on ? "#b0771e" : "#9aa3ad"}`,
-    background: on ? "#f3dfb5" : "#ffffff",
-    color: on ? "#6b4610" : "#374151",
-  });
-
-  return (
-    <div
-      role="dialog"
-      aria-label={`テーマ再生:${thread.title}`}
-      style={{
-        position: "fixed", inset: 0, zIndex: 60, display: "flex", flexDirection: "column",
-        background: "#f7f7f5", color: "#22272e", fontFamily: font,
-      }}
-    >
-      {/* 見出し */}
-      <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #d7dce2", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.2em", color: "#8a93a3" }}>テーマの糸</div>
-            <div style={{ fontSize: 17, fontWeight: 800, marginTop: 3 }}>{thread.title}</div>
-            <div style={{ fontSize: 11.5, color: "#4b5563", marginTop: 4, lineHeight: 1.6 }}>
-              {thread.lead}
-            </div>
-          </div>
-          <button onClick={onClose} aria-label="閉じる" style={{ ...ctlBtn(), padding: "6px 10px" }}>
-            ×閉じる
-          </button>
-        </div>
-        <div style={{ marginTop: 8, height: 3, background: "#d7dce2", borderRadius: 2 }}>
-          <div
-            style={{
-              width: `${((idx + 1) / evs.length) * 100}%`, height: "100%",
-              background: "#b0771e", borderRadius: 2, transition: "width 0.3s",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* 本体(現在の項目が中央に来るよう自動でスクロールする) */}
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <style>{`
-          @keyframes lifelineDriftA { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-          @keyframes lifelineDriftB { from { transform: translateX(-50%) } to { transform: translateX(0) } }
-        `}</style>
-        {/* 同じころに起きていた別カテゴリーの出来事を、左右の背景に薄く流す */}
-        <div style={{ position: "absolute", inset: 0, overflow: "hidden" }} aria-hidden="true">
-          {bgRows.map((row, i) => (
-            <div
-              key={i}
-              style={{
-                position: "absolute", top: `${((i + 0.5) * 100) / bgRows.length}%`,
-                left: 0, width: "max-content", display: "flex", gap: 46,
-                whiteSpace: "nowrap", lineHeight: 1,
-                animation: `lifelineDrift${i % 2 ? "B" : "A"} ${110 + i * 23}s linear infinite`,
-              }}
-            >
-              {[...row, ...row].map((e, j) => (
-                <span
-                  key={j}
-                  style={{
-                    fontSize: 13 + ((i * 5) % 9), color: BG_COLOR[catKey(e)] || "#8a93a3",
-                    opacity: 0.34, fontWeight: 600,
-                  }}
-                >
-                  <span style={{ fontFamily: mono, marginRight: 8, opacity: 0.65 }}>{e.y}</span>
-                  {e.t.replace(/[((].*$/, "")}
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-        {/* 中央は読ませたいので、背景の層を覆い隠す */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute", inset: 0, pointerEvents: "none",
-            background:
-              "linear-gradient(90deg, rgba(247,247,245,0) 0%, rgba(247,247,245,0.97) 20%, rgba(247,247,245,0.97) 80%, rgba(247,247,245,0) 100%)",
-          }}
-        />
-        <div ref={listRef} style={{ position: "absolute", inset: 0, overflowY: "auto", padding: "40vh 16px" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          {evs.map((ev, i) => {
-            const active = i === idx;
-            const color = CAT[catKey(ev)]?.bg || "#6b7280";
-            return (
-              <div
-                key={eventId(ev)}
-                data-i={i}
-                onClick={() => go(i)}
-                style={{
-                  padding: active ? "16px 0" : "9px 0", cursor: "pointer",
-                  opacity: active ? 1 : 0.52, transition: "opacity 0.35s",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  <span
-                    style={{
-                      fontFamily: mono, fontSize: active ? 15 : 13, fontWeight: 700,
-                      color: "#8a93a3", width: 48, flexShrink: 0,
-                    }}
-                  >
-                    {ev.y}
-                  </span>
-                  <span
-                    style={{
-                      flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#12151b",
-                      background: "#c9ced8", borderRadius: 5, padding: "2px 7px", marginTop: 1,
-                    }}
-                  >
-                    {gradeOf(ev)}
-                  </span>
-                  <Icon name={ev.ic} color={color} size={active ? 20 : 16} />
-                  <span
-                    style={{
-                      fontSize: active ? 19 : 14, fontWeight: active ? 800 : 500,
-                      lineHeight: 1.5, flex: 1,
-                    }}
-                  >
-                    {ev.t}
-                  </span>
-                </div>
-                {active && ev.n && (
-                  <div
-                    style={{
-                      marginTop: 10, marginLeft: 58, paddingLeft: 12,
-                      borderLeft: `3px solid ${color}`,
-                      fontSize: 13.5, lineHeight: 1.85, color: "#4b5563",
-                    }}
-                  >
-                    {ev.n}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {done && (
-            <div style={{ textAlign: "center", marginTop: 24, fontSize: 12.5, color: "#9aa3b2" }}>
-              この糸はここまで。
-              <button onClick={() => go(0)} style={{ ...ctlBtn(), marginLeft: 10 }}>
-                最初から
-              </button>
-            </div>
-          )}
-        </div>
-        </div>
-      </div>
-
-      {/* 操作 */}
-      <div
-        style={{
-          flexShrink: 0, borderTop: "1px solid #d7dce2", padding: "10px 16px",
-          display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-          justifyContent: "center", background: "#eef0f3",
-        }}
-      >
-        <button onClick={() => go(idx - 1)} style={ctlBtn()} aria-label="前へ">◀</button>
-        <button
-          onClick={() => {
-            if (done) go(0);
-            setPlaying((p) => (done ? true : !p));
-          }}
-          style={{ ...ctlBtn(playing), minWidth: 76 }}
-        >
-          {playing ? "❙❙ 一時停止" : "▶ 再生"}
-        </button>
-        <button onClick={() => go(idx + 1)} style={ctlBtn()} aria-label="次へ">▶</button>
-        <button onClick={() => setTts(!tts)} style={ctlBtn(tts)}>
-          {tts ? "🔊 読み上げ中" : "🔇 読み上げ"}
-        </button>
-        <button
-          onClick={() => setSpeed(speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1)}
-          style={ctlBtn(speed !== 1)}
-        >
-          {speed}倍速
-        </button>
-        <span style={{ fontFamily: mono, fontSize: 11.5, color: "#8a93a3" }}>
-          {idx + 1} / {evs.length}
-        </span>
-        <a
-          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-            `「${thread.title}」——${thread.lead} ${HASHTAG}`
-          )}&url=${encodeURIComponent(`${SHARE_URL}?t=${thread.key}`)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ ...ctlBtn(), textDecoration: "none" }}
-        >
-          この糸をXで共有
-        </a>
-      </div>
-    </div>
-  );
-}
-
 // ---- 保存(ブラウザのみ。使えない環境では黙ってメモリ動作) ----
-const LIFE_SETTINGS_STORAGE_KEY = "sf-lifeline";
-
-const store = {
-  load() {
-    try { return JSON.parse(window.localStorage.getItem(LIFE_SETTINGS_STORAGE_KEY) || "null"); } catch { return null; }
-  },
-  save(data) {
-    try { window.localStorage.setItem(LIFE_SETTINGS_STORAGE_KEY, JSON.stringify(data)); } catch {}
-  },
-};
-const SAVED = (typeof window !== "undefined" && store.load()) || {};
+const SAVED =
+  (typeof window !== "undefined" &&
+    settingsStore.load()) ||
+  {};
 const INITIAL_BIRTH = SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? 1965;
 const INITIAL_MONTH = SAVED.month ?? PROFILE_DEFAULTS.birthMonth ?? 0;
 const INITIAL_EDUCATION = migrateEducationSettings(
@@ -895,127 +204,152 @@ const INITIAL_EDUCATION = migrateEducationSettings(
 );
 
 export default function App() {
-  const [birth, setBirth] = useState(INITIAL_BIRTH);
-  const [month, setMonth] = useState(INITIAL_MONTH); // 0=未設定(任意入力)
-  const [earlyChildhoodHistory, setEarlyChildhoodHistory] = useState(
-    INITIAL_EDUCATION.earlyChildhoodHistory
-  );
-  const [higherEducationHistory, setHigherEducationHistory] = useState(
-    INITIAL_EDUCATION.higherEducationHistory
-  );
-  const [graduateEducationHistory, setGraduateEducationHistory] = useState(
-    INITIAL_EDUCATION.graduateEducationHistory
-  );
-  const [higherEdY, setHigherEdY] = useState(
-    INITIAL_EDUCATION.higherEdYear
-  );
-  const [higherEdType, setHigherEdType] = useState(
-    INITIAL_EDUCATION.higherEdType
-  );
-  const [graduateY, setGraduateY] = useState(
-    INITIAL_EDUCATION.graduateYear
-  );
-  const [graduateType, setGraduateType] = useState(
-    INITIAL_EDUCATION.graduateType
-  );
-  const [adultPeriodsEnabled, setAdultPeriodsEnabled] = useState(
-    SAVED.adultPeriodsEnabled ?? false
-  );
-  const [adultPeriods, setAdultPeriods] = useState(() =>
-    Array.isArray(SAVED.adultPeriods)
-      ? SAVED.adultPeriods.map((period) => ({
-          start: String(period.start ?? period.from ?? ""),
-          end:
-            period.end != null
-              ? String(period.end)
-              : period.to != null
-                ? String(period.to)
-                : "",
-          label: String(period.label ?? ""),
-        }))
-      : []
-  );
-  const [lifeSettingsStatus, setLifeSettingsStatus] = useState("");
-  const [myEvents, setMyEvents] = useState([]);
+  const {
+    birth,
+    month,
+    adjustBirthYear,
+    setBirthYear,
+    setBirthMonth,
+    earlyChildhoodHistory,
+    updateEarlyChildhoodHistory,
+    higherEducationHistory,
+    updateHigherEducationHistory,
+    graduateEducationHistory,
+    updateGraduateEducationHistory,
+    higherEdY,
+    higherEdType,
+    graduateY,
+    graduateType,
+    adultPeriodsEnabled,
+    adultPeriods,
+    lifeSettingsStatus,
+    lifeSettingsFileInputRef,
+    importLifeSettingsFile,
+    exportLifeSettingsFile,
+    setAdultPeriodSplittingEnabled,
+    resetAdultPeriods,
+    updateAdultPeriod,
+    addAdultPeriod,
+    removeAdultPeriod,
+  } = useLifeSettings({
+    initialBirth: INITIAL_BIRTH,
+    initialMonth: INITIAL_MONTH,
+    initialEducation: INITIAL_EDUCATION,
+    savedAdultPeriodsEnabled:
+      SAVED.adultPeriodsEnabled ?? false,
+    savedAdultPeriods: SAVED.adultPeriods,
+  });
 
-  const [eventCustomizations, setEventCustomizations] = useState(
-    EMPTY_EVENT_CUSTOMIZATIONS
-  );
-  const [eventCustomizationStatus, setEventCustomizationStatus] =
-    useState("");
-  const [eventCustomizationEditorOpen, setEventCustomizationEditorOpen] =
-    useState(false);
-  const [editingEventId, setEditingEventId] = useState(null);
-  const [eventEditDraft, setEventEditDraft] = useState({
-    title: "",
-    summary: "",
-    importance: 2,
+  const {
+    isEventOpen,
+    toggleEvent,
+    openEvent,
+    closeEvent,
+    openOnlyEvents,
+    closeAllEvents,
+  } = useOpenEvents();
+
+  const {
+    eventCustomizations,
+    eventCustomizationStatus,
+    eventCustomizationEditorOpen,
+    editingEventId,
+    eventEditDraft,
+    eventAddOpen,
+    eventAddDraft,
+    eventCustomizationFileInputRef,
+    startEditingEvent,
+    cancelEditingEvent,
+    openNewEventForm,
+    cancelAddingEvent,
+    openEventCustomizationEditor,
+    toggleEventCustomizationEditor,
+    closeEventCustomizationEditor,
+    updateEventEditDraft,
+    updateEventAddDraft,
+    saveEditedEvent,
+    importEventCustomizationsFile,
+    exportEventCustomizationsFile,
+    saveAddedEvent,
+    deleteAddedEvent,
+    hideEvent,
+    restoreHiddenEvent,
+    clearEventCustomizations,
+  } = useEventCustomizations({
+    events: EVENTS,
+    mainCategories: MAIN_CATS,
+    onReplaced: () => {
+      closeAllEvents();
+    },
+    onEventRemoved: (event) => {
+      closeEvent(event.id);
+    },
   });
-  const [eventAddOpen, setEventAddOpen] = useState(false);
-  const [eventAddDraft, setEventAddDraft] = useState({
-    date: "",
-    title: "",
-    category: "society",
-    importance: 2,
-    summary: "",
+  const {
+    myEvents,
+    personalEventsSource,
+    personalFileStatus,
+    personalAddOpen,
+    personalEditorOpen,
+    editingPersonalId,
+    personalDraft,
+    personalFileInputRef,
+    importPersonalEventsFile,
+    exportPersonalEventsFile,
+    openPersonalEventEntry,
+    togglePersonalEditor,
+    closePersonalEditor,
+    updatePersonalDraft,
+    openNewPersonalEventForm,
+    closePersonalEventForm,
+    startEditingPersonalEvent,
+    clearPersonalEventsFile,
+    savePersonalEvent,
+    deletePersonalEvent,
+    loadServerPersonalEvents,
+  } = usePersonalEvents({
+    onCleared: () => {
+      setShowMe(false);
+    },
+    onDeleted: (event) => {
+      closeEvent(eventId(event));
+    },
   });
-  const [personalEventsSource, setPersonalEventsSource] = useState("");
-  const [personalFileStatus, setPersonalFileStatus] = useState("");
-  const [personalAddOpen, setPersonalAddOpen] = useState(false);
-  const [personalEditorOpen, setPersonalEditorOpen] = useState(false);
-  const [editingPersonalId, setEditingPersonalId] = useState(null);
-  const [personalDraft, setPersonalDraft] = useState({
-    date: "",
-    title: "",
-    importance: 2,
-    summary: "",
+
+  const {
+    catOff,
+    sfOnly,
+    catOn,
+    toggleCat,
+    toggleSfOnly,
+    setAllCats,
+    importanceMin,
+    setImportanceLevel,
+    closedStages,
+    toggleStage,
+    expandAllStages,
+    collapseStages,
+    setupOpen,
+    openSetup,
+    toggleSetup,
+    speed,
+    cyclePlaybackSpeed,
+  } = useDisplaySettings({
+    saved: SAVED,
+    mainCategories: MAIN_CATS,
+    initialClosedStages:
+      preBirthPeriodsOf(INITIAL_BIRTH).map(
+        (period) => period.key
+      ),
   });
-  const eventCustomizationFileInputRef = useRef(null);
-  const personalFileInputRef = useRef(null);
-  const lifeSettingsFileInputRef = useRef(null);
-  // 大分類フィルタ。true が入っているカテゴリーだけを非表示にする
-  const [catOff, setCatOff] = useState(SAVED.catOff ?? {});
-  // 「作品」のうちSFタグを持つ項目だけに絞る補助フィルタ
-  const [sfOnly, setSfOnly] = useState(SAVED.sfOnly ?? false);
-  // 公開イベントの表示量。3=重要、2=標準、1=全部
-  const [importanceMin, setImportanceMin] = useState(SAVED.importanceMin ?? 2);
+
   const [showMe, setShowMe] = useState(false);
-  // 分野フィルタ。falseが入っている分野だけを非表示にする(未知の分野は既定でオン)
-  const [subOff, setSubOff] = useState(SAVED.subOff ?? {});
-  // 畳んでいる期間(帯)のキー。
-  // 新規起動時は出生前を閉じ、出生年以降を開く「半」を既定値にする。
-  // 保存済みの開閉状態がある場合は、それを優先する。
-  const [closedStages, setClosedStages] = useState(() =>
-    new Set(
-      Array.isArray(SAVED.closed)
-        ? SAVED.closed
-        : preBirthPeriodsOf(INITIAL_BIRTH).map((period) => period.key)
-    )
-  );
-  // 生年や進学・就職年の入力欄。一度入れたら畳んでおける(初回訪問時だけ開いた状態)
-  const [setupOpen, setSetupOpen] = useState(SAVED.setupOpen ?? !SAVED.birth);
-  const [open, setOpen] = useState(() => new Set());
-  // 再生中のテーマ(nullなら年表を表示)と、読み上げのオン・オフ
+  // 再生中のテーマ(nullなら年表を表示)
   const [thread, setThread] = useState(null);
-  const [tts, setTts] = useState(SAVED.tts ?? false);
-  // 再生速度はテーマをまたいでも覚えておく
-  const [speed, setSpeed] = useState(SAVED.speed ?? 1);
   // 年表内検索は一時的な表示条件として扱い、ブラウザ保存はしない。
   const [searchText, setSearchText] = useState("");
-  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
-  // 配列形式を正本とし、移行期間中の旧単一値は先頭行へ同期する。
   useEffect(() => {
-    const firstHigher = higherEducationHistory[0] ?? null;
-    const firstGraduate = graduateEducationHistory[0] ?? null;
-
-    setHigherEdY(firstHigher?.start ?? "");
-    setHigherEdType(firstHigher?.type ?? "university");
-    setGraduateY(firstGraduate?.start ?? "");
-    setGraduateType(firstGraduate?.type ?? "masters");
-  }, [higherEducationHistory, graduateEducationHistory]);
-
-  useEffect(() => {
-    store.save({
+    settingsStore.save({
       birth,
       month,
       earlyChildhoodHistory,
@@ -1030,985 +364,14 @@ export default function App() {
       catOff,
       sfOnly,
       importanceMin,
-      subOff,
       closed: [...closedStages],
       setupOpen,
-      tts,
       speed,
     });
-  }, [birth, month, earlyChildhoodHistory, higherEducationHistory, graduateEducationHistory, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, subOff, closedStages, setupOpen, tts, speed]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    loadBrowserPersonalEvents()
-      .then((events) => {
-        if (!cancelled) {
-          setMyEvents(events);
-          if (events.length > 0) {
-            setPersonalEventsSource("browser");
-          }
-        }
-      })
-      .catch((err) => {
-        console.error("Browser personal history could not be loaded:", err);
-        if (!cancelled) {
-          setPersonalFileStatus(
-            err?.message || "ブラウザ内の自分史を読み込めませんでした"
-          );
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    loadBrowserEventCustomizations()
-      .then((customizations) => {
-        if (!cancelled) {
-          setEventCustomizations(customizations);
-        }
-      })
-      .catch((err) => {
-        console.error(
-          "Browser event customizations could not be loaded:",
-          err
-        );
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const toggleStage = (key) =>
-    setClosedStages((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-
-  const MAIN_CATS = [
-    "work",
-    "science",
-    "education",
-    "computer",
-    "culture",
-    "society",
-  ];
-
-  const catOn = (k) => catOff[k] !== true;
-
-  const toggleCat = (k) =>
-    setCatOff((prev) => ({ ...prev, [k]: !prev[k] }));
-
-  const toggleSfOnly = () => {
-    setSfOnly((prev) => !prev);
-    setCatOff((prev) => ({ ...prev, work: false }));
-  };
-
-  const setAllCats = (on) => {
-    setCatOff(
-      on
-        ? {}
-        : Object.fromEntries(MAIN_CATS.map((k) => [k, true]))
-    );
-    if (on) setSfOnly(false);
-  };
-
-  const startEditingEvent = (event) => {
-    setEditingEventId(event.id);
-    setEventEditDraft({
-      title: event.t ?? "",
-      summary: event.n ?? "",
-      importance: event.importance ?? 2,
-    });
-    setEventCustomizationStatus(
-      `「${event.t}」を修正中です`
-    );
-  };
-
-  const cancelEditingEvent = () => {
-    setEditingEventId(null);
-    setEventEditDraft({
-      title: "",
-      summary: "",
-      importance: 2,
-    });
-    setEventCustomizationStatus("");
-  };
-
-  const saveEditedEvent = async (event) => {
-    const base = EVENTS.find((item) => item.id === event.id);
-
-    if (!base) {
-      setEventCustomizationStatus(
-        "正本に対応する項目が見つかりません"
-      );
-      return;
-    }
-
-    const title = eventEditDraft.title.trim();
-    const summary = eventEditDraft.summary.trim();
-    const importance = Number(eventEditDraft.importance);
-
-    if (!title || !summary) {
-      setEventCustomizationStatus(
-        "タイトルと概要は空にできません"
-      );
-      return;
-    }
-
-    if (![1, 2, 3].includes(importance)) {
-      setEventCustomizationStatus(
-        "重要度は1、2、3のいずれかにしてください"
-      );
-      return;
-    }
-
-    const changes = {};
-
-    if (title !== base.t) changes.t = title;
-    if (summary !== base.n) changes.n = summary;
-    if (importance !== base.importance) {
-      changes.importance = importance;
-    }
-
-    const nextOverrides = {
-      ...(eventCustomizations.overrides ?? {}),
-    };
-
-    const previous = nextOverrides[event.id] ?? {};
-
-    const preserved = Object.fromEntries(
-      Object.entries(previous).filter(
-        ([key]) => !["t", "n", "importance"].includes(key)
-      )
-    );
-
-    const merged = {
-      ...preserved,
-      ...changes,
-    };
-
-    if (Object.keys(merged).length === 0) {
-      delete nextOverrides[event.id];
-    } else {
-      nextOverrides[event.id] = merged;
-    }
-
-    const next = {
-      overrides: nextOverrides,
-      hidden: [...(eventCustomizations.hidden ?? [])],
-      additions: [...(eventCustomizations.additions ?? [])],
-    };
-
-    try {
-      await saveBrowserEventCustomizations(next);
-      setEventCustomizations(next);
-
-      setEditingEventId(null);
-      setEventEditDraft({
-        title: "",
-        summary: "",
-        importance: 2,
-      });
-
-      setEventCustomizationStatus(
-        Object.keys(merged).length === 0
-          ? `「${base.t}」を正本の内容に戻しました`
-          : `「${title}」の修正をこのブラウザに保存しました`
-      );
-    } catch (err) {
-      console.error(
-        "Event customization could not be saved:",
-        err
-      );
-      setEventCustomizationStatus(
-        `保存失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const importEventCustomizationsFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const parsed = parseEventCustomizationsTsv(text);
-
-      // 正本とのID衝突なども、保存前に検査する。
-      const preview = applyEventCustomizations(
-        EVENTS,
-        parsed
-      );
-
-      const overrideCount = Object.keys(
-        parsed.overrides ?? {}
-      ).length;
-      const hiddenCount = parsed.hidden?.length ?? 0;
-      const additionCount =
-        parsed.additions?.length ?? 0;
-
-      const ok = window.confirm(
-        `「${file.name}」を読み込み、` +
-        `現在の年表カスタマイズを置き換えますか？\n\n` +
-        `修正 ${overrideCount}件 / ` +
-        `非表示 ${hiddenCount}件 / ` +
-        `追加 ${additionCount}件`
-      );
-
-      if (!ok) return;
-
-      await saveBrowserEventCustomizations(parsed);
-      setEventCustomizations(parsed);
-
-      setEditingEventId(null);
-      setEventEditDraft({
-        title: "",
-        summary: "",
-        importance: 2,
-      });
-      setEventAddOpen(false);
-      resetEventAddDraft();
-      setOpen(new Set());
-
-      const orphanCount = preview.orphaned.length;
-
-      setEventCustomizationStatus(
-        `${file.name} から年表カスタマイズを読み込み、` +
-        `このブラウザに保存しました` +
-        `（修正 ${overrideCount}件 / ` +
-        `非表示 ${hiddenCount}件 / ` +
-        `追加 ${additionCount}件` +
-        (
-          orphanCount > 0
-            ? ` / 正本にないID ${orphanCount}件`
-            : ""
-        ) +
-        `）`
-      );
-    } catch (err) {
-      console.error(
-        "Event customizations could not be imported:",
-        err
-      );
-      setEventCustomizationStatus(
-        `TSV読み込み失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const exportEventCustomizationsFile = () => {
-    try {
-      const text = serializeEventCustomizationsTsv(
-        eventCustomizations
-      );
-
-      const blob = new Blob(
-        [text],
-        {
-          type: "text/tab-separated-values;charset=utf-8",
-        }
-      );
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = "koshix-timeline-customizations.tsv";
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 0);
-
-      const overrideCount = Object.keys(
-        eventCustomizations.overrides ?? {}
-      ).length;
-      const hiddenCount =
-        eventCustomizations.hidden?.length ?? 0;
-      const additionCount =
-        eventCustomizations.additions?.length ?? 0;
-
-      setEventCustomizationStatus(
-        `年表カスタマイズをTSVへ書き出しました` +
-        `（修正 ${overrideCount}件 / ` +
-        `非表示 ${hiddenCount}件 / ` +
-        `追加 ${additionCount}件）`
-      );
-    } catch (err) {
-      console.error(
-        "Event customizations could not be exported:",
-        err
-      );
-      setEventCustomizationStatus(
-        `TSV書き出し失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const resetEventAddDraft = () => {
-    setEventAddDraft({
-      date: "",
-      title: "",
-      category: "society",
-      importance: 2,
-      summary: "",
-    });
-  };
-
-  const openNewEventForm = () => {
-    resetEventAddDraft();
-    setEventCustomizationEditorOpen(true);
-    setEventAddOpen(true);
-    setEventCustomizationStatus("");
-  };
-
-  const cancelAddingEvent = () => {
-    setEventAddOpen(false);
-    resetEventAddDraft();
-    setEventCustomizationStatus("");
-  };
-
-  const saveAddedEvent = async () => {
-    const date = eventAddDraft.date.trim();
-    const title = eventAddDraft.title.trim();
-    const summary = eventAddDraft.summary.trim();
-    const category = eventAddDraft.category;
-    const importance = Number(eventAddDraft.importance);
-
-    const dateMatch = date.match(
-      /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/
-    );
-
-    if (!dateMatch) {
-      setEventCustomizationStatus(
-        "日付は YYYY、YYYY-MM、YYYY-MM-DD の形式で入力してください"
-      );
-      return;
-    }
-
-    const month = dateMatch[2] ? Number(dateMatch[2]) : null;
-    const day = dateMatch[3] ? Number(dateMatch[3]) : null;
-
-    if (month !== null && (month < 1 || month > 12)) {
-      setEventCustomizationStatus("月は01〜12で入力してください");
-      return;
-    }
-
-    if (day !== null && (day < 1 || day > 31)) {
-      setEventCustomizationStatus("日は01〜31で入力してください");
-      return;
-    }
-
-    if (!title || !summary) {
-      setEventCustomizationStatus(
-        "タイトルと概要は空にできません"
-      );
-      return;
-    }
-
-    if (!MAIN_CATS.includes(category)) {
-      setEventCustomizationStatus("分野の指定が不正です");
-      return;
-    }
-
-    if (![1, 2, 3].includes(importance)) {
-      setEventCustomizationStatus(
-        "重要度は1、2、3のいずれかにしてください"
-      );
-      return;
-    }
-
-    const iconByCategory = {
-      work: "video",
-      science: "chip",
-      education: "book",
-      computer: "computer",
-      culture: "music",
-      society: "flag",
-    };
-
-    const additions = [
-      ...(eventCustomizations.additions ?? []),
-    ];
-
-    const usedIds = new Set([
-      ...EVENTS.map((event) => event.id),
-      ...additions.map((event) => event.id),
-    ]);
-
-    let id;
-    do {
-      id =
-        `custom-${Date.now().toString(36)}-` +
-        Math.random().toString(36).slice(2, 8);
-    } while (usedIds.has(id));
-
-    const addition = {
-      id,
-      date,
-      y: Number(date.slice(0, 4)),
-      t: title,
-      cats: [category],
-      primary: category,
-      cat: category,
-      importance,
-      core: false,
-      ic: iconByCategory[category],
-      n: summary,
-    };
-
-    const next = {
-      overrides: {
-        ...(eventCustomizations.overrides ?? {}),
-      },
-      hidden: [
-        ...(eventCustomizations.hidden ?? []),
-      ],
-      additions: [...additions, addition],
-    };
-
-    try {
-      await saveBrowserEventCustomizations(next);
-      setEventCustomizations(next);
-      setEventAddOpen(false);
-      resetEventAddDraft();
-      setEventCustomizationStatus(
-        `「${title}」をこのブラウザの年表に追加しました`
-      );
-    } catch (err) {
-      console.error(
-        "Custom event could not be added:",
-        err
-      );
-      setEventCustomizationStatus(
-        `追加失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const deleteAddedEvent = async (event) => {
-    const addition = (eventCustomizations.additions ?? []).find(
-      (item) => item.id === event.id
-    );
-
-    if (!addition) {
-      setEventCustomizationStatus(
-        "追加項目として保存されているデータが見つかりません"
-      );
-      return;
-    }
-
-    const ok = window.confirm(
-      `追加項目「${addition.t}」をこのブラウザから削除しますか？`
-    );
-
-    if (!ok) return;
-
-    const next = {
-      overrides: {
-        ...(eventCustomizations.overrides ?? {}),
-      },
-      hidden: [
-        ...(eventCustomizations.hidden ?? []),
-      ],
-      additions: (eventCustomizations.additions ?? []).filter(
-        (item) => item.id !== event.id
-      ),
-    };
-
-    try {
-      await saveBrowserEventCustomizations(next);
-      setEventCustomizations(next);
-
-      setOpen((prev) => {
-        const nextOpen = new Set(prev);
-        nextOpen.delete(event.id);
-        return nextOpen;
-      });
-
-      setEventCustomizationStatus(
-        `「${addition.t}」を削除しました`
-      );
-    } catch (err) {
-      console.error(
-        "Custom event could not be deleted:",
-        err
-      );
-      setEventCustomizationStatus(
-        `削除失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const hideEvent = async (event) => {
-    const ok = window.confirm(
-      `年表項目「${event.t}」をこのブラウザで非表示にしますか？`
-    );
-
-    if (!ok) return;
-
-    const hidden = [
-      ...new Set([
-        ...(eventCustomizations.hidden ?? []),
-        event.id,
-      ]),
-    ];
-
-    const next = {
-      overrides: {
-        ...(eventCustomizations.overrides ?? {}),
-      },
-      hidden,
-      additions: [
-        ...(eventCustomizations.additions ?? []),
-      ],
-    };
-
-    try {
-      await saveBrowserEventCustomizations(next);
-      setEventCustomizations(next);
-
-      if (editingEventId === event.id) {
-        setEditingEventId(null);
-        setEventEditDraft({
-          title: "",
-          summary: "",
-          importance: 2,
-        });
-      }
-
-      setOpen((prev) => {
-        const nextOpen = new Set(prev);
-        nextOpen.delete(event.id);
-        return nextOpen;
-      });
-
-      setEventCustomizationStatus(
-        `「${event.t}」を非表示にしました`
-      );
-    } catch (err) {
-      console.error(
-        "Event could not be hidden:",
-        err
-      );
-      setEventCustomizationStatus(
-        `非表示失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const restoreHiddenEvent = async (id) => {
-    const base = EVENTS.find((event) => event.id === id);
-
-    const next = {
-      overrides: {
-        ...(eventCustomizations.overrides ?? {}),
-      },
-      hidden: (eventCustomizations.hidden ?? []).filter(
-        (itemId) => itemId !== id
-      ),
-      additions: [
-        ...(eventCustomizations.additions ?? []),
-      ],
-    };
-
-    try {
-      await saveBrowserEventCustomizations(next);
-      setEventCustomizations(next);
-      setEventCustomizationStatus(
-        base
-          ? `「${base.t}」を表示に戻しました`
-          : `項目 ${id} の非表示指定を解除しました`
-      );
-    } catch (err) {
-      console.error(
-        "Hidden event could not be restored:",
-        err
-      );
-      setEventCustomizationStatus(
-        `復帰失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const clearEventCustomizations = async () => {
-    const overrideCount = Object.keys(
-      eventCustomizations.overrides ?? {}
-    ).length;
-    const hiddenCount = eventCustomizations.hidden?.length ?? 0;
-    const additionCount = eventCustomizations.additions?.length ?? 0;
-    const total = overrideCount + hiddenCount + additionCount;
-
-    if (total === 0) {
-      setEventCustomizationStatus(
-        "保存されている年表カスタマイズはありません"
-      );
-      return;
-    }
-
-    const ok = window.confirm(
-      `年表カスタマイズ ${total}件をこのブラウザから消去しますか？`
-    );
-
-    if (!ok) return;
-
-    try {
-      await clearBrowserEventCustomizations();
-      setEventCustomizations({
-        overrides: {},
-        hidden: [],
-        additions: [],
-      });
-      setEditingEventId(null);
-      setEventEditDraft({
-        title: "",
-        summary: "",
-        importance: 2,
-      });
-      setEventCustomizationStatus(
-        "年表カスタマイズを消去し、正本の年表に戻しました"
-      );
-    } catch (err) {
-      console.error(
-        "Browser event customizations could not be cleared:",
-        err
-      );
-      setEventCustomizationStatus(
-        `消去失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const importPersonalEventsFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const events = parsePersonalEventsTsv(text);
-
-      await saveBrowserPersonalEvents(events);
-      setMyEvents(events);
-      setPersonalEventsSource("browser");
-      setEditingPersonalId(null);
-      setPersonalAddOpen(false);
-      setPersonalFileStatus(
-        `${file.name} から ${events.length}件を読み込み、このブラウザに保存しました`
-      );
-    } catch (err) {
-      console.error("Personal history file could not be imported:", err);
-      setPersonalFileStatus(
-        `読み込み失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const exportPersonalEventsFile = () => {
-    try {
-      const text = serializePersonalEventsTsv(myEvents);
-      const blob = new Blob(
-        [text],
-        { type: "text/tab-separated-values;charset=utf-8" }
-      );
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = "koshix-timeline-personal-history.tsv";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 0);
-
-      setPersonalFileStatus(
-        `${myEvents.length}件をTSVファイルへ書き出しました`
-      );
-    } catch (err) {
-      console.error("Personal history file could not be exported:", err);
-      setPersonalFileStatus(
-        `書き出し失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const resetPersonalDraft = () => {
-    setPersonalDraft({
-      date: "",
-      title: "",
-      importance: 2,
-      summary: "",
-    });
-  };
-
-  const clearPersonalEventsFile = async () => {
-    if (personalEventsSource !== "browser") {
-      setPersonalFileStatus(
-        "消去できるのは、このブラウザの自分史を使用しているときだけです"
-      );
-      return;
-    }
-
-    const ok = window.confirm(
-      `自分史 ${myEvents.length}件をこのブラウザから消去しますか？`
-    );
-
-    if (!ok) return;
-
-    try {
-      await clearBrowserPersonalEvents();
-
-      setMyEvents([]);
-      setPersonalEventsSource("");
-      setShowMe(false);
-      setEditingPersonalId(null);
-      resetPersonalDraft();
-      setPersonalAddOpen(false);
-      setPersonalEditorOpen(false);
-      setPersonalFileStatus(
-        "このブラウザの自分史を消去しました"
-      );
-    } catch (err) {
-      console.error("Personal history TSV could not be cleared:", err);
-      setPersonalFileStatus(
-        `消去失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const openNewPersonalEventForm = () => {
-    if (personalEventsSource === "server") return;
-
-    setPersonalEditorOpen(true);
-
-    if (personalAddOpen && editingPersonalId === null) {
-      setPersonalAddOpen(false);
-      return;
-    }
-
-    setEditingPersonalId(null);
-    resetPersonalDraft();
-    setPersonalAddOpen(true);
-  };
-
-  const closePersonalEventForm = () => {
-    setEditingPersonalId(null);
-    resetPersonalDraft();
-    setPersonalAddOpen(false);
-  };
-
-  const startEditingPersonalEvent = (event) => {
-    if (personalEventsSource !== "browser") {
-      setPersonalFileStatus(
-        "編集できるのは、このブラウザに保存した自分史だけです"
-      );
-      return;
-    }
-
-    setPersonalEditorOpen(true);
-    setEditingPersonalId(event.id);
-    setPersonalDraft({
-      date: event.date ?? "",
-      title: event.t ?? "",
-      importance: event.importance ?? 2,
-      summary: event.n ?? "",
-    });
-    setPersonalAddOpen(true);
-    setPersonalFileStatus(
-      `自分史「${event.t}」を編集中です`
-    );
-
-    setTimeout(() => {
-      document
-        .getElementById("personal-history-editor")
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 0);
-  };
-
-  const savePersonalEvent = async () => {
-    if (personalEventsSource === "server") {
-      setPersonalFileStatus(
-        "管理者データを表示中はブラウザ自分史を追加・編集できません"
-      );
-      return;
-    }
-
-    const date = String(personalDraft.date ?? "").trim();
-    const title = String(personalDraft.title ?? "").trim();
-    const summary = String(personalDraft.summary ?? "").trim();
-
-    const existing = editingPersonalId
-      ? myEvents.find((event) => event.id === editingPersonalId)
-      : null;
-
-    if (editingPersonalId && !existing) {
-      setPersonalFileStatus(
-        "編集対象の自分史が見つかりません"
-      );
-      return;
-    }
-
-    const event = existing
-      ? {
-          ...existing,
-          date,
-          y: Number(date.slice(0, 4)),
-          t: title,
-          importance: Number(personalDraft.importance),
-          n: summary,
-        }
-      : {
-          id: `me-${Date.now().toString(36)}`,
-          date,
-          y: Number(date.slice(0, 4)),
-          t: title,
-          cats: ["me"],
-          primary: "me",
-          importance: Number(personalDraft.importance),
-          ic: "flag",
-          n: summary,
-        };
-
-    const rawEvents = existing
-      ? myEvents.map((item) =>
-          item.id === editingPersonalId ? event : item
-        )
-      : [...myEvents, event];
-
-    try {
-      // 既存TSV仕様で検証してからIndexedDBへ保存する。
-      const events = parsePersonalEventsTsv(
-        serializePersonalEventsTsv(rawEvents)
-      );
-
-      await saveBrowserPersonalEvents(events);
-
-      setMyEvents(events);
-      setPersonalEventsSource("browser");
-      setEditingPersonalId(null);
-      resetPersonalDraft();
-      setPersonalAddOpen(false);
-      setPersonalFileStatus(
-        existing
-          ? `自分史「${title}」を更新し、このブラウザに保存しました`
-          : `自分史「${title}」を追加し、このブラウザに保存しました`
-      );
-    } catch (err) {
-      console.error("Personal history event could not be saved:", err);
-      setPersonalFileStatus(
-        `${existing ? "更新" : "追加"}失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const deletePersonalEvent = async (event) => {
-    if (personalEventsSource !== "browser") {
-      setPersonalFileStatus(
-        "削除できるのは、このブラウザに保存した自分史だけです"
-      );
-      return;
-    }
-
-    const ok = window.confirm(
-      `自分史「${event.t}」を削除しますか？`
-    );
-
-    if (!ok) return;
-
-    try {
-      const remaining = myEvents.filter(
-        (item) => item.id !== event.id
-      );
-
-      // 削除後もTSVとして読み戻せることを確認してから保存する。
-      const events = parsePersonalEventsTsv(
-        serializePersonalEventsTsv(remaining)
-      );
-
-      await saveBrowserPersonalEvents(events);
-
-      setMyEvents(events);
-
-      if (editingPersonalId === event.id) {
-        setEditingPersonalId(null);
-        resetPersonalDraft();
-        setPersonalAddOpen(false);
-      }
-
-      setOpen((prev) => {
-        const next = new Set(prev);
-        next.delete(eventId(event));
-        return next;
-      });
-
-      setPersonalFileStatus(
-        `自分史「${event.t}」を削除し、このブラウザに保存しました`
-      );
-    } catch (err) {
-      console.error("Personal history event could not be deleted:", err);
-      setPersonalFileStatus(
-        `削除失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
+  }, [birth, month, earlyChildhoodHistory, higherEducationHistory, graduateEducationHistory, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, closedStages, setupOpen, speed]);
 
   const toggleMyEvents = () => {
     setShowMe((value) => !value);
-  };
-
-  const loadServerPersonalEvents = async () => {
-    // 管理者向け。localhostではそのまま取得でき、
-    // 公開環境では private/ のBasic認証を通過した場合だけ取得できる。
-    try {
-      const events = await loadPrivateEvents();
-
-      if (events === null) {
-        setPersonalFileStatus(
-          "管理者データを読み込めませんでした"
-        );
-        return;
-      }
-
-      setMyEvents(events);
-      setPersonalEventsSource("server");
-      setEditingPersonalId(null);
-      setPersonalAddOpen(false);
-      setPersonalEditorOpen(false);
-      setPersonalFileStatus(
-        `管理者データ ${events.length}件を読み込みました`
-      );
-    } catch (err) {
-      console.error("Personal events could not be loaded:", err);
-      setPersonalFileStatus(
-        `管理者データの読み込み失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const subOn = (k) => subOff[k] !== true;
-  const toggleSub = (k) => setSubOff((prev) => ({ ...prev, [k]: !prev[k] }));
-  const setAllSubs = (on) =>
-    setSubOff(on ? {} : Object.fromEntries(Object.keys(SUBS).map((k) => [k, true])));
-
-  const toggle = (id) => {
-    setOpen((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
   };
 
   // ?e=<項目ID> で共有されたリンクは、その項目を開いた状態で表示する
@@ -2023,8 +386,8 @@ export default function App() {
     );
     if (!ev) return;
     const id = eventId(ev);
-    setOpen((prev) => new Set(prev).add(id));
-    setClosedStages(new Set()); // 共有リンクで来たときは帯を畳んだままにしない
+    openEvent(id);
+    expandAllStages(); // 共有リンクで来たときは帯を畳んだままにしない
     const timer = setTimeout(() => {
       document.getElementById(`ev-${id}`)?.scrollIntoView({ block: "center" });
     }, 150);
@@ -2052,531 +415,35 @@ export default function App() {
     [effectiveEvents]
   );
 
-  const grouped = useMemo(() => {
-    const searchExpression = parseSearchExpression(searchText);
-    const matchesSearch = (e) => {
-      if (!searchText.trim()) return true;
-      if (searchExpression.error) return false;
-      const haystack = normalizeSearchText(
-        [e.date, e.end_date, e.t, e.n, e.q, e.note, e.region]
-          .filter(Boolean)
-          .join(" ")
-      );
-      return matchesSearchExpression(searchExpression.root, haystack);
-    };
-
-    const life = buildLifeModel({
-      birth,
-      month,
-      earlyChildhoodHistory,
-      higherEducationHistory,
-      graduateEducationHistory,
-      higherEdYear: higherEdY,
-      higherEdType,
-      graduateYear: graduateY,
-      graduateType,
-      adultYear: "",
-    });
-
-    const adultPeriodValidation = validateAdultPeriods(
-      adultPeriodsEnabled ? adultPeriods : [],
-      {
-        adultYear: life.adultYear,
-      }
-    );
-
-    const usableAdultPeriods =
-      adultPeriodsEnabled &&
-      adultPeriodValidation.errors.length === 0
-        ? adultPeriodValidation.periods
-        : [];
-
-    const RANK = {
-      me: 0,
-      sf: 1,
-      science: 2,
-      education: 3,
-      computer: 4,
-      culture: 5,
-      society: 6,
-    };
-    const list = [
-      // v0.1: 旧 tech → computer、旧 music → culture として暫定表示
-      ...effectiveEvents
-        // 大分類フィルタは主分類で判定する。
-        // sf などの副分類はタグ・色ドットとして保持する。
-        .filter((e) => {
-          const primary = primaryCatOf(e);
-          return (
-            catOn(primary) &&
-            (primary !== "work" || !sfOnly || catsOf(e).includes("sf")) &&
-            (e.importance ?? 2) >= importanceMin &&
-            matchesSearch(e)
-          );
-        })
-        // 既存表示コードとの互換のため cat に主分類を入れる
-        .map((e) => ({
-          ...e,
-          cats: catsOf(e),
-          cat: primaryCatOf(e),
-        })),
-      ...(showMe
-        ? myEvents.filter(matchesSearch).map((m) => ({
-            ...m,
-            cat: "me",
-            cats: m.cats ?? ["me"],
-            primary: "me",
-            ic: m.ic ?? "flag",
-          }))
-        : []),
-    ]
-      .map((e) => ({ ...e, age: e.y - birth }))
-      .sort((a, b) => a.y - b.y || RANK[a.cat] - RANK[b.cat]);
-    const preBirthPeriods = preBirthPeriodsOf(birth);
-    const preBirthStage = life.stageOf(birth - 1);
-
-    const groups = preBirthPeriods.map((period) => ({
-      key: period.key,
-      stage: {
-        ...preBirthStage,
-        key: period.key,
-        label: period.label,
-      },
-      adultPeriod: null,
-      rangeFrom: period.from,
-      rangeTo: period.to,
-      items: [],
-    }));
-
-    const preBirthGroups = new Map(
-      groups.map((group) => [group.key, group])
-    );
-
-    for (const ev of list) {
-      const baseStage = life.stageOf(ev.y);
-
-      if (baseStage.key === "pre") {
-        if (ev.y < TIMELINE_START_YEAR) continue;
-
-        const period = preBirthPeriods.find(
-          (candidate) =>
-            ev.y >= candidate.from &&
-            ev.y <= candidate.to
-        );
-
-        if (period) {
-          preBirthGroups.get(period.key)?.items.push(ev);
-        }
-
-        continue;
-      }
-
-      const customAdultPeriod =
-        baseStage.key === "adult"
-          ? adultPeriodOf(ev.y, usableAdultPeriods)
-          : null;
-
-      const st = customAdultPeriod
-        ? {
-            ...baseStage,
-            label: customAdultPeriod.label,
-          }
-        : baseStage;
-
-      const periodKey = customAdultPeriod
-        ? `adult-period:${customAdultPeriod.from}:${
-            customAdultPeriod.to ?? "open"
-          }`
-        : baseStage.key;
-
-      const key = periodKey;
-
-      const last = groups[groups.length - 1];
-
-      if (last && last.key === key) {
-        last.items.push(ev);
-      } else {
-        groups.push({
-          key,
-          stage: st,
-          adultPeriod: customAdultPeriod,
-          items: [ev],
-        });
-      }
-    }
-    // 個人史の期間帯は背景史と独立させる。
-    // 検索中は従来どおり全グループを開いた状態として扱う。
-    for (const g of groups) {
-      g.closed = !searchText.trim() && closedStages.has(g.key);
-    }
-
-    // 実際に画面上へ表示されている項目だけを数える。
-    // この配列は「現在表示をTSV保存」にも利用する。
-    const visibleItems = groups
-      .filter((g) => !g.closed)
-      .flatMap((g) => g.items);
-
-    return {
-      groups,
-      visibleItems,
-      gradeLabel: life.gradeLabel,
-      adultYear: life.adultYear,
-      adultPeriodErrors: adultPeriodValidation.errors,
-      adultPeriods: usableAdultPeriods,
-      warnings: life.warnings,
-      shown: visibleItems.filter((e) => e.cat !== "me").length,
-      myShown: visibleItems.filter((e) => e.cat === "me").length,
-      searchError: searchExpression.error,
-    };
-  }, [birth, month, earlyChildhoodHistory, higherEducationHistory, graduateEducationHistory, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, myEvents, effectiveEvents, catOff, sfOnly, importanceMin, showMe, subOff, searchText, closedStages]);
-
-  const updateAdultPeriod = (index, key, value) => {
-    setAdultPeriods((previous) =>
-      previous.map((period, i) =>
-        i === index
-          ? { ...period, [key]: value }
-          : period
-      )
-    );
-    setLifeSettingsStatus("");
-  };
-
-  const addAdultPeriod = () => {
-    setAdultPeriods((previous) => {
-      const last = previous.at(-1);
-      const lastEnd = last?.end ?? "";
-
-      const start =
-        previous.length === 0
-          ? String(grouped.adultYear)
-          : lastEnd !== "" &&
-              Number.isFinite(Number(lastEnd))
-            ? String(Number(lastEnd) + 1)
-            : "";
-
-      const end = "";
-
-      return [
-        ...previous,
-        {
-          start,
-          end,
-          label: "",
-        },
-      ];
-    });
-
-    setLifeSettingsStatus("");
-  };
-
-  const removeAdultPeriod = (index) => {
-    setAdultPeriods((previous) =>
-      previous.filter((_, i) => i !== index)
-    );
-    setLifeSettingsStatus("");
-  };
-
-  const exportLifeSettingsFile = () => {
-    try {
-      const text = serializeLifeSettingsTsv(
-        store.load() || {}
-      );
-
-      const blob = new Blob(
-        ["\uFEFF", text],
-        {
-          type: "text/tab-separated-values;charset=utf-8",
-        }
-      );
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download =
-        "koshix-timeline-life-settings.tsv";
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(
-        () => URL.revokeObjectURL(url),
-        0
-      );
-
-      setLifeSettingsStatus(
-        "人生設定全体をTSVへ書き出しました。"
-      );
-    } catch (err) {
-      console.error(
-        "Life settings could not be exported:",
-        err
-      );
-
-      setLifeSettingsStatus(
-        `TSV書き出し失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const importLifeSettingsFile = async (event) => {
-    const file = event.target.files?.[0];
-
-    event.target.value = "";
-
-    if (!file) return;
-
-    try {
-      const imported =
-        parseLifeSettingsTsv(
-          await file.text()
-        );
-
-      const ok = window.confirm(
-        `「${file.name}」から人生設定を読み込み、` +
-        "現在の生年・幼保歴・大学等・大学院・成人期分割を置き換えますか？"
-      );
-
-      if (!ok) return;
-
-      const current =
-        store.load() || {};
-
-      const next =
-        mergeLifeSettings(
-          current,
-          imported
-        );
-
-      const storage =
-        window.localStorage;
-
-      const backup =
-        storage.getItem(
-          LIFE_SETTINGS_STORAGE_KEY
-        );
-
-      try {
-        storage.removeItem(
-          LIFE_SETTINGS_STORAGE_KEY
-        );
-
-        storage.setItem(
-          LIFE_SETTINGS_STORAGE_KEY,
-          JSON.stringify(next)
-        );
-      } catch (err) {
-        try {
-          storage.removeItem(
-            LIFE_SETTINGS_STORAGE_KEY
-          );
-
-          if (backup != null) {
-            storage.setItem(
-              LIFE_SETTINGS_STORAGE_KEY,
-              backup
-            );
-          }
-        } catch {}
-
-        throw err;
-      }
-
-      window.location.reload();
-    } catch (err) {
-      console.error(
-        "Life settings could not be imported:",
-        err
-      );
-
-      setLifeSettingsStatus(
-        `TSV読み込み失敗: ${err?.message || String(err)}`
-      );
-    }
-  };
-
-  const exportVisibleEventsTsv = (target = "auto") => {
-    const cleanCell = (value) =>
-      String(value ?? "")
-        .replace(/\t/g, " ")
-        .replace(/\r?\n/g, " ")
-        .trim();
-
-    const listCell = (value) =>
-      Array.isArray(value)
-        ? value.map(cleanCell).filter(Boolean).join("|")
-        : cleanCell(value);
-
-    const downloadUtf16Tsv = (filename, header, rows) => {
-      const lines = [
-        header.join("\t"),
-        ...rows.map((row) =>
-          row.map(cleanCell).join("\t")
-        ),
-      ];
-
-      const text = lines.join("\r\n") + "\r\n";
-      const bytes = new Uint8Array(2 + text.length * 2);
-
-      // UTF-16LE BOM
-      bytes[0] = 0xff;
-      bytes[1] = 0xfe;
-
-      for (let i = 0; i < text.length; i += 1) {
-        const code = text.charCodeAt(i);
-        bytes[2 + i * 2] = code & 0xff;
-        bytes[3 + i * 2] = code >> 8;
-      }
-
-      const blob = new Blob(
-        [bytes],
-        { type: "text/plain;charset=utf-16le" }
-      );
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = filename;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    };
-
-    const visiblePublicItems = grouped.visibleItems.filter(
-      (event) => event.cat !== "me"
-    );
-    const visiblePersonalItems = grouped.visibleItems.filter(
-      (event) => event.cat === "me"
-    );
-
-    let exportTarget = target;
-
-    if (exportTarget === "auto") {
-      if (
-        visiblePublicItems.length > 0 &&
-        visiblePersonalItems.length > 0
-      ) {
-        setDownloadMenuOpen(true);
-        return;
-      }
-
-      exportTarget =
-        visiblePersonalItems.length > 0 ? "personal" : "public";
-    }
-
-    const now = new Date();
-    const stamp =
-      String(now.getFullYear()) +
-      String(now.getMonth() + 1).padStart(2, "0") +
-      String(now.getDate()).padStart(2, "0");
-
-    if (
-      exportTarget === "public" &&
-      visiblePublicItems.length > 0
-    ) {
-      const header = [
-        "id",
-        "date",
-        "end_date",
-        "title",
-        "cats",
-        "primary",
-        "subs",
-        "region",
-        "importance",
-        "icon",
-        "summary",
-        "sources",
-        "search",
-        "note",
-        "core",
-        "age",
-        "grade",
-      ];
-
-      const rows = visiblePublicItems.map((event) => [
-        event.id ?? "",
-        event.date ?? "",
-        event.end_date ?? "",
-        event.t ?? "",
-        listCell(catsOf(event)),
-        event.primary ?? event.cat ?? "",
-        listCell(event.subs),
-        event.region ?? "",
-        event.importance ?? 2,
-        event.ic ?? "",
-        event.n ?? "",
-        listCell(event.l),
-        event.q ?? "",
-        event.note ?? "",
-        event.core ? "1" : "0",
-        event.age,
-        grouped.gradeLabel(event.y),
-      ]);
-
-      downloadUtf16Tsv(
-        `koshix-timeline-visible-public-${stamp}.txt`,
-        header,
-        rows
-      );
-    }
-
-    if (
-      exportTarget === "personal" &&
-      visiblePersonalItems.length > 0
-    ) {
-      const header = [
-        "id",
-        "date",
-        "end_date",
-        "title",
-        "cats",
-        "primary",
-        "subs",
-        "region",
-        "importance",
-        "icon",
-        "summary",
-        "sources",
-        "search",
-        "note",
-        "age",
-        "grade",
-      ];
-
-      const rows = visiblePersonalItems.map((event) => [
-        event.id ?? "",
-        event.date ?? "",
-        event.end_date ?? "",
-        event.t ?? "",
-        listCell(event.cats ?? ["me"]),
-        event.primary ?? "me",
-        listCell(event.subs),
-        event.region ?? "",
-        event.importance ?? 2,
-        event.ic ?? "flag",
-        event.n ?? "",
-        listCell(event.l),
-        event.q ?? "",
-        event.note ?? "",
-        event.age,
-        grouped.gradeLabel(event.y),
-      ]);
-
-      downloadUtf16Tsv(
-        `koshix-timeline-visible-personal-${stamp}.txt`,
-        header,
-        rows
-      );
-    }
-
-    setDownloadMenuOpen(false);
-  };
+  const grouped = useTimelineModel({
+    birth,
+    month,
+    earlyChildhoodHistory,
+    higherEducationHistory,
+    graduateEducationHistory,
+    higherEdYear: higherEdY,
+    higherEdType,
+    graduateYear: graduateY,
+    graduateType,
+    adultPeriodsEnabled,
+    adultPeriods,
+    personalEvents: myEvents,
+    publicEvents: effectiveEvents,
+    catOff,
+    sfOnly,
+    importanceMin,
+    showPersonal: showMe,
+    searchText,
+    closedStages,
+  });
+
+  const {
+    downloadMenuOpen,
+    exportVisibleEventsTsv,
+  } = useVisibleEventsExport({
+    visibleItems: grouped.visibleItems,
+    gradeLabel: grouped.gradeLabel,
+  });
 
   const font =
     '"Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif';
@@ -2666,7 +533,7 @@ export default function App() {
             }}
           >
             関連する出来事を一本の流れとしてたどります。
-            テーマを選ぶと、読み上げ付きの再生画面が始まります。
+            テーマを選ぶと、自動送りの再生画面が始まります。
           </div>
 
           <div
@@ -2739,10 +606,11 @@ export default function App() {
             thread={thread}
             gradeLabel={grouped.gradeLabel}
             birth={birth}
-            tts={tts}
-            setTts={setTts}
+            allEvents={EVENTS}
+            hashtag={HASHTAG}
+            shareUrl={SHARE_URL}
             speed={speed}
-            setSpeed={setSpeed}
+            onCycleSpeed={cyclePlaybackSpeed}
             onClose={() => setThread(null)}
           />
         )}
@@ -2895,7 +763,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                setSetupOpen(true);
+                openSetup();
                 setTimeout(() => {
                   document
                     .getElementById("timeline-settings")
@@ -2926,12 +794,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                if (personalEventsSource !== "server") {
-                  setPersonalEditorOpen(true);
-                  setPersonalAddOpen(true);
-                  setEditingPersonalId(null);
-                  resetPersonalDraft();
-                }
+                openPersonalEventEntry();
                 setTimeout(() => {
                   document
                     .getElementById("personal-history")
@@ -2962,9 +825,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                setEventCustomizationEditorOpen(true);
-                setEventAddOpen(false);
-                resetEventAddDraft();
+                openEventCustomizationEditor();
                 setTimeout(() => {
                   document
                     .getElementById("timeline-customization")
@@ -2993,47 +854,6 @@ export default function App() {
             </button>
           </div>
         </section>
-
-        {/* 旧小分類：あなた版では現在使用しない */}
-        <div
-          style={{
-            display: "none",
-            background: "#fff", border: "1px solid #e2e4e8", borderRadius: 12,
-            padding: "12px 16px", marginBottom: 14,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 13, fontWeight: 700 }}>興味のある分野</span>
-            <span style={{ fontSize: 11, color: "#8a8f98" }}>チェックを外した分野は年表から消えます</span>
-            <span style={{ flex: 1 }} />
-            <button onClick={() => setAllSubs(true)} style={miniBtn}>全部オン</button>
-            <button onClick={() => setAllSubs(false)} style={miniBtn}>全部オフ</button>
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {Object.entries(SUBS).map(([k, v]) => {
-              const on = subOn(k);
-              const c = CAT[v.c].bg;
-              return (
-                <label
-                  key={k}
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer",
-                    fontSize: 12, fontWeight: 700, padding: "4px 10px", borderRadius: 999,
-                    border: `1.5px solid ${on ? c : "#d5d8dd"}`,
-                    background: on ? `${c}12` : "transparent",
-                    color: on ? c : "#a0a4ab",
-                  }}
-                >
-                  <input
-                    type="checkbox" checked={on} onChange={() => toggleSub(k)}
-                    style={{ accentColor: c, margin: 0, cursor: "pointer" }}
-                  />
-                  {v.label}
-                </label>
-              );
-            })}
-          </div>
-        </div>
 
         {/* 共通年表の表示設定 */}
         <div
@@ -3122,551 +942,39 @@ export default function App() {
               件
             </span>
 
-          {MAIN_CATS.map((k) => {
-            const on = catOn(k);
-
-            if (k === "work") {
-              return (
-                <span
-                  key={k}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "stretch",
-                    border: `1.5px solid ${CAT[k].border}`,
-                    borderRadius: 999,
-                    overflow: "hidden",
-                    background: on ? CAT[k].bg : CAT[k].soft,
-                    color: on ? CAT[k].fg : CAT[k].border,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleCat(k)}
-                    aria-pressed={on}
-                    style={{
-                      fontFamily: font,
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      padding: "6px 2px 6px 11px",
-                      border: "none",
-                      background: "transparent",
-                      color: "inherit",
-                    }}
-                  >
-                    {CAT[k].label}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={toggleSfOnly}
-                    aria-pressed={sfOnly}
-                    aria-label={sfOnly ? "SF作品のみ表示を解除" : "SF作品のみ表示"}
-                    title={sfOnly ? "SF作品のみ表示中" : "SF作品だけに絞る"}
-                    style={{
-                      fontFamily: font,
-                      fontSize: 11.5,
-                      fontWeight: 800,
-                      cursor: "pointer",
-                      padding: "6px 9px 6px 2px",
-                      border: "none",
-                      background: "transparent",
-                      color: "inherit",
-                    }}
-                  >
-                    | {sfOnly ? "✓" : "□"}SF
-                  </button>
-                </span>
-              );
-            }
-
-            return (
-              <button
-                key={k}
-                onClick={() => toggleCat(k)}
-                style={{
-                  fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                  padding: "6px 14px", borderRadius: 999,
-                  border: `1.5px solid ${CAT[k].border}`,
-                  background: on ? CAT[k].bg : CAT[k].soft,
-                  color: on ? CAT[k].fg : CAT[k].border,
-                }}
-              >
-                {CAT[k].label}
-              </button>
-            );
-          })}
-          <button
-            onClick={toggleMyEvents}
-            style={{
-              fontFamily: font, fontSize: 12, fontWeight: 700, cursor: "pointer",
-              padding: "6px 14px", borderRadius: 999,
-              border: `1.5px solid ${CAT.me.border}`,
-              background: showMe ? CAT.me.bg : CAT.me.soft,
-              color: showMe ? CAT.me.fg : CAT.me.border,
-            }}
-          >
-            {CAT.me.label}
-          </button>
-
-          <button
-            type="button"
-            onClick={openThreadWindow}
-            style={{
-              fontFamily: font,
-              fontSize: 12,
-              fontWeight: 800,
-              cursor: "pointer",
-              padding: "6px 11px",
-              borderRadius: 999,
-              marginLeft: 0,
-              marginRight: 4,
-              border: "1.5px solid #d1d5db",
-              background: "#f3f4f6",
-              color: "#6b7280",
-            }}
-          >
-            テーマの糸
-          </button>
-
+          <TimelineCategoryFilters
+            mainCategories={MAIN_CATS}
+            catOn={catOn}
+            toggleCat={toggleCat}
+            sfOnly={sfOnly}
+            toggleSfOnly={toggleSfOnly}
+            showMe={showMe}
+            toggleMyEvents={toggleMyEvents}
+            openThreadWindow={openThreadWindow}
+            font={font}
+          />
           </div>
-          <div
-            aria-label="年表表示操作"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 18,
-              flexWrap: "nowrap",
-              width: "fit-content",
-              maxWidth: "100%",
-              minHeight: 38,
-              boxSizing: "border-box",
-              paddingBottom: 0,
-            }}
-          >
-            <div
-              role="group"
-              aria-label="分類の一括表示切替"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 3,
-                padding: 3,
-                borderRadius: 9,
-                background: "#edf7f0",
-                border: "1px solid #d9eadf",
-                flexShrink: 0,
-              }}
-            >
-              <span style={{
-                fontSize: 11.5,
-                fontWeight: 800,
-                color: "#4f765d",
-                padding: "0 3px",
-              }}>
-                分類
-              </span>
+          <TimelineDisplayControls
+            groups={grouped.groups}
+            birth={birth}
+            setAllCats={setAllCats}
+            importanceMin={importanceMin}
+            setImportanceLevel={setImportanceLevel}
+            expandAllStages={expandAllStages}
+            collapseStages={collapseStages}
+            openOnlyEvents={openOnlyEvents}
+            closeAllEvents={closeAllEvents}
+            font={font}
+          />
 
-              <span style={{
-                display: "inline-flex",
-                overflow: "hidden",
-                borderRadius: 7,
-                border: "1.5px solid #6f8a78",
-              }}>
-                <button
-                  onClick={() => setAllCats(true)}
-                  style={{
-                    fontFamily: font,
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                    padding: "4px 9px",
-                    border: "none",
-                    background: "#fff",
-                    color: "#42654f",
-                    cursor: "pointer",
-                  }}
-                >
-                  全ON
-                </button>
-
-                <span aria-hidden="true"
-                  style={{ width: 1, background: "#b9c9be" }}
-                />
-
-                <button
-                  onClick={() => setAllCats(false)}
-                  style={{
-                    fontFamily: font,
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    padding: "4px 9px",
-                    border: "none",
-                    background: "#e9f2eb",
-                    color: "#657a6c",
-                    cursor: "pointer",
-                  }}
-                >
-                  全OFF
-                </button>
-              </span>
-            </div>
-
-            <div
-              role="group"
-              aria-label="表示"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 3,
-                padding: 3,
-                borderRadius: 9,
-                background: "#f5f1e8",
-                border: "1px solid #e7dfcf",
-                flexShrink: 0,
-              }}
-            >
-              <span style={{
-                fontSize: 11.5,
-                fontWeight: 800,
-                color: "#776d5c",
-                padding: "0 3px",
-              }}>
-                表示
-              </span>
-
-              <span style={{
-                display: "inline-flex",
-                overflow: "hidden",
-                borderRadius: 7,
-                border: "1.5px solid #b4aa98",
-              }}>
-                {[3, 2, 1].map((level, index) => (
-                  <span key={level} style={{ display: "inline-flex" }}>
-                    {index > 0 && (
-                      <span
-                        aria-hidden="true"
-                        style={{ width: 1, background: "#d1c9ba" }}
-                      />
-                    )}
-                    <button
-                      onClick={() => setImportanceMin(level)}
-                      aria-pressed={importanceMin === level}
-                      style={{
-                        fontFamily: font,
-                        fontSize: 11.5,
-                        fontWeight: importanceMin === level ? 800 : 700,
-                        padding: "4px 9px",
-                        border: "none",
-                        background:
-                          importanceMin === level ? "#e6e9ee" : "#fff",
-                        color: "#667085",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {level === 3 ? "重要" : level === 2 ? "標準" : "全部"}
-                    </button>
-                  </span>
-                ))}
-              </span>
-            </div>
-
-            <div
-              role="group"
-              aria-label="期間の一括開閉"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 3,
-                padding: 3,
-                borderRadius: 9,
-                background: "#f7f2ea",
-                border: "1px solid #eadfce",
-                flexShrink: 0,
-              }}
-            >
-              <span style={{
-                fontSize: 11.5,
-                fontWeight: 800,
-                color: "#7a6a55",
-                padding: "0 3px",
-              }}>
-                期間
-              </span>
-
-              <span style={{
-                display: "inline-flex",
-                overflow: "hidden",
-                borderRadius: 7,
-                border: "1.5px solid #9a8b76",
-              }}>
-                <button
-                  onClick={() => setClosedStages(new Set())}
-                  style={{
-                    fontFamily: font,
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                    padding: "4px 9px",
-                    border: "none",
-                    background: "#fff",
-                    color: "#6b5a45",
-                    cursor: "pointer",
-                  }}
-                >
-                  開
-                </button>
-
-                <span aria-hidden="true"
-                  style={{ width: 1, background: "#d1c5b3" }}
-                />
-
-                <button
-                  onClick={() =>
-                    setClosedStages(
-                      new Set(
-                        grouped.groups
-                          .filter(
-                            (g) =>
-                              g.rangeTo != null &&
-                              g.rangeTo < birth
-                          )
-                          .map((g) => g.key)
-                      )
-                    )
-                  }
-                  title="出生前を閉じ、出生年以降を開きます"
-                  style={{
-                    fontFamily: font,
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                    padding: "4px 9px",
-                    border: "none",
-                    background: "#f7f3ec",
-                    color: "#74644f",
-                    cursor: "pointer",
-                  }}
-                >
-                  半
-                </button>
-
-                <span aria-hidden="true"
-                  style={{ width: 1, background: "#d1c5b3" }}
-                />
-
-                <button
-                  onClick={() =>
-                    setClosedStages(
-                      new Set(grouped.groups.map((g) => g.key))
-                    )
-                  }
-                  style={{
-                    fontFamily: font,
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    padding: "4px 9px",
-                    border: "none",
-                    background: "#eee8dd",
-                    color: "#7d7468",
-                    cursor: "pointer",
-                  }}
-                >
-                  閉
-                </button>
-              </span>
-            </div>
-
-            <div
-              role="group"
-              aria-label="解説の一括開閉"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 3,
-                padding: 3,
-                borderRadius: 9,
-                background: "#eef4f8",
-                border: "1px solid #dce6ee",
-                flexShrink: 0,
-              }}
-            >
-              <span style={{
-                fontSize: 11.5,
-                fontWeight: 800,
-                color: "#4f7089",
-                padding: "0 3px",
-              }}>
-                解説
-              </span>
-
-              <span style={{
-                display: "inline-flex",
-                overflow: "hidden",
-                borderRadius: 7,
-                border: "1.5px solid #6f8798",
-              }}>
-                <button
-                  onClick={() =>
-                    setOpen(
-                      new Set(
-                        grouped.groups.flatMap(
-                          (g) => g.items.map(eventId)
-                        )
-                      )
-                    )
-                  }
-                  style={{
-                    fontFamily: font,
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                    padding: "4px 9px",
-                    border: "none",
-                    background: "#fff",
-                    color: "#405f76",
-                    cursor: "pointer",
-                  }}
-                >
-                  開
-                </button>
-
-                <span aria-hidden="true"
-                  style={{ width: 1, background: "#bfd0dc" }}
-                />
-
-                <button
-                  onClick={() =>
-                    setOpen(
-                      new Set(
-                        grouped.groups
-                          .flatMap((g) => g.items)
-                          .filter((ev) => ev.y >= birth)
-                          .map(eventId)
-                      )
-                    )
-                  }
-                  title="出生前の解説を閉じ、出生年以降の解説を開きます"
-                  style={{
-                    fontFamily: font,
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                    padding: "4px 9px",
-                    border: "none",
-                    background: "#f3f7fa",
-                    color: "#4f6a7e",
-                    cursor: "pointer",
-                  }}
-                >
-                  半
-                </button>
-
-                <span aria-hidden="true"
-                  style={{ width: 1, background: "#bfd0dc" }}
-                />
-
-                <button
-                  onClick={() => setOpen(new Set())}
-                  style={{
-                    fontFamily: font,
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    padding: "4px 9px",
-                    border: "none",
-                    background: "#e3edf4",
-                    color: "#647785",
-                    cursor: "pointer",
-                  }}
-                >
-                  閉
-                </button>
-              </span>
-            </div>
-          </div>
-
-          <div
-            role="group"
-            aria-label="検索"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              flexWrap: "nowrap",
-              width: "calc(100% - 50px)",
-              minHeight: 38,
-              boxSizing: "border-box",
-              marginTop: 3,
-              padding: "3px 9px",
-              borderRadius: 10,
-              overflowX: "auto",
-              border: "1px solid #dfe3e8",
-              background: "#f6f7f9",
-            }}
-          >
-            <label
-              htmlFor="timeline-search"
-              style={{
-                fontSize: 11.5,
-                fontWeight: 800,
-                color: "#626c78",
-                padding: "0 2px",
-              }}
-            >
-              検索
-            </label>
-
-            <input
-              id="timeline-search"
-              type="search"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="例: AI && 教育 / (DNA || RNA) && 研究"
-              autoComplete="off"
-              style={{
-                flex: "0 0 225px",
-                minWidth: 220,
-                maxWidth: 225,
-                fontFamily: font,
-                fontSize: 12,
-                padding: "5px 9px",
-                borderRadius: 7,
-                border: `1px solid ${
-                  grouped.searchError ? "#c2452d" : "#cfd5dc"
-                }`,
-                background: "#fff",
-                color: "#22272e",
-              }}
-            />
-
-            {searchText && (
-              <button
-                onClick={() => setSearchText("")}
-                style={{
-                  ...miniBtn,
-                  fontSize: 11.5,
-                  fontWeight: 700,
-                  padding: "4px 8px",
-                }}
-              >
-                クリア
-              </button>
-            )}
-
-            <span
-              style={{
-                flex: "1 1 auto",
-                minWidth: 0,
-                fontSize: 10.5,
-                lineHeight: 1.4,
-                whiteSpace: "nowrap",
-                color: grouped.searchError ? "#b33b2e" : "#7f8791",
-              }}
-              role={grouped.searchError ? "alert" : undefined}
-            >
-              {grouped.searchError || (
-                <>
-                  {"&& = AND、|| = OR、( ) = 優先指定。"}
-                  {" 空白・読点・カンマもANDです。"}
-                </>
-              )}
-            </span>
-          </div>
+          <TimelineSearchControls
+            searchText={searchText}
+            searchError={grouped.searchError}
+            onSearchTextChange={setSearchText}
+            onClearSearch={() => setSearchText("")}
+            font={font}
+            miniBtn={miniBtn}
+          />
 
           <div
             style={{
@@ -4002,7 +1310,7 @@ export default function App() {
 
                 if (ev.cat === "me") {
                   const id = eventId(ev);
-                  const isOpen = open.has(id);
+                  const isOpen = isEventOpen(id);
                   return (
                     <li
                       key={ev.id}
@@ -4013,7 +1321,7 @@ export default function App() {
                       {halfCenturyHeading}
                       {japaneseEraHeading}
                       <button
-                        onClick={() => toggle(id)}
+                        onClick={() => toggleEvent(id)}
                         aria-expanded={isOpen}
                         style={{
                           display: "flex", alignItems: "flex-start", gap: 10,
@@ -4122,7 +1430,7 @@ export default function App() {
                   );
                 }
                 const id = eventId(ev);
-                const isOpen = open.has(id);
+                const isOpen = isEventOpen(id);
                 const grade = grouped.gradeLabel(ev.y);
                 const shareText =
                   (ev.age < 0
@@ -4131,13 +1439,17 @@ export default function App() {
                 const secondaryCats = (ev.cats ?? []).filter(
                   (category) => category !== ev.cat
                 );
+                const isAdded = (
+                  eventCustomizations.additions ?? []
+                ).some((item) => item.id === id);
+                const isEditing = editingEventId === id;
                 return (
                   <li key={i} id={`ev-${id}`} style={{ borderBottom: "1px solid #ececea" }}>
                     {backgroundHeading}
                     {halfCenturyHeading}
                     {japaneseEraHeading}
                     <button
-                      onClick={() => toggle(id)}
+                      onClick={() => toggleEvent(id)}
                       aria-expanded={isOpen}
                       style={{
                         display: "flex", alignItems: "flex-start", gap: 10,
@@ -4253,69 +1565,11 @@ export default function App() {
                           日付：{formatEventDate(ev.date)}
                         </div>
                         {ev.n}
-                        {ev.q && (
-                          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            <a
-                              href={`https://www.amazon.co.jp/s?k=${encodeURIComponent(ev.q)}`}
-                              target="_blank" rel="noopener noreferrer"
-                              style={{
-                                fontSize: 11.5, fontWeight: 700, color: "#fff",
-                                textDecoration: "none", borderRadius: 999,
-                                padding: "3px 12px", background: "#b0771e",
-                              }}
-                            >
-                              Amazonで探す
-                            </a>
-                            <a
-                              href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ev.q)}`}
-                              target="_blank" rel="noopener noreferrer"
-                              style={{
-                                fontSize: 11.5, fontWeight: 700, color: "#fff",
-                                textDecoration: "none", borderRadius: 999,
-                                padding: "3px 12px", background: "#c2452d",
-                              }}
-                            >
-                              YouTubeで探す
-                            </a>
-                          </div>
-                        )}
-                        {ev.l && (
-                          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            {ev.l.map((t) => {
-                              // TSVでは "|" をソース間の区切りに使うので、
-                              // 1ソース内の「対象::表示名」は "::" で分ける。
-                              // 外部URLは "https://…::表示名"、Wikipediaは "記事名::表示名"。
-                              const [rawTarget, rawLabel] = t.split("::");
-                              const ext = rawTarget.startsWith("http");
-                              const en = rawTarget.startsWith("en:");
-                              const article = en ? rawTarget.slice(3) : rawTarget;
-                              const title = rawLabel || (ext ? rawTarget : article);
-                              const url = ext
-                                ? rawTarget
-                                : (en
-                                    ? "https://en.wikipedia.org/wiki/"
-                                    : "https://ja.wikipedia.org/wiki/") +
-                                  encodeURIComponent(article.replace(/ /g, "_"));
-                              return (
-                                <a
-                                  key={t}
-                                  href={url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    fontSize: 11.5, fontWeight: 700,
-                                    color: CAT[ev.cat].bg, textDecoration: "none",
-                                    border: `1px solid ${CAT[ev.cat].bg}44`,
-                                    borderRadius: 999, padding: "2px 10px",
-                                    background: "#ffffffaa",
-                                  }}
-                                >
-                                  {ext ? "▶ " : "W: "}{title}{en ? " (en)" : ""}
-                                </a>
-                              );
-                            })}
-                          </div>
-                        )}
+                        <EventReferenceLinks
+                          query={ev.q}
+                          links={ev.l}
+                          color={CAT[ev.cat].bg}
+                        />
                         {ev.note && (
                           <div
                             style={{
@@ -4329,208 +1583,28 @@ export default function App() {
                             {ev.note}
                           </div>
                         )}
-                        <div
-                          style={{
-                            marginTop: 10, paddingTop: 8, borderTop: "1px dashed #d5d8dd",
-                            display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-                          }}
-                        >
-                          <SpeakButton ev={ev} rate={speed} color={CAT[ev.cat].bg} />
-
-                          {(eventCustomizations.additions ?? []).some(
-                            (item) => item.id === id
-                          ) ? (
-                            <button
-                              type="button"
-                              onClick={() => deleteAddedEvent(ev)}
-                              style={{
-                                ...miniBtn,
-                                color: "#8b4a35",
-                                border: "1px solid #d6b3a5",
-                                background: "#fff8f5",
-                              }}
-                            >
-                              削除
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => startEditingEvent(ev)}
-                                style={{
-                                  ...miniBtn,
-                                  ...(editingEventId === id
-                                    ? {
-                                        background: "#e8f1ff",
-                                        border: "1px solid #6f98d5",
-                                        color: "#28568f",
-                                      }
-                                    : {}),
-                                }}
-                              >
-                                修正
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => hideEvent(ev)}
-                                style={{
-                                  ...miniBtn,
-                                  color: "#8b4a35",
-                                  border: "1px solid #d6b3a5",
-                                  background: "#fff8f5",
-                                }}
-                              >
-                                非表示
-                              </button>
-                            </>
-                          )}
-
-                          <ShareBar
-                            compact
-                            hashtag={HASHTAG}
-                            color={CAT[ev.cat].bg}
-                            text={shareText}
-                            note={ev.n}
-                            url={`${SHARE_URL}?e=${encodeURIComponent(id)}`}
+                        <EventCustomizationActions
+                          isAdded={isAdded}
+                          isEditing={isEditing}
+                          onDeleteAdded={() => deleteAddedEvent(ev)}
+                          onStartEditing={() => startEditingEvent(ev)}
+                          onHide={() => hideEvent(ev)}
+                          hashtag={HASHTAG}
+                          color={CAT[ev.cat].bg}
+                          shareText={shareText}
+                          note={ev.n}
+                          shareUrl={`${SHARE_URL}?e=${encodeURIComponent(id)}`}
+                          miniBtn={miniBtn}
+                        />
+                        {isEditing && (
+                          <EventCustomizationEditForm
+                            draft={eventEditDraft}
+                            updateDraft={updateEventEditDraft}
+                            onSave={() => saveEditedEvent(ev)}
+                            onCancel={cancelEditingEvent}
+                            font={font}
+                            miniBtn={miniBtn}
                           />
-                        </div>
-
-                        {editingEventId === id && (
-                          <form
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              saveEditedEvent(ev);
-                            }}
-                            style={{
-                              marginTop: 10,
-                              padding: 10,
-                              border: "1px solid #cfdce8",
-                              borderRadius: 8,
-                              background: "#ffffffaa",
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: 11.5,
-                                fontWeight: 800,
-                                color: "#365f7d",
-                                marginBottom: 7,
-                              }}
-                            >
-                              この年表項目を修正
-                            </div>
-
-                            <input
-                              type="text"
-                              required
-                              value={eventEditDraft.title}
-                              onChange={(e) =>
-                                setEventEditDraft((prev) => ({
-                                  ...prev,
-                                  title: e.target.value,
-                                }))
-                              }
-                              placeholder="タイトル"
-                              aria-label="年表項目タイトル"
-                              style={{
-                                boxSizing: "border-box",
-                                width: "100%",
-                                fontFamily: font,
-                                fontSize: 12,
-                                padding: "7px 9px",
-                                border: "1px solid #cfd3d8",
-                                borderRadius: 7,
-                              }}
-                            />
-
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                marginTop: 8,
-                              }}
-                            >
-                              <label
-                                style={{
-                                  fontSize: 11.5,
-                                  fontWeight: 700,
-                                  color: "#365f7d",
-                                }}
-                              >
-                                重要度
-                              </label>
-
-                              <select
-                                value={eventEditDraft.importance}
-                                onChange={(e) =>
-                                  setEventEditDraft((prev) => ({
-                                    ...prev,
-                                    importance: Number(e.target.value),
-                                  }))
-                                }
-                                style={{
-                                  fontFamily: font,
-                                  fontSize: 12,
-                                  padding: "6px 8px",
-                                  border: "1px solid #cfd3d8",
-                                  borderRadius: 7,
-                                }}
-                              >
-                                <option value={3}>L3 重要</option>
-                                <option value={2}>L2 標準</option>
-                                <option value={1}>L1 補足</option>
-                              </select>
-                            </div>
-
-                            <textarea
-                              required
-                              value={eventEditDraft.summary}
-                              onChange={(e) =>
-                                setEventEditDraft((prev) => ({
-                                  ...prev,
-                                  summary: e.target.value,
-                                }))
-                              }
-                              placeholder="概要"
-                              aria-label="年表項目概要"
-                              rows={4}
-                              style={{
-                                display: "block",
-                                boxSizing: "border-box",
-                                width: "100%",
-                                marginTop: 8,
-                                fontFamily: font,
-                                fontSize: 12,
-                                lineHeight: 1.6,
-                                padding: "7px 9px",
-                                border: "1px solid #cfd3d8",
-                                borderRadius: 7,
-                                resize: "vertical",
-                              }}
-                            />
-
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: 8,
-                                marginTop: 9,
-                              }}
-                            >
-                              <button type="submit" style={miniBtn}>
-                                変更を保存
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={cancelEditingEvent}
-                                style={miniBtn}
-                              >
-                                キャンセル
-                              </button>
-                            </div>
-                          </form>
                         )}
                       </div>
                     )}
@@ -4555,149 +1629,19 @@ export default function App() {
             marginBottom: 14,
           }}
         >
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 800,
-              color: "#365f7d",
-            }}
-          >
-            ③共通年表の編集
-          </div>
-
-          <div
-            style={{
-              fontSize: 11.5,
-              lineHeight: 1.7,
-              color: "#6b7280",
-              marginTop: 4,
-            }}
-          >
-            元の年表は変更せず、あなたの変更内容だけをこのブラウザに保存します。必要ならTSVファイルでバックアップできます。
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 10,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: "#365f7d",
-              }}
-            >
-              ●現在の年表：
-              修正 {Object.keys(eventCustomizations.overrides ?? {}).length}件
-              {" / "}
-              非表示 {eventCustomizations.hidden?.length ?? 0}件
-              {" / "}
-              追加 {eventCustomizations.additions?.length ?? 0}件
-            </span>
-
-            <button
-              type="button"
-              onClick={clearEventCustomizations}
-              disabled={
-                Object.keys(eventCustomizations.overrides ?? {}).length === 0 &&
-                (eventCustomizations.hidden?.length ?? 0) === 0 &&
-                (eventCustomizations.additions?.length ?? 0) === 0
-              }
-              style={{
-                ...miniBtn,
-                background: "#fff3f3",
-                border: "1px solid #e4bcbc",
-                color: "#8a4f4f",
-                ...(
-                  Object.keys(eventCustomizations.overrides ?? {}).length === 0 &&
-                  (eventCustomizations.hidden?.length ?? 0) === 0 &&
-                  (eventCustomizations.additions?.length ?? 0) === 0
-                    ? { opacity: 0.45, cursor: "not-allowed" }
-                    : {}
-                ),
-              }}
-            >
-              年表の変更を消去
-            </button>
-
-            <input
-              ref={eventCustomizationFileInputRef}
-              type="file"
-              accept=".tsv,text/tab-separated-values,text/plain"
-              onChange={importEventCustomizationsFile}
-              style={{ display: "none" }}
-            />
-
-            <button
-              type="button"
-              onClick={() =>
-                eventCustomizationFileInputRef.current?.click()
-              }
-              style={{
-                ...miniBtn,
-                background: "#f0f6fd",
-                border: "1px solid #bdd0e5",
-                color: "#41698f",
-              }}
-            >
-              ファイルから読込
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setEventCustomizationEditorOpen((value) => !value);
-                setEventAddOpen(false);
-                resetEventAddDraft();
-              }}
-              style={{
-                ...miniBtn,
-                fontWeight: 800,
-                background: "#f5f0fa",
-                border: "1px solid #cfbfdf",
-                color: "#68517d",
-                ...(eventCustomizationEditorOpen
-                  ? {
-                      background: "#ece3f5",
-                      border: "1px solid #9f82b6",
-                      color: "#5f3f76",
-                    }
-                  : {}),
-              }}
-            >
-              編集
-            </button>
-
-            <button
-              type="button"
-              onClick={exportEventCustomizationsFile}
-              style={{
-                ...miniBtn,
-                background: "#f0f8f2",
-                border: "1px solid #bed8c5",
-                color: "#4b7356",
-              }}
-            >
-              ファイルに保存
-            </button>
-          </div>
-
-          {eventCustomizationStatus && (
-            <div
-              style={{
-                marginTop: 8,
-                fontSize: 11.5,
-                color: "#5f6770",
-              }}
-            >
-              {eventCustomizationStatus}
-            </div>
-          )}
+          <EventCustomizationControls
+            overrideCount={Object.keys(eventCustomizations.overrides ?? {}).length}
+            hiddenCount={eventCustomizations.hidden?.length ?? 0}
+            additionCount={eventCustomizations.additions?.length ?? 0}
+            eventCustomizationStatus={eventCustomizationStatus}
+            eventCustomizationEditorOpen={eventCustomizationEditorOpen}
+            eventCustomizationFileInputRef={eventCustomizationFileInputRef}
+            importEventCustomizationsFile={importEventCustomizationsFile}
+            exportEventCustomizationsFile={exportEventCustomizationsFile}
+            toggleEventCustomizationEditor={toggleEventCustomizationEditor}
+            clearEventCustomizations={clearEventCustomizations}
+            miniBtn={miniBtn}
+          />
 
           {eventCustomizationEditorOpen && (
             <div
@@ -4738,11 +1682,7 @@ export default function App() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setEventCustomizationEditorOpen(false);
-                    setEventAddOpen(false);
-                    resetEventAddDraft();
-                  }}
+                  onClick={closeEventCustomizationEditor}
                   style={{
                     ...miniBtn,
                     marginLeft: 6,
@@ -4755,260 +1695,39 @@ export default function App() {
           )}
 
           {eventCustomizationEditorOpen && eventAddOpen && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                saveAddedEvent();
-              }}
-              style={{
-                marginTop: 10,
-                padding: 10,
-                border: "1px solid #cfdce8",
-                borderRadius: 8,
-                background: "#ffffffaa",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  color: "#365f7d",
-                  marginBottom: 7,
-                }}
-              >
-                年表項目を追加
-              </div>
-
-              <input
-                type="text"
-                required
-                value={eventAddDraft.date}
-                onChange={(e) =>
-                  setEventAddDraft((prev) => ({
-                    ...prev,
-                    date: e.target.value,
-                  }))
-                }
-                placeholder="日付（YYYY / YYYY-MM / YYYY-MM-DD）"
-                aria-label="追加項目の日付"
-                style={{
-                  boxSizing: "border-box",
-                  width: "100%",
-                  fontFamily: font,
-                  fontSize: 12,
-                  padding: "7px 9px",
-                  border: "1px solid #cfd3d8",
-                  borderRadius: 7,
-                }}
-              />
-
-              <input
-                type="text"
-                required
-                value={eventAddDraft.title}
-                onChange={(e) =>
-                  setEventAddDraft((prev) => ({
-                    ...prev,
-                    title: e.target.value,
-                  }))
-                }
-                placeholder="タイトル"
-                aria-label="追加項目のタイトル"
-                style={{
-                  boxSizing: "border-box",
-                  width: "100%",
-                  marginTop: 8,
-                  fontFamily: font,
-                  fontSize: 12,
-                  padding: "7px 9px",
-                  border: "1px solid #cfd3d8",
-                  borderRadius: 7,
-                }}
-              />
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: 10,
-                  marginTop: 8,
-                }}
-              >
-                <label
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    color: "#365f7d",
-                  }}
-                >
-                  分野
-                </label>
-
-                <select
-                  value={eventAddDraft.category}
-                  onChange={(e) =>
-                    setEventAddDraft((prev) => ({
-                      ...prev,
-                      category: e.target.value,
-                    }))
-                  }
-                  style={{
-                    fontFamily: font,
-                    fontSize: 12,
-                    padding: "6px 8px",
-                    border: "1px solid #cfd3d8",
-                    borderRadius: 7,
-                  }}
-                >
-                  {MAIN_CATS.map((key) => (
-                    <option key={key} value={key}>
-                      {CAT[key].label}
-                    </option>
-                  ))}
-                </select>
-
-                <label
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    color: "#365f7d",
-                  }}
-                >
-                  重要度
-                </label>
-
-                <select
-                  value={eventAddDraft.importance}
-                  onChange={(e) =>
-                    setEventAddDraft((prev) => ({
-                      ...prev,
-                      importance: Number(e.target.value),
-                    }))
-                  }
-                  style={{
-                    fontFamily: font,
-                    fontSize: 12,
-                    padding: "6px 8px",
-                    border: "1px solid #cfd3d8",
-                    borderRadius: 7,
-                  }}
-                >
-                  <option value={3}>L3 重要</option>
-                  <option value={2}>L2 標準</option>
-                  <option value={1}>L1 補足</option>
-                </select>
-              </div>
-
-              <textarea
-                required
-                value={eventAddDraft.summary}
-                onChange={(e) =>
-                  setEventAddDraft((prev) => ({
-                    ...prev,
-                    summary: e.target.value,
-                  }))
-                }
-                placeholder="概要"
-                aria-label="追加項目の概要"
-                rows={4}
-                style={{
-                  display: "block",
-                  boxSizing: "border-box",
-                  width: "100%",
-                  marginTop: 8,
-                  fontFamily: font,
-                  fontSize: 12,
-                  lineHeight: 1.6,
-                  padding: "7px 9px",
-                  border: "1px solid #cfd3d8",
-                  borderRadius: 7,
-                  resize: "vertical",
-                }}
-              />
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: 9,
-                }}
-              >
-                <button type="submit" style={miniBtn}>
-                  追加して保存
-                </button>
-
-                <button
-                  type="button"
-                  onClick={cancelAddingEvent}
-                  style={miniBtn}
-                >
-                  キャンセル
-                </button>
-              </div>
-            </form>
+            <EventCustomizationAddForm
+              draft={eventAddDraft}
+              categoryOptions={MAIN_CATS.map((key) => ({
+                key,
+                label: CAT[key].label,
+              }))}
+              updateDraft={updateEventAddDraft}
+              saveAddedEvent={saveAddedEvent}
+              cancelAddingEvent={cancelAddingEvent}
+              font={font}
+              miniBtn={miniBtn}
+            />
           )}
 
           {eventCustomizationEditorOpen &&
             (eventCustomizations.hidden?.length ?? 0) > 0 && (
-            <div
-              style={{
-                marginTop: 10,
-                paddingTop: 8,
-                borderTop: "1px solid #dbe4ec",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  color: "#365f7d",
-                  marginBottom: 5,
-                }}
-              >
-                非表示中の項目
-              </div>
-
-              {eventCustomizations.hidden.map((id) => {
+            <EventCustomizationHiddenList
+              items={eventCustomizations.hidden.map((id) => {
                 const base = EVENTS.find(
                   (event) => event.id === id
                 );
-
-                return (
-                  <div
-                    key={id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "5px 0",
-                    }}
-                  >
-                    <span
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        fontSize: 11.5,
-                        color: "#4f5965",
-                      }}
-                    >
-                      {base
-                        ? `${base.y} ${base.t}`
-                        : id}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => restoreHiddenEvent(id)}
-                      style={miniBtn}
-                    >
-                      表示に戻す
-                    </button>
-                  </div>
-                );
+                return {
+                  id,
+                  label: base
+                    ? `${base.y} ${base.t}`
+                    : id,
+                };
               })}
-            </div>
+              restoreHiddenEvent={restoreHiddenEvent}
+              miniBtn={miniBtn}
+            />
           )}
+
         </div>
 
         <div
@@ -5023,486 +1742,41 @@ export default function App() {
             marginBottom: 14,
           }}
         >
-          <div style={{ fontSize: 14, fontWeight: 800, color: CAT.me.bg }}>
-            ②自分史の編集
-          </div>
-          <div
-            style={{
-              fontSize: 11.5,
-              lineHeight: 1.7,
-              color: "#6b7280",
-              marginTop: 4,
-            }}
-          >
-            自分史はこのブラウザ内に保存されます。
-            「編集」で追加・編集・削除し、年表表示は上の「自分」で切り替えます。
-            必要ならTSVファイルでバックアップできます。
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 10,
-            }}
-          >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 12,
-                fontWeight: 800,
-                color: "#5f4a72",
-              }}
-            >
-              <span
-                aria-hidden="true"
-                style={{
-                  width: 9,
-                  height: 9,
-                  borderRadius: "50%",
-                  background:
-                    personalEventsSource === "browser"
-                      ? "#4f7fc7"
-                      : personalEventsSource === "server"
-                        ? "#d69232"
-                        : "#a0a5ad",
-                }}
-              />
-              現在の自分史：
-              {personalEventsSource === "browser"
-                ? `このブラウザ（${myEvents.length}件）`
-                : personalEventsSource === "server"
-                  ? `管理者データ（${myEvents.length}件）`
-                  : "未読み込み"}
-            </span>
-
-            <button
-              onClick={clearPersonalEventsFile}
-              disabled={personalEventsSource !== "browser"}
-              style={{
-                ...miniBtn,
-                background: "#fff3f3",
-                border: "1px solid #e4bcbc",
-                color: "#8a4f4f",
-                ...(personalEventsSource !== "browser"
-                  ? { opacity: 0.45, cursor: "not-allowed" }
-                  : {}),
-              }}
-            >
-              自分史を消去
-            </button>
-
-            <button
-              onClick={() => personalFileInputRef.current?.click()}
-              style={{
-                ...miniBtn,
-                background: "#f0f6fd",
-                border: "1px solid #bdd0e5",
-                color: "#41698f",
-                ...(personalEventsSource === "browser"
-                  ? {
-                      background: "#e5f0fc",
-                      border: "1px solid #7fa5d0",
-                      color: "#28568f",
-                      fontWeight: 800,
-                    }
-                  : {}),
-              }}
-            >
-              ファイルから読込
-            </button>
-
-            <button
-              onClick={() => {
-                setPersonalEditorOpen((value) => !value);
-                setPersonalAddOpen(false);
-                setEditingPersonalId(null);
-                resetPersonalDraft();
-              }}
-              disabled={personalEventsSource === "server"}
-              style={{
-                ...miniBtn,
-                fontWeight: 800,
-                background: "#f5f0fa",
-                border: "1px solid #cfbfdf",
-                color: "#68517d",
-                ...(personalEventsSource === "server"
-                  ? { opacity: 0.45, cursor: "not-allowed" }
-                  : {}),
-                ...(personalEditorOpen
-                  ? {
-                      background: "#ece3f5",
-                      border: "1px solid #9f82b6",
-                      color: "#5f3f76",
-                    }
-                  : {}),
-              }}
-            >
-              編集
-            </button>
-
-            <button
-              onClick={exportPersonalEventsFile}
-              style={{
-                ...miniBtn,
-                background: "#f0f8f2",
-                border: "1px solid #bed8c5",
-                color: "#4b7356",
-              }}
-            >
-              ファイルに保存
-            </button>
-
-            <details
-              style={{
-                marginLeft: 6,
-                fontSize: 11,
-                color: "#8a8f98",
-              }}
-            >
-              <summary
-                style={{
-                  cursor: "pointer",
-                  userSelect: "none",
-                  padding: "4px 6px",
-                }}
-              >
-                管理者向け
-              </summary>
-
-              <button
-                type="button"
-                onClick={loadServerPersonalEvents}
-                style={{
-                  ...miniBtn,
-                  marginTop: 6,
-                  ...(personalEventsSource === "server"
-                    ? {
-                        background: "#fff1dc",
-                        border: "1px solid #d79a43",
-                        color: "#8a5208",
-                        fontWeight: 800,
-                      }
-                    : {}),
-                }}
-              >
-                管理者データ読込
-              </button>
-            </details>
-
-            <input
-              ref={personalFileInputRef}
-              type="file"
-              accept=".tsv,text/tab-separated-values,text/plain"
-              onChange={importPersonalEventsFile}
-              style={{ display: "none" }}
-            />
-          </div>
+          <PersonalHistoryControls
+            eventCount={myEvents.length}
+            personalEventsSource={personalEventsSource}
+            personalEditorOpen={personalEditorOpen}
+            personalFileInputRef={personalFileInputRef}
+            importPersonalEventsFile={importPersonalEventsFile}
+            exportPersonalEventsFile={exportPersonalEventsFile}
+            togglePersonalEditor={togglePersonalEditor}
+            clearPersonalEventsFile={clearPersonalEventsFile}
+            loadServerPersonalEvents={loadServerPersonalEvents}
+            titleColor={CAT.me.bg}
+            miniBtn={miniBtn}
+          />
 
           {personalEditorOpen && personalEventsSource !== "server" && (
-            <div
-              style={{
-                marginTop: 12,
-                padding: 12,
-                border: "1px solid #dfd2ea",
-                borderRadius: 10,
-                background: "#fff",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginBottom: 8,
-                }}
-              >
-                <strong style={{ fontSize: 12, color: "#5f4a72" }}>
-                  自分史を編集
-                </strong>
-
-                <span style={{ fontSize: 11, color: "#7b818b" }}>
-                  {myEvents.length}件
-                </span>
-
-                <span style={{ flex: 1 }} />
-
-                <button
-                  type="button"
-                  onClick={openNewPersonalEventForm}
-                  style={{
-                    ...miniBtn,
-                    background: "#e7f1fb",
-                    border: "1px solid #91b3d2",
-                    color: "#315f87",
-                    fontWeight: 800,
-                  }}
-                >
-                  ＋追加
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPersonalEditorOpen(false);
-                    setPersonalAddOpen(false);
-                    setEditingPersonalId(null);
-                    resetPersonalDraft();
-                  }}
-                  style={{
-                    ...miniBtn,
-                    marginLeft: 6,
-                  }}
-                >
-                  ×閉じる
-                </button>
-              </div>
-
-              {myEvents.length === 0 ? (
-                <div
-                  style={{
-                    fontSize: 11.5,
-                    color: "#7b818b",
-                    padding: "8px 0",
-                  }}
-                >
-                  自分史はまだありません。
-                </div>
-              ) : (
-                <div
-                  style={{
-                    maxHeight: 320,
-                    overflowY: "auto",
-                    borderTop: "1px solid #ece7f0",
-                  }}
-                >
-                  {myEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "7px 2px",
-                        borderBottom: "1px solid #ece7f0",
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 88,
-                          flexShrink: 0,
-                          fontSize: 11,
-                          color: "#747b86",
-                        }}
-                      >
-                        {event.date}
-                      </span>
-
-                      <span
-                        style={{
-                          flex: 1,
-                          minWidth: 0,
-                          fontSize: 12,
-                          color: "#333a44",
-                        }}
-                      >
-                        {event.t}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => startEditingPersonalEvent(event)}
-                        style={miniBtn}
-                      >
-                        編集
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => deletePersonalEvent(event)}
-                        style={{
-                          ...miniBtn,
-                          color: "#9b2c2c",
-                          border: "1px solid #d8a4a4",
-                          background: "#fff7f7",
-                        }}
-                      >
-                        削除
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <PersonalHistoryEditorList
+              events={myEvents}
+              openNewPersonalEventForm={openNewPersonalEventForm}
+              closePersonalEditor={closePersonalEditor}
+              startEditingPersonalEvent={startEditingPersonalEvent}
+              deletePersonalEvent={deletePersonalEvent}
+              miniBtn={miniBtn}
+            />
           )}
 
           {personalAddOpen && personalEventsSource !== "server" && (
-            <form
-              id="personal-history-editor"
-              onSubmit={(e) => {
-                e.preventDefault();
-                savePersonalEvent();
-              }}
-              style={{
-                marginTop: 12,
-                padding: 12,
-                border: "1px solid #dfd2ea",
-                borderRadius: 10,
-                background: "#fff",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: "#5f4a72",
-                  marginBottom: 8,
-                }}
-              >
-                {editingPersonalId ? "自分史を編集" : "自分史を追加"}
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "minmax(130px, 0.8fr) minmax(220px, 2fr)",
-                  gap: 8,
-                }}
-              >
-                <input
-                  type="text"
-                  required
-                  value={personalDraft.date}
-                  onChange={(e) =>
-                    setPersonalDraft((prev) => ({
-                      ...prev,
-                      date: e.target.value,
-                    }))
-                  }
-                  placeholder="日付 YYYY / YYYY-MM / YYYY-MM-DD"
-                  aria-label="日付"
-                  style={{
-                    fontFamily: font,
-                    fontSize: 12,
-                    padding: "7px 9px",
-                    border: "1px solid #cfd3d8",
-                    borderRadius: 7,
-                  }}
-                />
-
-                <input
-                  type="text"
-                  required
-                  value={personalDraft.title}
-                  onChange={(e) =>
-                    setPersonalDraft((prev) => ({
-                      ...prev,
-                      title: e.target.value,
-                    }))
-                  }
-                  placeholder="タイトル"
-                  aria-label="タイトル"
-                  style={{
-                    fontFamily: font,
-                    fontSize: 12,
-                    padding: "7px 9px",
-                    border: "1px solid #cfd3d8",
-                    borderRadius: 7,
-                  }}
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginTop: 8,
-                }}
-              >
-                <label
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    color: "#5f4a72",
-                  }}
-                >
-                  重要度
-                </label>
-
-                <select
-                  value={personalDraft.importance}
-                  onChange={(e) =>
-                    setPersonalDraft((prev) => ({
-                      ...prev,
-                      importance: Number(e.target.value),
-                    }))
-                  }
-                  style={{
-                    fontFamily: font,
-                    fontSize: 12,
-                    padding: "6px 8px",
-                    border: "1px solid #cfd3d8",
-                    borderRadius: 7,
-                  }}
-                >
-                  <option value={3}>L3 重要</option>
-                  <option value={2}>L2 標準</option>
-                  <option value={1}>L1 補足</option>
-                </select>
-              </div>
-
-              <textarea
-                required
-                value={personalDraft.summary}
-                onChange={(e) =>
-                  setPersonalDraft((prev) => ({
-                    ...prev,
-                    summary: e.target.value,
-                  }))
-                }
-                placeholder="概要"
-                aria-label="概要"
-                rows={3}
-                style={{
-                  display: "block",
-                  boxSizing: "border-box",
-                  width: "100%",
-                  marginTop: 8,
-                  fontFamily: font,
-                  fontSize: 12,
-                  lineHeight: 1.6,
-                  padding: "7px 9px",
-                  border: "1px solid #cfd3d8",
-                  borderRadius: 7,
-                  resize: "vertical",
-                }}
-              />
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginTop: 9,
-                }}
-              >
-                <button type="submit" style={miniBtn}>
-                  {editingPersonalId ? "変更を保存" : "保存"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={closePersonalEventForm}
-                  style={miniBtn}
-                >
-                  キャンセル
-                </button>
-              </div>
-            </form>
+            <PersonalHistoryEventForm
+              draft={personalDraft}
+              isEditing={Boolean(editingPersonalId)}
+              updateDraft={updatePersonalDraft}
+              savePersonalEvent={savePersonalEvent}
+              closePersonalEventForm={closePersonalEventForm}
+              font={font}
+              miniBtn={miniBtn}
+            />
           )}
 
           {personalEventsSource === "server" && (
@@ -5546,7 +1820,7 @@ export default function App() {
         >
         {/* 入力欄(畳めるようにしている) */}
         <button
-          onClick={() => setSetupOpen((v) => !v)}
+          onClick={toggleSetup}
           aria-expanded={setupOpen}
           style={{
             display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%",
@@ -5592,42 +1866,16 @@ export default function App() {
 
         {setupOpen && (<>
         {/* 生年入力 */}
-        <div
-          style={{
-            display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-            padding: "14px 16px",
-            borderBottom: "1px solid #eceef1",
-          }}
-        >
-          <label style={{ fontSize: 13, fontWeight: 700 }}>生まれた年</label>
-          <button onClick={() => setBirth((b) => Math.max(1930, b - 1))} style={btnStyle} aria-label="1年戻す">−</button>
-          <span style={{ fontFamily: mono, fontSize: 24, fontWeight: 700, minWidth: 76, textAlign: "center" }}>
-            {birth}
-          </span>
-          <button onClick={() => setBirth((b) => Math.min(2010, b + 1))} style={btnStyle} aria-label="1年進める">＋</button>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            style={{
-              fontFamily: font, fontSize: 14, fontWeight: 700, cursor: "pointer",
-              padding: "7px 8px", borderRadius: 8, border: "1px solid #d5d8dd",
-              background: "#fff", color: "#22272e",
-            }}
-            aria-label="生まれた月"
-          >
-            <option value={0}>月(任意)</option>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-              <option key={m} value={m}>{m}月</option>
-            ))}
-          </select>
-          <input
-            type="range" min={1930} max={2010} value={birth}
-            onChange={(e) => setBirth(Number(e.target.value))}
-            style={{ flex: 1, minWidth: 140, accentColor: "#c2452d" }}
-            aria-label="生まれた年スライダー"
-          />
-        </div>
-
+        <BirthSettingsEditor
+          birth={birth}
+          month={month}
+          adjustBirthYear={adjustBirthYear}
+          setBirthYear={setBirthYear}
+          setBirthMonth={setBirthMonth}
+          font={font}
+          mono={mono}
+          btnStyle={btnStyle}
+        />
         {/* 幼保・大学等・大学院の複数行教育歴 */}
         <div
           style={{
@@ -5639,383 +1887,33 @@ export default function App() {
             earlyChildhoodHistory={earlyChildhoodHistory}
             higherEducationHistory={higherEducationHistory}
             graduateEducationHistory={graduateEducationHistory}
-            onEarlyChildhoodHistoryChange={setEarlyChildhoodHistory}
-            onHigherEducationHistoryChange={setHigherEducationHistory}
-            onGraduateEducationHistoryChange={setGraduateEducationHistory}
+            onEarlyChildhoodHistoryChange={updateEarlyChildhoodHistory}
+            onHigherEducationHistoryChange={updateHigherEducationHistory}
+            onGraduateEducationHistoryChange={updateGraduateEducationHistory}
           />
 
-          <div
-            style={{
-              width: "100%",
-              padding: "10px 0",
-              borderBottom: "1px solid #eceef1",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-                marginBottom: 7,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#4b5563",
-                }}
-              >
-                4. 成人期
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setAdultPeriodsEnabled(false);
-                  setAdultPeriods([]);
-                  setLifeSettingsStatus("");
-                }}
-                style={{
-                  ...resetBtnStyle,
-                  marginLeft: "auto",
-                }}
-              >
-                未設定に戻す
-              </button>
-            </div>
+          <AdultPeriodsEditor
+            adultPeriodsEnabled={adultPeriodsEnabled}
+            adultPeriods={adultPeriods}
+            adultYear={grouped.adultYear}
+            adultPeriodErrors={grouped.adultPeriodErrors}
+            setAdultPeriodSplittingEnabled={setAdultPeriodSplittingEnabled}
+            resetAdultPeriods={resetAdultPeriods}
+            updateAdultPeriod={updateAdultPeriod}
+            addAdultPeriod={addAdultPeriod}
+            removeAdultPeriod={removeAdultPeriod}
+            font={font}
+            mono={mono}
+            miniBtn={miniBtn}
+          />
 
-            <label
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 800,
-                cursor: "pointer",
-                color: "#4b5563",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={adultPeriodsEnabled}
-                onChange={(e) => {
-                  setAdultPeriodsEnabled(e.target.checked);
-                  setLifeSettingsStatus("");
-                }}
-                style={{ accentColor: "#37414f" }}
-              />
-              成人期を分割する
-            </label>
-
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 11,
-                lineHeight: 1.7,
-                color: "#8a8f98",
-              }}
-            >
-              必要な場合だけ使います。勤務地、勤務先、職階、役割など、
-              自分に合う名称を自由に付けられます。
-              最後の期間は終了年を空欄にすると現在まで続きます。
-            </div>
-
-            {adultPeriodsEnabled && (
-              <div
-                style={{
-                  marginTop: 10,
-                  padding: 10,
-                  border: "1px solid #dce0e5",
-                  borderRadius: 9,
-                  background: "#fafbfc",
-                }}
-              >
-                {adultPeriods.length === 0 && (
-                  <div
-                    style={{
-                      fontSize: 11.5,
-                      color: "#7b828c",
-                      marginBottom: 8,
-                    }}
-                  >
-                    まだ分割されていません。「＋期間を追加」から始めてください。
-                  </div>
-                )}
-
-                {adultPeriods.map((period, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      flexWrap: "wrap",
-                      padding: "6px 0",
-                      borderBottom:
-                        index < adultPeriods.length - 1
-                          ? "1px solid #eceef1"
-                          : "none",
-                    }}
-                  >
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min="1930"
-                      max="2100"
-                      value={period.start}
-                      onChange={(e) =>
-                        updateAdultPeriod(
-                          index,
-                          "start",
-                          e.target.value
-                        )
-                      }
-                      placeholder="開始年"
-                      aria-label={`${index + 1}番目の成人期区分の開始年`}
-                      style={{
-                        fontFamily: mono,
-                        fontSize: 12,
-                        width: 74,
-                        padding: "6px 7px",
-                        borderRadius: 7,
-                        border: "1px solid #cfd3d8",
-                      }}
-                    />
-
-                    <span
-                      style={{
-                        fontSize: 11.5,
-                        color: "#8a8f98",
-                      }}
-                    >
-                      ～
-                    </span>
-
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min="1930"
-                      max="2100"
-                      value={period.end}
-                      onChange={(e) =>
-                        updateAdultPeriod(
-                          index,
-                          "end",
-                          e.target.value
-                        )
-                      }
-                      placeholder="終了年"
-                      aria-label={`${index + 1}番目の成人期区分の終了年`}
-                      style={{
-                        fontFamily: mono,
-                        fontSize: 12,
-                        width: 74,
-                        padding: "6px 7px",
-                        borderRadius: 7,
-                        border: "1px solid #cfd3d8",
-                      }}
-                    />
-
-                    <input
-                      type="text"
-                      value={period.label}
-                      onChange={(e) =>
-                        updateAdultPeriod(
-                          index,
-                          "label",
-                          e.target.value
-                        )
-                      }
-                      placeholder="例：奈良勤務、管理職、大学勤務"
-                      aria-label={`${index + 1}番目の成人期区分の名称`}
-                      style={{
-                        flex: "1 1 190px",
-                        minWidth: 160,
-                        fontFamily: font,
-                        fontSize: 12,
-                        padding: "6px 8px",
-                        borderRadius: 7,
-                        border: "1px solid #cfd3d8",
-                      }}
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => removeAdultPeriod(index)}
-                      style={{
-                        ...miniBtn,
-                        color: "#8b4a35",
-                        border: "1px solid #d6b3a5",
-                        background: "#fff8f5",
-                      }}
-                    >
-                      削除
-                    </button>
-                  </div>
-                ))}
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    marginTop: 10,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={addAdultPeriod}
-                    style={{
-                      ...miniBtn,
-                      fontWeight: 800,
-                      background: "#eef1f5",
-                      border: "1px solid #aab2bd",
-                      color: "#4b5563",
-                    }}
-                  >
-                    ＋期間を追加
-                  </button>
-
-                </div>
-
-                {grouped.adultPeriodErrors.length > 0 && (
-                  <div
-                    role="alert"
-                    style={{
-                      marginTop: 9,
-                      padding: "7px 9px",
-                      borderRadius: 7,
-                      background: "#fff3f1",
-                      color: "#a13d31",
-                      fontSize: 11,
-                      lineHeight: 1.7,
-                    }}
-                  >
-                    {grouped.adultPeriodErrors.map(
-                      (error, index) => (
-                        <div key={index}>{error}</div>
-                      )
-                    )}
-                  </div>
-                )}
-
-              </div>
-            )}
-
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 11,
-                lineHeight: 1.7,
-                color: "#8a8f98",
-              }}
-            >
-              大学等・大学院の設定から成人期の開始年を自動計算します。
-              成人期は必要に応じて自由に期間を分割できます。
-            </div>
-          </div>
-
-          <div
-            style={{
-              width: "100%",
-              padding: "10px 0",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#4b5563",
-                marginBottom: 7,
-              }}
-            >
-              5. 人生設定
-            </div>
-
-              <div
-                style={{
-                  marginTop: 4,
-                  fontSize: 11,
-                  lineHeight: 1.7,
-                  color: "#8a8f98",
-                }}
-              >
-                生年・出生月と、上の1〜4の設定を1つのTSVに保存します。
-                別のブラウザや端末でも、このTSVを読み込むと同じ設定を再現できます。
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                  marginTop: 8,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={exportLifeSettingsFile}
-                  style={{
-                    ...miniBtn,
-                    fontWeight: 800,
-                    background: "#f0f8f2",
-                    border: "1px solid #bed8c5",
-                    color: "#4b7356",
-                  }}
-                >
-                  ファイルに保存
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    lifeSettingsFileInputRef.current?.click()
-                  }
-                  style={{
-                    ...miniBtn,
-                    fontWeight: 800,
-                    background: "#f0f6fd",
-                    border: "1px solid #bdd0e5",
-                    color: "#41698f",
-                  }}
-                >
-                  ファイルから読込
-                </button>
-
-                <input
-                  ref={lifeSettingsFileInputRef}
-                  type="file"
-                  accept=".tsv,text/tab-separated-values,text/plain"
-                  onChange={importLifeSettingsFile}
-                  style={{ display: "none" }}
-                />
-
-                <span
-                  style={{
-                    fontSize: 10.5,
-                    color: "#8a8f98",
-                  }}
-                >
-                  koshix-timeline-life-settings.tsv
-                </span>
-              </div>
-
-              {lifeSettingsStatus && (
-                <div
-                  role="status"
-                  style={{
-                    marginTop: 7,
-                    fontSize: 11,
-                    lineHeight: 1.6,
-                    color: "#59616c",
-                  }}
-                >
-                  {lifeSettingsStatus}
-                </div>
-              )}
-          </div>
+          <LifeSettingsFileControls
+            lifeSettingsStatus={lifeSettingsStatus}
+            lifeSettingsFileInputRef={lifeSettingsFileInputRef}
+            importLifeSettingsFile={importLifeSettingsFile}
+            exportLifeSettingsFile={exportLifeSettingsFile}
+            miniBtn={miniBtn}
+          />
 
           {grouped.warnings.length > 0 && (
             <div
@@ -6162,28 +2060,17 @@ export default function App() {
           thread={thread}
           gradeLabel={grouped.gradeLabel}
           birth={birth}
-          tts={tts}
-          setTts={setTts}
+          allEvents={EVENTS}
+          hashtag={HASHTAG}
+          shareUrl={SHARE_URL}
           speed={speed}
-          setSpeed={setSpeed}
+          onCycleSpeed={cyclePlaybackSpeed}
           onClose={() => setThread(null)}
         />
       )}
     </div>
   );
 }
-
-const resetBtnStyle = {
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 700,
-  cursor: "pointer",
-  padding: "6px 12px",
-  borderRadius: 999,
-  border: "1px solid #d5d8dd",
-  background: "#fff",
-  color: "#6b7280",
-};
 
 const segmentBtnStyle = (selected, color, soft) => ({
   fontFamily: "inherit",
