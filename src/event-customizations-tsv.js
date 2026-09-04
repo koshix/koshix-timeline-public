@@ -1,3 +1,10 @@
+import {
+  EVENT_FIELD_MAP,
+  EVENT_FIELD_ORDER,
+  EVENT_INTERNAL_TO_EXTERNAL,
+  isValidEventDate,
+} from "./event-schema.js";
+
 export const EVENT_CUSTOMIZATIONS_TSV_HEADER = [
   "action",
   "id",
@@ -5,61 +12,11 @@ export const EVENT_CUSTOMIZATIONS_TSV_HEADER = [
   "value_json",
 ];
 
-const FIELD_MAP = {
-  date: "date",
-  end_date: "end_date",
-  title: "t",
-  cats: "cats",
-  primary: "primary",
-  subs: "subs",
-  region: "region",
-  importance: "importance",
-  icon: "ic",
-  summary: "n",
-  sources: "l",
-  search: "q",
-  note: "note",
-  core: "core",
-};
-
-const INTERNAL_TO_EXTERNAL = Object.fromEntries(
-  Object.entries(FIELD_MAP).map(([external, internal]) => [
-    internal,
-    external,
-  ])
-);
-
-const FIELD_ORDER = Object.keys(FIELD_MAP);
-
 const ALLOWED_DERIVED_FIELDS = new Set([
   "id",
   "y",
   "cat",
 ]);
-
-function validDate(value) {
-  if (!/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(value)) {
-    return false;
-  }
-
-  const parts = value.split("-").map(Number);
-
-  if (
-    parts.length >= 2 &&
-    (parts[1] < 1 || parts[1] > 12)
-  ) {
-    return false;
-  }
-
-  if (
-    parts.length === 3 &&
-    (parts[2] < 1 || parts[2] > 31)
-  ) {
-    return false;
-  }
-
-  return true;
-}
 
 function parseJsonValue(value, lineNo) {
   if (value === "") {
@@ -78,7 +35,12 @@ function parseJsonValue(value, lineNo) {
 }
 
 function requireKnownField(field, lineNo) {
-  if (!Object.prototype.hasOwnProperty.call(FIELD_MAP, field)) {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      EVENT_FIELD_MAP,
+      field
+    )
+  ) {
     throw new Error(
       `${lineNo}行目: field "${field}" は未対応です`
     );
@@ -86,7 +48,7 @@ function requireKnownField(field, lineNo) {
 }
 
 function validateAddition(event, id) {
-  if (!validDate(event.date ?? "")) {
+  if (!isValidEventDate(event.date ?? "")) {
     throw new Error(
       `追加項目 "${id}": date "${event.date ?? ""}" が不正です`
     );
@@ -96,7 +58,7 @@ function validateAddition(event, id) {
     event.end_date !== undefined &&
     event.end_date !== null &&
     event.end_date !== "" &&
-    !validDate(event.end_date)
+    !isValidEventDate(event.end_date)
   ) {
     throw new Error(
       `追加項目 "${id}": end_date "${event.end_date}" が不正です`
@@ -240,7 +202,7 @@ export function parseEventCustomizationsTsv(text) {
     if (action === "override") {
       requireKnownField(field, lineNo);
 
-      const internalField = FIELD_MAP[field];
+      const internalField = EVENT_FIELD_MAP[field];
       const value = parseJsonValue(
         valueJson,
         lineNo
@@ -268,7 +230,7 @@ export function parseEventCustomizationsTsv(text) {
     if (action === "add") {
       requireKnownField(field, lineNo);
 
-      const internalField = FIELD_MAP[field];
+      const internalField = EVENT_FIELD_MAP[field];
       const value = parseJsonValue(
         valueJson,
         lineNo
@@ -339,7 +301,7 @@ function assertSerializableFields(event, context) {
   for (const key of Object.keys(event)) {
     if (
       !Object.prototype.hasOwnProperty.call(
-        INTERNAL_TO_EXTERNAL,
+        EVENT_INTERNAL_TO_EXTERNAL,
         key
       ) &&
       !ALLOWED_DERIVED_FIELDS.has(key)
@@ -410,8 +372,8 @@ export function serializeEventCustomizationsTsv(
       `override "${id}"`
     );
 
-    for (const externalField of FIELD_ORDER) {
-      const internalField = FIELD_MAP[externalField];
+    for (const externalField of EVENT_FIELD_ORDER) {
+      const internalField = EVENT_FIELD_MAP[externalField];
 
       if (
         !Object.prototype.hasOwnProperty.call(
@@ -468,8 +430,8 @@ export function serializeEventCustomizationsTsv(
 
     validateAddition(event, event.id);
 
-    for (const externalField of FIELD_ORDER) {
-      const internalField = FIELD_MAP[externalField];
+    for (const externalField of EVENT_FIELD_ORDER) {
+      const internalField = EVENT_FIELD_MAP[externalField];
 
       if (
         !Object.prototype.hasOwnProperty.call(

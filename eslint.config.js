@@ -5,6 +5,9 @@ export default [
     ignores: [
       "dist/**",
       "node_modules/**",
+      "test-results/**",
+      "playwright-report/**",
+      "blob-report/**",
     ],
   },
 
@@ -40,6 +43,8 @@ export default [
     files: [
       "scripts/**/*.mjs",
       "vite.config.js",
+      "playwright.config.js",
+      "tests/e2e/**/*.js",
     ],
 
     languageOptions: {

@@ -3,6 +3,11 @@ import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
+import {
+  PUBLIC_EVENT_TSV_HEADER,
+  isValidEventDate,
+} from "../src/event-schema.js";
+
 const TSV = "public/events.tsv";
 const BUILDER = "scripts/build-events.mjs";
 
@@ -20,12 +25,6 @@ const ICONS = [
   "computer", "chip", "globe", "satellite", "rocket",
   "hmd", "gamepad", "phone", "video", "ai", "ghost",
   "music", "wifi", "flag",
-];
-
-const HEADER = [
-  "id", "date", "end_date", "title", "cats", "primary",
-  "subs", "region", "importance", "icon", "summary",
-  "sources", "search", "note", "core",
 ];
 
 const clean = (s) => s.trim().replace(/\r?\n/g, " ");
@@ -46,13 +45,12 @@ function eventId(year, title) {
 }
 
 function yearFromDate(date) {
-  const m = date.match(/^(\d{4})(?:-\d{2})?(?:-\d{2})?$/);
-  if (!m) {
+  if (!isValidEventDate(date)) {
     throw new Error(
       "date は YYYY / YYYY-MM / YYYY-MM-DD の形式で入力してください"
     );
   }
-  return Number(m[1]);
+  return Number(date.slice(0, 4));
 }
 
 function readTsv(text) {
@@ -84,7 +82,10 @@ async function main() {
   const original = fs.readFileSync(TSV, "utf8");
   const { header, rows } = readTsv(original);
 
-  if (header.join("\t") !== HEADER.join("\t")) {
+  if (
+    header.join("\t") !==
+    PUBLIC_EVENT_TSV_HEADER.join("\t")
+  ) {
     throw new Error("events.tsv のヘッダーが想定と違います");
   }
 
@@ -109,6 +110,12 @@ async function main() {
     const endDate = clean(
       await rl.question("end_date [任意]: ")
     );
+
+    if (endDate && !isValidEventDate(endDate)) {
+      throw new Error(
+        "end_date は YYYY / YYYY-MM / YYYY-MM-DD の形式で入力してください"
+      );
+    }
 
     const title = clean(
       await rl.question("title: ")
@@ -298,7 +305,7 @@ sources を1件ずつ入力します。空Enterで終了。
       return;
     }
 
-    const line = HEADER
+    const line = PUBLIC_EVENT_TSV_HEADER
       .map(k => row[k])
       .join("\t");
 

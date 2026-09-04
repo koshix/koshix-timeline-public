@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { prepareEvents } from "./events-source";
 import { prepareConfig } from "./config-source";
+import "./styles.css";
 
 async function bootstrap() {
   // App.jsx を読み込む前に公開TSVを準備する。

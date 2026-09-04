@@ -4,3 +4,6 @@ dist
 *.orig
 private-data/
 release
+test-results/
+playwright-report/
+blob-report/

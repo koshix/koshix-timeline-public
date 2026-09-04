@@ -1,17 +1,19 @@
 import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { readReleaseManifest } from "./scripts/release-manifest.mjs";
 
 const packageJson = JSON.parse(
   readFileSync(new URL("./package.json", import.meta.url), "utf8")
 );
+const releaseManifest = readReleaseManifest();
 
-const now = new Date();
-const buildDate = [
-  now.getFullYear(),
-  String(now.getMonth() + 1).padStart(2, "0"),
-  String(now.getDate()).padStart(2, "0"),
-].join("-");
+if (releaseManifest.version !== packageJson.version) {
+  throw new Error(
+    `release-manifest.json version ${releaseManifest.version} ` +
+    `!= package.json version ${packageJson.version}`
+  );
+}
 
 const personalEventsFile = new URL(
   "./private-data/personal-events.tsv",
@@ -72,7 +74,7 @@ export default defineConfig({
   base: "./",
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
-    __APP_UPDATED_DATE__: JSON.stringify(buildDate),
+    __APP_UPDATED_DATE__: JSON.stringify(releaseManifest.releaseDate),
   },
   build: {
     rollupOptions: {

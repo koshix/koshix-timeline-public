@@ -1,7 +1,41 @@
+import {
+  createVersionedRecord,
+  decodeVersionedRecord,
+} from "./versioned-storage.js";
+
 const DB_NAME = "koshix-timeline";
 const DB_VERSION = 1;
 const STORE_NAME = "personal-history";
-const EVENTS_KEY = "events";
+const EVENTS_KEY = "personal-events";
+
+export const PERSONAL_EVENTS_STORAGE_FORMAT =
+  "koshix-timeline-personal-events";
+export const PERSONAL_EVENTS_STORAGE_VERSION = 1;
+
+function validatePersonalEvents(value) {
+  if (!Array.isArray(value)) {
+    throw new Error("ブラウザ内の個人史データ形式が不正です");
+  }
+
+  return value;
+}
+
+export function encodePersonalEventsStorageValue(events) {
+  return createVersionedRecord(
+    PERSONAL_EVENTS_STORAGE_FORMAT,
+    PERSONAL_EVENTS_STORAGE_VERSION,
+    validatePersonalEvents(events)
+  );
+}
+
+export function decodePersonalEventsStorageValue(value) {
+  return decodeVersionedRecord(value, {
+    format: PERSONAL_EVENTS_STORAGE_FORMAT,
+    currentVersion: PERSONAL_EVENTS_STORAGE_VERSION,
+    validateData: validatePersonalEvents,
+    context: "個人史保存データ",
+  });
+}
 
 function requireIndexedDb() {
   if (
@@ -96,21 +130,15 @@ export async function loadBrowserPersonalEvents() {
     return [];
   }
 
-  if (!Array.isArray(value)) {
-    throw new Error("ブラウザ内の個人史データ形式が不正です");
-  }
-
-  return value;
+  return decodePersonalEventsStorageValue(value).data;
 }
 
 export async function saveBrowserPersonalEvents(events) {
-  if (!Array.isArray(events)) {
-    throw new Error("保存する個人史データが配列ではありません");
-  }
+  const value = encodePersonalEventsStorageValue(events);
 
   await runTransaction(
     "readwrite",
-    (store) => store.put(events, EVENTS_KEY)
+    (store) => store.put(value, EVENTS_KEY)
   );
 }
 

@@ -1,24 +1,14 @@
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
 
+import {
+  PUBLIC_EVENT_CATEGORIES,
+  PUBLIC_EVENT_TSV_HEADER,
+  isValidEventDate,
+} from "../src/event-schema.js";
+
 const TSV = "public/events.tsv";
 const BUILDER = "scripts/build-events.mjs";
-
-const HEADER = [
-  "id", "date", "end_date", "title", "cats", "primary",
-  "subs", "region", "importance", "icon", "summary",
-  "sources", "search", "note", "core",
-];
-
-const CATEGORIES = new Set([
-  "sf",
-  "work",
-  "science",
-  "education",
-  "computer",
-  "culture",
-  "society",
-]);
 
 const ICONS = new Set([
   "book", "tv", "film", "robot", "watch", "comm",
@@ -92,11 +82,7 @@ function checkDate(value, name, optional = false) {
 
   if (!s && optional) return "";
 
-  const m = s.match(
-    /^(\d{4})(?:-\d{2})?(?:-\d{2})?$/
-  );
-
-  if (!m) {
+  if (!isValidEventDate(s)) {
     throw new Error(
       `${name} は YYYY / YYYY-MM / YYYY-MM-DD で指定してください`
     );
@@ -117,7 +103,10 @@ function readRows(text) {
 
   const header = lines[0]?.split("\t") ?? [];
 
-  if (header.join("\t") !== HEADER.join("\t")) {
+  if (
+    header.join("\t") !==
+    PUBLIC_EVENT_TSV_HEADER.join("\t")
+  ) {
     throw new Error(
       "events.tsv のヘッダーが想定と違います"
     );
@@ -185,7 +174,7 @@ function normalize(data) {
   }
 
   for (const cat of cats) {
-    if (!CATEGORIES.has(cat)) {
+    if (!PUBLIC_EVENT_CATEGORIES.has(cat)) {
       throw new Error(
         `未知の大分類です: ${cat}`
       );
@@ -195,7 +184,7 @@ function normalize(data) {
   const primary =
     clean(data.primary) || cats[0];
 
-  if (!CATEGORIES.has(primary)) {
+  if (!PUBLIC_EVENT_CATEGORIES.has(primary)) {
     throw new Error(
       `未知の primary です: ${primary}`
     );
@@ -382,7 +371,9 @@ async function addFromStdin() {
   // 全件検査を通過してから、一度に追記。
   const lines = rows.map(
     (row) =>
-      HEADER.map((k) => row[k]).join("\t")
+      PUBLIC_EVENT_TSV_HEADER
+        .map((key) => row[key])
+        .join("\t")
   );
 
   const base = originalTsv.endsWith("\n")

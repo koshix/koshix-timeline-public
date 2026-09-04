@@ -1,7 +1,16 @@
+import {
+  createVersionedRecord,
+  decodeVersionedRecord,
+} from "./versioned-storage.js";
+
 const DB_NAME = "koshix-timeline-customizations";
 const DB_VERSION = 1;
 const STORE_NAME = "customizations";
-const CUSTOMIZATIONS_KEY = "events";
+const CUSTOMIZATIONS_KEY = "event-customizations";
+
+export const EVENT_CUSTOMIZATIONS_STORAGE_FORMAT =
+  "koshix-timeline-event-customizations";
+export const EVENT_CUSTOMIZATIONS_STORAGE_VERSION = 1;
 
 export const EMPTY_EVENT_CUSTOMIZATIONS = {
   overrides: {},
@@ -64,6 +73,25 @@ function validateCustomizations(value) {
     hidden,
     additions,
   };
+}
+
+export function encodeEventCustomizationsStorageValue(
+  customizations
+) {
+  return createVersionedRecord(
+    EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
+    EVENT_CUSTOMIZATIONS_STORAGE_VERSION,
+    validateCustomizations(customizations)
+  );
+}
+
+export function decodeEventCustomizationsStorageValue(value) {
+  return decodeVersionedRecord(value, {
+    format: EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
+    currentVersion: EVENT_CUSTOMIZATIONS_STORAGE_VERSION,
+    validateData: validateCustomizations,
+    context: "年表カスタマイズ保存データ",
+  });
 }
 
 function openDatabase() {
@@ -154,13 +182,15 @@ export async function loadBrowserEventCustomizations() {
     };
   }
 
-  return validateCustomizations(value);
+  return decodeEventCustomizationsStorageValue(value).data;
 }
 
 export async function saveBrowserEventCustomizations(
   customizations
 ) {
-  const value = validateCustomizations(customizations);
+  const value = encodeEventCustomizationsStorageValue(
+    customizations
+  );
 
   await runTransaction(
     "readwrite",

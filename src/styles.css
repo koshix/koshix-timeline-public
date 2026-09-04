@@ -1,0 +1,251 @@
+:root {
+  --kt-color-text: #22272e;
+  --kt-color-heading: #374151;
+  --kt-color-muted: #6b7280;
+  --kt-color-subtle: #8a8f98;
+  --kt-color-border: #e2e4e8;
+  --kt-color-surface: #ffffff;
+  --kt-color-surface-soft: #f7f8f9;
+  --kt-color-app-bg: #fafaf8;
+  --kt-radius-sm: 7px;
+  --kt-radius-md: 9px;
+  --kt-radius-lg: 10px;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.timeline-category-pill {
+  padding: 6px 14px;
+  border: 1.5px solid var(--category-border);
+  border-radius: 999px;
+  background: var(--category-bg);
+  color: var(--category-color);
+  font-family: var(--timeline-font, inherit);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.timeline-category-split {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1.5px solid var(--category-border);
+  border-radius: 999px;
+  background: var(--category-bg);
+  color: var(--category-color);
+}
+
+.timeline-category-split-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--timeline-font, inherit);
+  cursor: pointer;
+}
+
+.timeline-category-split-button--label {
+  padding: 6px 2px 6px 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.timeline-category-split-button--sf {
+  padding: 6px 9px 6px 2px;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.timeline-thread-button {
+  margin: 0 4px 0 0;
+  padding: 6px 11px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: var(--kt-color-muted);
+  font-family: var(--timeline-font, inherit);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.timeline-display-controls {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: nowrap;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 38px;
+  box-sizing: border-box;
+}
+
+.timeline-control-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--control-group-border);
+  border-radius: var(--kt-radius-md);
+  background: var(--control-group-bg);
+  flex-shrink: 0;
+}
+
+.timeline-control-label {
+  padding: 0 3px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--control-label-color);
+}
+
+.timeline-control-segments {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1.5px solid var(--control-segment-border);
+  border-radius: var(--kt-radius-sm);
+}
+
+.timeline-control-segment {
+  display: inline-flex;
+}
+
+.timeline-control-separator {
+  width: 1px;
+  background: var(--control-separator-color);
+}
+
+.timeline-control-button {
+  padding: 4px 9px;
+  border: 0;
+  background: var(--control-button-bg, #ffffff);
+  color: var(--control-button-color);
+  font-family: var(--timeline-font, inherit);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.timeline-control-button[data-strong="true"] {
+  font-weight: 800;
+}
+
+.timeline-control-button[aria-pressed="true"] {
+  font-weight: 800;
+  background: #e6e9ee;
+}
+
+.timeline-control-group--categories {
+  --control-group-bg: #edf7f0;
+  --control-group-border: #d9eadf;
+  --control-label-color: #4f765d;
+  --control-segment-border: #6f8a78;
+  --control-separator-color: #b9c9be;
+  --control-button-color: #42654f;
+}
+
+.timeline-control-group--categories .timeline-control-button--muted {
+  --control-button-bg: #e9f2eb;
+  --control-button-color: #657a6c;
+}
+
+.timeline-control-group--importance {
+  --control-group-bg: #f5f1e8;
+  --control-group-border: #e7dfcf;
+  --control-label-color: #776d5c;
+  --control-segment-border: #b4aa98;
+  --control-separator-color: #d1c9ba;
+  --control-button-color: #667085;
+}
+
+.timeline-control-group--periods {
+  --control-group-bg: #f7f2ea;
+  --control-group-border: #eadfce;
+  --control-label-color: #7a6a55;
+  --control-segment-border: #9a8b76;
+  --control-separator-color: #d1c5b3;
+  --control-button-color: #6b5a45;
+}
+
+.timeline-control-group--periods .timeline-control-button--half {
+  --control-button-bg: #f7f3ec;
+  --control-button-color: #74644f;
+}
+
+.timeline-control-group--periods .timeline-control-button--closed {
+  --control-button-bg: #eee8dd;
+  --control-button-color: #7d7468;
+}
+
+.timeline-control-group--explanations {
+  --control-group-bg: #eef4f8;
+  --control-group-border: #dce6ee;
+  --control-label-color: #4f7089;
+  --control-segment-border: #6f8798;
+  --control-separator-color: #bfd0dc;
+  --control-button-color: #405f76;
+}
+
+.timeline-control-group--explanations .timeline-control-button--half {
+  --control-button-bg: #f3f7fa;
+  --control-button-color: #4f6a7e;
+}
+
+.timeline-control-group--explanations .timeline-control-button--closed {
+  --control-button-bg: #e3edf4;
+  --control-button-color: #647785;
+}
+
+.timeline-search-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: nowrap;
+  width: calc(100% - 50px);
+  min-height: 38px;
+  box-sizing: border-box;
+  margin-top: 3px;
+  padding: 3px 9px;
+  overflow-x: auto;
+  border: 1px solid #dfe3e8;
+  border-radius: var(--kt-radius-lg);
+  background: #f6f7f9;
+}
+
+.timeline-search-label {
+  padding: 0 2px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #626c78;
+}
+
+.timeline-search-input {
+  flex: 0 0 225px;
+  min-width: 220px;
+  max-width: 225px;
+  padding: 5px 9px;
+  border: 1px solid #cfd5dc;
+  border-radius: var(--kt-radius-sm);
+  background: var(--kt-color-surface);
+  color: var(--kt-color-text);
+  font-family: var(--timeline-font, inherit);
+  font-size: 12px;
+}
+
+.timeline-search-input--error {
+  border-color: #c2452d;
+}
+
+.timeline-search-help {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 10.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: #7f8791;
+}
+
+.timeline-search-help--error {
+  color: #b33b2e;
+}
