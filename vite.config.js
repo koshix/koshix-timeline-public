@@ -13,8 +13,62 @@ const buildDate = [
   String(now.getDate()).padStart(2, "0"),
 ].join("-");
 
+const personalEventsFile = new URL(
+  "./private-data/personal-events.tsv",
+  import.meta.url
+);
+
+function personalEventsDevSource() {
+  return {
+    name: "personal-events-dev-source",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const pathname = req.url?.split("?")[0];
+
+        if (pathname !== "/personal/personal-events.tsv") {
+          next();
+          return;
+        }
+
+        if (req.method !== "GET" && req.method !== "HEAD") {
+          res.statusCode = 405;
+          res.setHeader("Allow", "GET, HEAD");
+          res.end();
+          return;
+        }
+
+        try {
+          const body = readFileSync(personalEventsFile);
+
+          res.statusCode = 200;
+          res.setHeader(
+            "Content-Type",
+            "text/tab-separated-values; charset=utf-8"
+          );
+          res.setHeader("Cache-Control", "no-store");
+
+          if (req.method === "HEAD") {
+            res.end();
+          } else {
+            res.end(body);
+          }
+        } catch (error) {
+          if (error?.code === "ENOENT") {
+            res.statusCode = 404;
+            res.end();
+            return;
+          }
+
+          next(error);
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), personalEventsDevSource()],
   base: "./",
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),

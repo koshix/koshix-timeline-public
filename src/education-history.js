@@ -29,18 +29,6 @@ export const GRADUATE_TYPES = {
   doctorate: { label: "博士", stageLabel: "大学院（博士）", gradePrefix: "博", defaultYears: 3 },
 };
 
-// v2.1.1までの保存値との互換専用。Object.entries()には出ないため、
-// UIの選択肢には「修士＋博士」を表示しない。
-Object.defineProperty(GRADUATE_TYPES, "mastersDoctorate", {
-  value: {
-    label: "修士＋博士",
-    stageLabel: "大学院（修士＋博士）",
-    gradePrefix: "院",
-    defaultYears: 5,
-  },
-  enumerable: false,
-});
-
 export const normalizeEducationHistory = (rows, types, fallbackType) =>
   (Array.isArray(rows) ? rows : [])
     .map((row) => ({
@@ -49,41 +37,6 @@ export const normalizeEducationHistory = (rows, types, fallbackType) =>
       type: types[row?.type] ? row.type : fallbackType,
     }))
     .filter((row) => row.start !== "" || row.years !== "");
-
-export const expandLegacyGraduateHistory = (rows) =>
-  normalizeEducationHistory(rows, GRADUATE_TYPES, "masters").flatMap((row) => {
-    if (row.type !== "mastersDoctorate") return [row];
-
-    const start = Number(row.start);
-    const totalYears = Number(row.years || 5);
-
-    if (
-      !Number.isInteger(start) ||
-      !Number.isInteger(totalYears) ||
-      totalYears < 1
-    ) {
-      return [{ ...row, type: "masters" }];
-    }
-
-    const mastersYears = Math.min(2, totalYears);
-    const expanded = [
-      {
-        start: String(start),
-        years: String(mastersYears),
-        type: "masters",
-      },
-    ];
-
-    if (totalYears > mastersYears) {
-      expanded.push({
-        start: String(start + mastersYears),
-        years: String(totalYears - mastersYears),
-        type: "doctorate",
-      });
-    }
-
-    return expanded;
-  });
 
 export const defaultYearsFor = (types, type) =>
   String(types[type]?.defaultYears ?? "");

@@ -17,9 +17,8 @@ const requiredSourceFiles = [
   "dist/events.tsv",
   "dist/icons.svg",
   "dist/favicon.svg",
-  "dist/private/auth-check.txt",
-  "examples/config.json",
-  "examples/private-events.tsv",
+    "examples/config.json",
+  "examples/personal-events-template.tsv",
   "examples/STARTER-README.md",
   "DATA-GUIDE.md",
   "LICENSE",
@@ -29,6 +28,62 @@ const requiredSourceFiles = [
 function fail(message) {
   console.error(`ERROR: ${message}`);
   process.exit(1);
+}
+
+const reproducibleZipDate = new Date(2000, 0, 1, 0, 0, 0);
+
+function normalizeArchiveTimestamps(rootDir) {
+  function visit(currentPath) {
+    const stat = fs.statSync(currentPath);
+
+    if (stat.isDirectory()) {
+      const names = fs.readdirSync(currentPath).sort();
+
+      for (const name of names) {
+        visit(path.join(currentPath, name));
+      }
+    }
+
+    fs.utimesSync(
+      currentPath,
+      reproducibleZipDate,
+      reproducibleZipDate
+    );
+  }
+
+  visit(rootDir);
+}
+
+function collectArchiveEntries(rootDir) {
+  const entries = [`${starterName}/`];
+
+  function visit(currentDir) {
+    const dirents = fs
+      .readdirSync(currentDir, { withFileTypes: true })
+      .sort((a, b) => {
+        if (a.name < b.name) return -1;
+        if (a.name > b.name) return 1;
+        return 0;
+      });
+
+    for (const entry of dirents) {
+      const fullPath = path.join(currentDir, entry.name);
+      const relativePath = path
+        .relative(releaseDir, fullPath)
+        .split(path.sep)
+        .join("/");
+
+      if (entry.isDirectory()) {
+        entries.push(`${relativePath}/`);
+        visit(fullPath);
+      } else {
+        entries.push(relativePath);
+      }
+    }
+  }
+
+  visit(rootDir);
+  return entries;
 }
 
 fs.mkdirSync(releaseDir, { recursive: true });
@@ -49,7 +104,6 @@ fs.cpSync(distDir, stageDir, {
       .split(path.sep)
       .join("/");
 
-    if (relativePath === "private/events.tsv") return false;
     if (path.basename(sourcePath) === ".DS_Store") return false;
     return true;
   },
@@ -60,16 +114,16 @@ fs.copyFileSync(
   path.join(stageDir, "config.json")
 );
 
-fs.mkdirSync(path.join(stageDir, "private"), { recursive: true });
+fs.mkdirSync(path.join(stageDir, "personal"), { recursive: true });
 fs.copyFileSync(
-  path.join(projectRoot, "examples/private-events.tsv"),
-  path.join(stageDir, "private/events.tsv")
+  path.join(projectRoot, "examples/personal-events-template.tsv"),
+  path.join(stageDir, "personal/personal-events.tsv")
 );
 
 fs.mkdirSync(path.join(stageDir, "examples"), { recursive: true });
 fs.copyFileSync(
-  path.join(projectRoot, "examples/private-events.tsv"),
-  path.join(stageDir, "examples/private-events.tsv")
+  path.join(projectRoot, "examples/personal-events-template.tsv"),
+  path.join(stageDir, "examples/personal-events-template.tsv")
 );
 
 fs.copyFileSync(
@@ -89,22 +143,27 @@ for (const fileName of [
 }
 
 const privateTemplate = fs.readFileSync(
-  path.join(projectRoot, "examples/private-events.tsv")
+  path.join(projectRoot, "examples/personal-events-template.tsv")
 );
 const stagedPrivateFile = fs.readFileSync(
-  path.join(stageDir, "private/events.tsv")
+  path.join(stageDir, "personal/personal-events.tsv")
 );
 
 if (!privateTemplate.equals(stagedPrivateFile)) {
-  fail("private/events.tsv が空テンプレートと一致しません");
+  fail("personal/personal-events.tsv が空テンプレートと一致しません");
 }
+
+normalizeArchiveTimestamps(stageDir);
+
+const archiveEntries = collectArchiveEntries(stageDir);
 
 const zipResult = spawnSync(
   "/usr/bin/zip",
-  ["-q", "-r", zipPath, starterName],
+  ["-X", "-q", zipPath, "-@"],
   {
     cwd: releaseDir,
-    stdio: "inherit",
+    input: `${archiveEntries.join("\n")}\n`,
+    stdio: ["pipe", "inherit", "inherit"],
   }
 );
 
@@ -129,17 +188,17 @@ const entries = listResult.stdout
 
 const zipPrivateResult = spawnSync(
   "/usr/bin/unzip",
-  ["-p", zipPath, `${starterName}/private/events.tsv`]
+  ["-p", zipPath, `${starterName}/personal/personal-events.tsv`]
 );
 
 if (zipPrivateResult.status !== 0) {
   fs.rmSync(zipPath, { force: true });
-  fail("zip内の private/events.tsv を検査できませんでした");
+  fail("zip内の personal/personal-events.tsv を検査できませんでした");
 }
 
 if (!privateTemplate.equals(zipPrivateResult.stdout)) {
   fs.rmSync(zipPath, { force: true });
-  fail("zip内の private/events.tsv に実データが混入しています");
+  fail("zip内の personal/personal-events.tsv に実データが混入しています");
 }
 
 if (entries.some((entry) => path.basename(entry) === ".DS_Store")) {
@@ -149,4 +208,4 @@ if (entries.some((entry) => path.basename(entry) === ".DS_Store")) {
 
 console.log(`OK: ${zipPath}`);
 console.log(`OK: ${entries.length}項目を検査しました`);
-console.log("OK: private/events.tsv は空テンプレートと一致します");
+console.log("OK: personal/personal-events.tsv は空テンプレートと一致します");

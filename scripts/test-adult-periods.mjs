@@ -16,7 +16,6 @@ import {
     ],
     {
       adultYear: 1982,
-      retirementYear: 2019,
     }
   );
 

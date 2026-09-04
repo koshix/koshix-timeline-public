@@ -54,7 +54,6 @@ const source = {
       label: "第2期",
     },
   ],
-  retirementYear: 2018,
   catOff: {
     society: true,
   },
@@ -110,20 +109,9 @@ assert.equal(
   parsed.adultPeriods.length,
   2
 );
-assert.equal(
-  Object.hasOwn(
-    parsed,
-    "retirementYear"
-  ),
-  false
-);
-
 const merged = mergeLifeSettings(
   {
     birth: 1965,
-    retirementYear: 2025,
-    adultYear: 1990,
-    higherEdYear: 1984,
     catOff: {
       culture: true,
     },
@@ -133,27 +121,6 @@ const merged = mergeLifeSettings(
 );
 
 assert.equal(merged.birth, 1953);
-assert.equal(
-  Object.hasOwn(
-    merged,
-    "retirementYear"
-  ),
-  false
-);
-assert.equal(
-  Object.hasOwn(
-    merged,
-    "adultYear"
-  ),
-  false
-);
-assert.equal(
-  Object.hasOwn(
-    merged,
-    "higherEdYear"
-  ),
-  false
-);
 assert.deepEqual(
   merged.catOff,
   { culture: true }
@@ -180,5 +147,5 @@ assert.throws(
 );
 
 console.log(
-  "OK: 人生設定TSVの書き出し・読込・旧設定除去を検査しました"
+  "OK: 人生設定TSVの書き出し・読込・既存設定保持を検査しました"
 );

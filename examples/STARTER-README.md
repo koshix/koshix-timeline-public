@@ -12,9 +12,9 @@ ZIPを展開し、その中のファイル一式をWebサーバーへ配置し�
 
 - `config.json`：タイトル、ハッシュタグ、共有先URL、プロフィール初期値
 - `events.tsv`：公開年表の追加・削除・修正
-- `private/events.tsv`：個人史の追加・削除・修正
+- `personal/personal-events.tsv`：個人史の追加・削除・修正
 
-`private/events.tsv` を使用する場合は、公開前に必ずWebサーバー側で認証保護してください。
+`personal/personal-events.tsv` を使用する場合は、公開前に必ずWebサーバー側で認証保護してください。
 
 この静的スターターには、React/Viteの開発用ソースコードやNode.jsの開発環境は含まれていません。
 `assets/` 内のJavaScriptはビルド済み成果物であり、直接編集することは想定していません。
@@ -26,7 +26,7 @@ ZIPを展開し、その中のファイル一式をWebサーバーへ配置し�
 2. ZIPを展開する
 3. `config.json` を自分の公開先に合わせて変更する
 4. `events.tsv` を自分の年表として編集する
-5. 必要な場合だけ、認証保護した `private/events.tsv` に個人史を追加する
+5. 必要な場合だけ、認証保護した `personal/personal-events.tsv` に個人史を追加する
 6. 展開したフォルダーの内容をWebサーバーへ配置し、ブラウザで確認する
 
 
@@ -56,7 +56,7 @@ id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummar
 
 ## 個人イベント
 
-`private/events.tsv` は、ヘッダーだけの空テンプレートです。個人史を使わない場合は、そのままで構いません。
+`personal/personal-events.tsv` は、ヘッダーだけの空テンプレートです。個人史を使わない場合は、そのままで構いません。
 
 個人史を追加する場合は、各行で次を満たしてください。
 
@@ -66,11 +66,11 @@ primary を me にする
 importance を 1、2、3 のいずれかにする
 ```
 
-同じ空テンプレートを `examples/private-events.tsv` にも収録しています。
+同じ空テンプレートを `examples/personal-events-template.tsv` にも収録しています。
 
 ## 重要：個人史の保護
 
-実データを書き込む前に、Webサーバー側で `private/` ディレクトリを認証保護してください。画面上で非表示にするだけでは、TSVファイルは保護されません。
+実データを書き込む前に、Webサーバー側で `personal/` ディレクトリを認証保護してください。画面上で非表示にするだけでは、TSVファイルは保護されません。
 
 ApacheのBasic認証を使う場合の概略は次です。
 
@@ -84,8 +84,8 @@ Require valid-user
 パスワードファイルはWeb公開領域の外に置きます。実個人史の公開前に、認証なしでは `401`、認証ありでは `200` になることを確認してください。
 
 ```bash
-curl -I https://example.com/timeline/private/events.tsv
-curl -I -u USER https://example.com/timeline/private/events.tsv
+curl -I https://example.com/timeline/personal/personal-events.tsv
+curl -I -u USER https://example.com/timeline/personal/personal-events.tsv
 ```
 
 ## 配置
@@ -99,10 +99,10 @@ config.json
 events.tsv
 icons.svg
 favicon.svg
-private/
+personal/
 ```
 
-サーバー側で作成した `private/.htaccess` などを、再アップロード時に削除・上書きしないよう注意してください。
+サーバー側で作成した `personal/.htaccess` などを、再アップロード時に削除・上書きしないよう注意してください。
 
 ## 原型とライセンス
 

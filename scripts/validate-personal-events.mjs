@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { parsePersonalEventsTsv } from "../src/personal-events-tsv.js";
 
-const INPUT = "public/private/events.tsv";
+const INPUT = "private-data/personal-events.tsv";
 
 if (!fs.existsSync(INPUT)) {
   console.log(`WARN: ${INPUT} がありません`);

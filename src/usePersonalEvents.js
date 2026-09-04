@@ -9,7 +9,7 @@ import {
   loadBrowserPersonalEvents,
   saveBrowserPersonalEvents,
 } from "./personal-events-store.js";
-import { loadPrivateEvents } from "./private-events-source.js";
+import { loadPersonalEvents } from "./personal-events-source.js";
 import {
   parsePersonalEventsTsv,
   serializePersonalEventsTsv,
@@ -427,10 +427,10 @@ export default function usePersonalEvents({
   };
 
   const loadServerPersonalEvents = async () => {
-    // 管理者向け。localhostではそのまま取得でき、
-    // 公開環境では private/ のBasic認証を通過した場合だけ取得できる。
+    // 管理者向け。開発環境ではVite経由でローカル個人史を取得し、
+    // 公開環境では personal/ の認証を通過した場合だけ取得できる。
     try {
-      const events = await loadPrivateEvents();
+      const events = await loadPersonalEvents();
 
       if (events === null) {
         setPersonalFileStatus(

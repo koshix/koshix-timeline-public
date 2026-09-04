@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   GRADUATE_TYPES,
   buildLifeModel,
-  migrateEducationSettings,
 } from "../src/life-stages.js";
 
 function model(overrides = {}) {
@@ -13,7 +12,6 @@ function model(overrides = {}) {
     higherEducationHistory: [],
     graduateEducationHistory: [],
     adultYear: "",
-    retirementYear: "",
     ...overrides,
   });
 }
@@ -98,7 +96,6 @@ function model(overrides = {}) {
       { start: "1976", years: "2", type: "masters" },
       { start: "1978", years: "3", type: "doctorate" },
     ],
-    retirementYear: "2019",
   });
 
   assert.equal(life.stageOf(1972).label, "大学");
@@ -107,7 +104,8 @@ function model(overrides = {}) {
   assert.equal(life.gradeLabel(1978), "博1");
   assert.equal(life.adultYear, 1981);
   assert.equal(life.stageOf(1981).label, "成人期");
-  assert.equal(life.stageOf(2019).label, "自由人");
+  assert.equal(life.stageOf(2019).label, "成人期");
+  assert.equal(life.stageOf(2050).label, "成人期");
 }
 
 // 高専から大学への編入を2行で表す。
@@ -207,19 +205,6 @@ function model(overrides = {}) {
   assert.equal(life.adultYear, 1981);
 }
 
-// v2.1.1までの内部値「修士＋博士」は互換用として読み込める。
-{
-  const life = model({
-    graduateEducationHistory: [
-      { start: "1976", years: "5", type: "mastersDoctorate" },
-    ],
-  });
-
-  assert.equal(life.gradeLabel(1976), "修1");
-  assert.equal(life.gradeLabel(1978), "博1");
-  assert.equal(life.adultYear, 1981);
-}
-
 // 入学までに空白があれば勝手に前の課程を延長しない。
 {
   const life = model({
@@ -262,98 +247,4 @@ function model(overrides = {}) {
   assert.equal(life.adultYear, 1972);
 }
 
-// 旧path設定から新しい配列形式へ移行する。
-// life-stages側では旧内部値を互換用に保持し、ブラウザUI初期化時に2行へ展開する。
-{
-  const migrated = migrateEducationSettings(
-    {
-      path: "phd",
-      ronin: 1,
-      ryunen: 0,
-      adultY: "",
-      retirementY: "2019",
-    },
-    {
-      path: "univ",
-    },
-    1953,
-    4
-  );
-
-  assert.deepEqual(migrated.higherEducationHistory, [
-    { start: "1973", years: "4", type: "university" },
-  ]);
-  assert.deepEqual(migrated.graduateEducationHistory, [
-    { start: "1977", years: "2", type: "masters" },
-    { start: "1979", years: "3", type: "doctorate" },
-  ]);
-  assert.equal(migrated.retirementYear, "2019");
-}
-
-// v2.1.1の配列形式に残っている「修士＋博士」も2行へ展開する。
-{
-  const migrated = migrateEducationSettings(
-    {
-      graduateEducationHistory: [
-        { start: "1976", years: "5", type: "mastersDoctorate" },
-      ],
-    },
-    {},
-    1953,
-    4
-  );
-
-  assert.deepEqual(migrated.graduateEducationHistory, [
-    { start: "1976", years: "2", type: "masters" },
-    { start: "1978", years: "3", type: "doctorate" },
-  ]);
-}
-
-// 直前版の単一設定からも自動移行する。
-{
-  const migrated = migrateEducationSettings(
-    {
-      higherEdYear: "1972",
-      higherEdType: "medical",
-      graduateYear: "1978",
-      graduateType: "masters",
-      adultYear: "1980",
-      retirementYear: "2019",
-    },
-    {},
-    1953,
-    4
-  );
-
-  assert.deepEqual(migrated.higherEducationHistory, [
-    { start: "1972", years: "6", type: "university" },
-  ]);
-  assert.deepEqual(migrated.graduateEducationHistory, [
-    { start: "1978", years: "2", type: "masters" },
-  ]);
-  assert.equal(migrated.adultYear, "1980");
-}
-
-// 明示的に空配列へ戻した場合、古い単一設定が残っていても復活させない。
-{
-  const migrated = migrateEducationSettings(
-    {
-      earlyChildhoodHistory: [],
-      higherEducationHistory: [],
-      graduateEducationHistory: [],
-      higherEdYear: "1972",
-      graduateYear: "1976",
-    },
-    {},
-    1953,
-    4
-  );
-
-  assert.deepEqual(migrated.earlyChildhoodHistory, []);
-  assert.deepEqual(migrated.higherEducationHistory, []);
-  assert.deepEqual(migrated.graduateEducationHistory, []);
-  assert.equal(migrated.higherEdYear, "");
-  assert.equal(migrated.graduateYear, "");
-}
-
-console.log("OK: 複数行の教育歴・人生段階・旧設定移行を検査しました");
+console.log("OK: 複数行の教育歴・人生段階を検査しました");

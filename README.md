@@ -45,7 +45,7 @@ npm run build
 - `title`: 年表のタイトル
 - `hashtag`: 共有用ハッシュタグ
 - `shareUrl`: 自分が設置する公開URL
-- `defaults`: 生年、進学年、就職年、退職年などの初期値
+- `defaults`: 生年、幼保歴、大学等、大学院などの初期値
 
 公開用ソースでは `shareUrl` は例示URLになっています。自分の設置先へ変更してください。
 
@@ -62,17 +62,17 @@ npm run build
 個人史を使う場合は、空テンプレートから作成します。
 
 ```bash
-cp examples/private-events.tsv public/private/events.tsv
+cp examples/personal-events-template.tsv private-data/personal-events.tsv
 ```
 
-`public/private/events.tsv` は `.gitignore` 対象です。
+`private-data/personal-events.tsv` は `.gitignore` 対象です。
 
 ## 個人史の保護
 
 個人史をWeb上で使用する場合、画面上で非表示にするだけでは保護されません。
-Webサーバー側で `private/` ディレクトリをBasic認証などで保護してください。
+Webサーバー側で `personal/` ディレクトリをBasic認証などで保護してください。
 
-実個人史はproduction buildから自動的に除外されます。
+実個人史を置く `private-data/` はproduction buildの入力には含まれません。
 サーバーへ配置する場合も、公開ファイルとは別に管理してください。
 
 ## 主なコマンド
@@ -82,7 +82,7 @@ npm run dev
 npm run build
 npm run preview
 npm run build:events
-npm run build:private
+npm run validate:personal
 npm run test:life-stages
 npm run add:event:interactive
 npm run build:starter
@@ -97,7 +97,7 @@ src/                        Reactアプリ本体
 public/events.tsv           公開年表
 public/config.json          表示設定
 public/icons.svg            SVGアイコン
-examples/private-events.tsv 個人史の空テンプレート
+examples/personal-events-template.tsv 個人史の空テンプレート
 scripts/                    検査・build・配布用スクリプト
 DATA-GUIDE.md               イベント登録・編集規約
 LICENSE                     ライセンス
@@ -106,10 +106,10 @@ THIRD-PARTY-NOTICES.md      原作品・第三者ソフトウェア表示
 
 ## 公開データと個人データ
 
-公開年表とprivateな個人史は明確に分離してください。
+公開年表と非公開の個人史は明確に分離してください。
 
 この公開リポジトリには実際の個人史を含めないでください。
-`public/private/events.tsv` はGit管理対象外です。
+`private-data/personal-events.tsv` はGit管理対象外です。
 
 ## 原型と変更
 

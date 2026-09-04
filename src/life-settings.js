@@ -2,6 +2,7 @@ import {
   EARLY_CHILDHOOD_TYPES,
   HIGHER_ED_TYPES,
   GRADUATE_TYPES,
+  normalizeEducationHistory,
 } from "./education-history.js";
 import { validateAdultPeriods } from "./adult-periods.js";
 
@@ -31,6 +32,74 @@ const isObject = (value) =>
   value !== null &&
   typeof value === "object" &&
   !Array.isArray(value);
+
+export function createInitialEducationSettings(
+  saved = {},
+  defaults = {},
+  birth,
+  month
+) {
+  const cohortBirth =
+    month >= 1 && month <= 3
+      ? birth - 1
+      : birth;
+
+  const savedEarly =
+    Array.isArray(saved.earlyChildhoodHistory)
+      ? saved.earlyChildhoodHistory
+      : null;
+
+  const defaultEarly =
+    Array.isArray(defaults.earlyChildhoodHistory)
+      ? defaults.earlyChildhoodHistory
+      : null;
+
+  const earlySource =
+    savedEarly !== null
+      ? savedEarly
+      : defaultEarly?.length
+        ? defaultEarly
+        : [{
+            start: String(cohortBirth + 5),
+            years: "2",
+            type: "kindergarten",
+          }];
+
+  const higherSource =
+    Array.isArray(saved.higherEducationHistory)
+      ? saved.higherEducationHistory
+      : Array.isArray(defaults.higherEducationHistory)
+        ? defaults.higherEducationHistory
+        : [];
+
+  const graduateSource =
+    Array.isArray(saved.graduateEducationHistory)
+      ? saved.graduateEducationHistory
+      : Array.isArray(defaults.graduateEducationHistory)
+        ? defaults.graduateEducationHistory
+        : [];
+
+  return {
+    earlyChildhoodHistory:
+      normalizeEducationHistory(
+        earlySource,
+        EARLY_CHILDHOOD_TYPES,
+        "kindergarten"
+      ),
+    higherEducationHistory:
+      normalizeEducationHistory(
+        higherSource,
+        HIGHER_ED_TYPES,
+        "university"
+      ),
+    graduateEducationHistory:
+      normalizeEducationHistory(
+        graduateSource,
+        GRADUATE_TYPES,
+        "masters"
+      ),
+  };
+}
 
 const parseYear = (value, label) => {
   const year = Number(value);
@@ -453,22 +522,6 @@ export function mergeLifeSettings(
     createLifeSettingsSnapshot(
       snapshot
     );
-
-  [
-    "path",
-    "ronin",
-    "ryunen",
-    "higherEdYear",
-    "higherEdType",
-    "graduateYear",
-    "graduateType",
-    "adultYear",
-    "adultY",
-    "retirementYear",
-    "retirementY",
-  ].forEach((key) => {
-    delete next[key];
-  });
 
   return {
     ...next,

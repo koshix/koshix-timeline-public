@@ -232,10 +232,6 @@ const lifeContext = buildTimelineLifeContext({
   earlyChildhoodHistory: [],
   higherEducationHistory: [],
   graduateEducationHistory: [],
-  higherEdYear: "",
-  higherEdType: "university",
-  graduateYear: "",
-  graduateType: "masters",
   adultPeriodsEnabled: true,
   adultPeriods: [
     {
@@ -261,10 +257,6 @@ const invalidAdultPeriods =
     earlyChildhoodHistory: [],
     higherEducationHistory: [],
     graduateEducationHistory: [],
-    higherEdYear: "",
-    higherEdType: "university",
-    graduateYear: "",
-    graduateType: "masters",
     adultPeriodsEnabled: true,
     adultPeriods: [
       {
@@ -285,10 +277,6 @@ const disabledAdultPeriods =
     earlyChildhoodHistory: [],
     higherEducationHistory: [],
     graduateEducationHistory: [],
-    higherEdYear: "",
-    higherEdType: "university",
-    graduateYear: "",
-    graduateType: "masters",
     adultPeriodsEnabled: false,
     adultPeriods: [
       {

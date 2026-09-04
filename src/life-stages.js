@@ -2,7 +2,6 @@ import {
   EARLY_CHILDHOOD_TYPES,
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
-  expandLegacyGraduateHistory,
   normalizeEducationHistory,
 } from "./education-history.js";
 
@@ -61,228 +60,6 @@ function addGap(stages, from, to, label = "次の段階に進む前") {
   );
 }
 
-const legacyHigherType = (type) => {
-  if (type === "kosen") return "kosen";
-  if (type === "vocational") return "vocational";
-  if (type === "juniorCollege") return "juniorCollege";
-  return "university";
-};
-
-const legacyHigherYears = (type) => {
-  if (type === "kosen") return 5;
-  if (type === "vocational") return 2;
-  if (type === "juniorCollege") return 2;
-  if (type === "medical") return 6;
-  return 4;
-};
-
-const legacyGraduateType = (type) =>
-  GRADUATE_TYPES[type] ? type : "masters";
-
-const legacyGraduateYears = (type) =>
-  type === "mastersDoctorate" ? 5 : 2;
-
-const savedArray = (value) => Array.isArray(value);
-
-export function migrateEducationSettings(saved, defaults, birth, month) {
-  const cohortBirth = month >= 1 && month <= 3 ? birth - 1 : birth;
-
-  const savedEarlyHistory = savedArray(saved.earlyChildhoodHistory)
-    ? saved.earlyChildhoodHistory
-    : null;
-  const defaultEarlyHistory = savedArray(defaults.earlyChildhoodHistory)
-    ? defaults.earlyChildhoodHistory
-    : null;
-
-  const savedHigherHistory = savedArray(saved.higherEducationHistory)
-    ? saved.higherEducationHistory
-    : savedArray(saved.higherEdHistory)
-      ? saved.higherEdHistory
-      : null;
-  const savedGraduateHistory = savedArray(saved.graduateEducationHistory)
-    ? saved.graduateEducationHistory
-    : savedArray(saved.graduateHistory)
-      ? saved.graduateHistory
-      : null;
-  const defaultHigherHistory = savedArray(defaults.higherEducationHistory)
-    ? defaults.higherEducationHistory
-    : savedArray(defaults.higherEdHistory)
-      ? defaults.higherEdHistory
-      : null;
-  const defaultGraduateHistory = savedArray(defaults.graduateEducationHistory)
-    ? defaults.graduateEducationHistory
-    : savedArray(defaults.graduateHistory)
-      ? defaults.graduateHistory
-      : null;
-
-  const initialEarlyHistory =
-    savedEarlyHistory !== null
-      ? savedEarlyHistory
-      : defaultEarlyHistory?.length
-        ? defaultEarlyHistory
-        : [{
-            start: String(cohortBirth + 5),
-            years: "2",
-            type: "kindergarten",
-          }];
-
-  let earlyChildhoodHistory = normalizeEducationHistory(
-    initialEarlyHistory,
-    EARLY_CHILDHOOD_TYPES,
-    "kindergarten"
-  );
-  let higherEducationHistory;
-  let graduateEducationHistory;
-
-  if (savedHigherHistory !== null || defaultHigherHistory !== null) {
-    higherEducationHistory = normalizeEducationHistory(
-      savedHigherHistory ?? defaultHigherHistory,
-      HIGHER_ED_TYPES,
-      "university"
-    );
-  } else {
-    const higherEdYear = saved.higherEdYear ?? defaults.higherEdYear ?? "";
-    const rawHigherType =
-      saved.higherEdType ?? defaults.higherEdType ?? "university";
-    higherEducationHistory = higherEdYear === ""
-      ? []
-      : [{
-          start: String(higherEdYear),
-          years: String(
-            saved.higherEdYears ??
-            defaults.higherEdYears ??
-            legacyHigherYears(rawHigherType)
-          ),
-          type: legacyHigherType(rawHigherType),
-        }];
-  }
-
-  if (savedGraduateHistory !== null || defaultGraduateHistory !== null) {
-    graduateEducationHistory = normalizeEducationHistory(
-      savedGraduateHistory ?? defaultGraduateHistory,
-      GRADUATE_TYPES,
-      "masters"
-    );
-  } else {
-    const graduateYear = saved.graduateYear ?? defaults.graduateYear ?? "";
-    const rawGraduateType =
-      saved.graduateType ?? defaults.graduateType ?? "masters";
-    graduateEducationHistory = graduateYear === ""
-      ? []
-      : [{
-          start: String(graduateYear),
-          years: String(
-            saved.graduateYears ??
-            defaults.graduateYears ??
-            legacyGraduateYears(rawGraduateType)
-          ),
-          type: legacyGraduateType(rawGraduateType),
-        }];
-  }
-
-  const savedHasModernSettings = [
-    "higherEdYear",
-    "higherEdType",
-    "graduateYear",
-    "graduateType",
-    "higherEducationHistory",
-    "graduateEducationHistory",
-    "higherEdHistory",
-    "graduateHistory",
-    "adultYear",
-    "retirementYear",
-  ].some((key) => Object.hasOwn(saved, key));
-  const savedHasLegacySettings = ["path", "ronin", "ryunen"].some(
-    (key) => Object.hasOwn(saved, key)
-  );
-  const defaultsHaveModernSettings = [
-    "higherEdYear",
-    "higherEdType",
-    "graduateYear",
-    "graduateType",
-    "higherEducationHistory",
-    "graduateEducationHistory",
-  ].some((key) => Object.hasOwn(defaults, key));
-  const defaultsHaveLegacySettings = Object.hasOwn(defaults, "path");
-  const shouldUseLegacyPath =
-    (!savedHasModernSettings && savedHasLegacySettings) ||
-    (!savedHasModernSettings &&
-      !savedHasLegacySettings &&
-      defaultsHaveLegacySettings &&
-      !defaultsHaveModernSettings);
-
-  if (shouldUseLegacyPath) {
-    const legacyPath = saved.path ?? defaults.path;
-    const legacyRonin = Number(saved.ronin ?? defaults.roninYears ?? 0);
-    const legacyRyunen = Number(saved.ryunen ?? defaults.ryunenYears ?? 0);
-    const path = legacyPath || "univ";
-
-    if (path === "hs_job") {
-      higherEducationHistory = [];
-      graduateEducationHistory = [];
-    } else {
-      const higherType =
-        path === "kosen"
-          ? "kosen"
-          : path === "vocational"
-            ? "vocational"
-            : "university";
-      const start = cohortBirth + (path === "kosen" ? 16 : 19 + legacyRonin);
-      const baseYears =
-        path === "kosen"
-          ? 5
-          : path === "vocational"
-            ? 2
-            : path === "univ6"
-              ? 6
-              : 4;
-      const years = baseYears + legacyRyunen;
-      higherEducationHistory = [{
-        start: String(start),
-        years: String(years),
-        type: higherType,
-      }];
-
-      if (path === "masters" || path === "phd") {
-        graduateEducationHistory = [{
-          start: String(start + years),
-          years: path === "phd" ? "5" : "2",
-          type: path === "phd" ? "mastersDoctorate" : "masters",
-        }];
-      } else {
-        graduateEducationHistory = [];
-      }
-    }
-  }
-
-  graduateEducationHistory = expandLegacyGraduateHistory(
-    graduateEducationHistory
-  );
-
-  const firstHigher = higherEducationHistory[0] ?? null;
-  const firstGraduate = graduateEducationHistory[0] ?? null;
-
-  return {
-    earlyChildhoodHistory,
-    higherEducationHistory,
-    graduateEducationHistory,
-    // 旧Appとの移行期間中に使う互換値。
-    higherEdYear: firstHigher?.start ?? "",
-    higherEdType: firstHigher?.type ?? "university",
-    higherEdYears: firstHigher?.years ?? "",
-    graduateYear: firstGraduate?.start ?? "",
-    graduateType: firstGraduate?.type ?? "masters",
-    graduateYears: firstGraduate?.years ?? "",
-    adultYear:
-      saved.adultYear ?? saved.adultY ?? defaults.adultYear ?? "",
-    retirementYear:
-      saved.retirementYear ??
-      saved.retirementY ??
-      defaults.retirementYear ??
-      "",
-  };
-}
-
 function normalizeRowsForModel({
   rows,
   types,
@@ -334,54 +111,6 @@ function normalizeRowsForModel({
   return complete;
 }
 
-function resolveHistories({
-  earlyChildhoodHistory,
-  higherEducationHistory,
-  graduateEducationHistory,
-  higherEdYear,
-  higherEdType,
-  graduateYear,
-  graduateType,
-}) {
-  const explicitEarly = Array.isArray(earlyChildhoodHistory)
-    ? earlyChildhoodHistory
-    : null;
-  const explicitHigher = Array.isArray(higherEducationHistory)
-    ? higherEducationHistory
-    : null;
-  const explicitGraduate = Array.isArray(graduateEducationHistory)
-    ? graduateEducationHistory
-    : null;
-
-  if (explicitEarly || explicitHigher || explicitGraduate) {
-    return {
-      earlyChildhoodHistory: explicitEarly ?? [],
-      higherEducationHistory: explicitHigher ?? [],
-      graduateEducationHistory: explicitGraduate ?? [],
-    };
-  }
-
-  return {
-    earlyChildhoodHistory: [],
-    higherEducationHistory:
-      higherEdYear === "" || higherEdYear == null
-        ? []
-        : [{
-            start: String(higherEdYear),
-            years: String(legacyHigherYears(higherEdType)),
-            type: legacyHigherType(higherEdType),
-          }],
-    graduateEducationHistory:
-      graduateYear === "" || graduateYear == null
-        ? []
-        : [{
-            start: String(graduateYear),
-            years: String(legacyGraduateYears(graduateType)),
-            type: legacyGraduateType(graduateType),
-          }],
-  };
-}
-
 function addHigherStage(stages, entry, sequence) {
   const config = HIGHER_ED_TYPES[entry.type] ?? HIGHER_ED_TYPES.university;
   addStage(
@@ -399,40 +128,6 @@ function addHigherStage(stages, entry, sequence) {
 }
 
 function addGraduateStages(stages, entry, sequence) {
-  if (entry.type === "mastersDoctorate") {
-    const mastersYears = Math.min(2, entry.years);
-    if (mastersYears > 0) {
-      addStage(
-        stages,
-        stage(
-          `graduate-${sequence}-masters`,
-          "大学院（修士）",
-          entry.start,
-          entry.start + mastersYears - 1,
-          "#4a5fb0",
-          "#eaeefb",
-          { gradePrefix: "修" }
-        )
-      );
-    }
-    const doctorateYears = entry.years - mastersYears;
-    if (doctorateYears > 0) {
-      addStage(
-        stages,
-        stage(
-          `graduate-${sequence}-doctorate`,
-          "大学院（博士）",
-          entry.start + mastersYears,
-          entry.end,
-          "#31589c",
-          "#e5ecf8",
-          { gradePrefix: "博" }
-        )
-      );
-    }
-    return;
-  }
-
   const config = GRADUATE_TYPES[entry.type] ?? GRADUATE_TYPES.masters;
   addStage(
     stages,
@@ -454,27 +149,23 @@ export function buildLifeModel({
   earlyChildhoodHistory,
   higherEducationHistory,
   graduateEducationHistory,
-  higherEdYear = "",
-  higherEdType = "university",
-  graduateYear = "",
-  graduateType = "masters",
   adultYear = "",
-  retirementYear = "",
 }) {
   const cohortBirth = month >= 1 && month <= 3 ? birth - 1 : birth;
   const earlyHistoryWasExplicit = Array.isArray(earlyChildhoodHistory);
   const explicitAdult = validYear(adultYear);
-  const requestedRetirement = validYear(retirementYear);
   const warnings = [];
-  const histories = resolveHistories({
-    earlyChildhoodHistory,
-    higherEducationHistory,
-    graduateEducationHistory,
-    higherEdYear,
-    higherEdType,
-    graduateYear,
-    graduateType,
-  });
+  const histories = {
+    earlyChildhoodHistory: Array.isArray(earlyChildhoodHistory)
+      ? earlyChildhoodHistory
+      : [],
+    higherEducationHistory: Array.isArray(higherEducationHistory)
+      ? higherEducationHistory
+      : [],
+    graduateEducationHistory: Array.isArray(graduateEducationHistory)
+      ? graduateEducationHistory
+      : [],
+  };
 
   const earlyRows = normalizeRowsForModel({
     rows: histories.earlyChildhoodHistory,
@@ -668,24 +359,6 @@ export function buildLifeModel({
     ? Math.max(...educationRows.map((entry) => entry.end)) + 1
     : cohortBirth + 19;
   const resolvedAdultYear = explicitAdult ?? automaticAdultYear;
-  const retirement =
-    requestedRetirement != null && requestedRetirement >= resolvedAdultYear
-      ? requestedRetirement
-      : null;
-
-  if (
-    retirementYear !== "" &&
-    requestedRetirement != null &&
-    requestedRetirement < resolvedAdultYear
-  ) {
-    warnings.push("定年退職年は成人期の開始年以後にしてください。");
-  } else if (
-    retirementYear !== "" &&
-    requestedRetirement == null
-  ) {
-    warnings.push(`定年退職年を${YEAR_MIN}〜${YEAR_MAX}年で指定してください。`);
-  }
-
   if (
     explicitAdult != null &&
     educationRows.some((entry) => entry.start >= explicitAdult)
@@ -704,25 +377,11 @@ export function buildLifeModel({
       "adult",
       "成人期",
       resolvedAdultYear,
-      retirement == null ? Infinity : retirement - 1,
+      Infinity,
       "#37414f",
       "#eef1f5"
     )
   );
-  if (retirement != null) {
-    addStage(
-      stages,
-      stage(
-        "retired",
-        "自由人",
-        retirement,
-        Infinity,
-        "#37414f",
-        "#eef1f5"
-      )
-    );
-  }
-
   const preStage = stage(
     "pre",
     "生まれる前",
@@ -757,7 +416,6 @@ export function buildLifeModel({
     gradeLabel,
     cohortBirth,
     adultYear: resolvedAdultYear,
-    retirementYear: retirement,
     earlyChildhoodHistory: histories.earlyChildhoodHistory,
     higherEducationHistory: histories.higherEducationHistory,
     graduateEducationHistory: histories.graduateEducationHistory,

@@ -144,10 +144,6 @@ export function buildTimelineLifeContext({
   earlyChildhoodHistory,
   higherEducationHistory,
   graduateEducationHistory,
-  higherEdYear,
-  higherEdType,
-  graduateYear,
-  graduateType,
   adultPeriodsEnabled,
   adultPeriods,
 }) {
@@ -157,10 +153,6 @@ export function buildTimelineLifeContext({
     earlyChildhoodHistory,
     higherEducationHistory,
     graduateEducationHistory,
-    higherEdYear,
-    higherEdType,
-    graduateYear,
-    graduateType,
     adultYear: "",
   });
 

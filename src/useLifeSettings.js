@@ -99,13 +99,13 @@ export default function useLifeSettings({
   const firstGraduateEducation =
     graduateEducationHistory[0] ?? null;
 
-  const higherEdY =
+  const firstHigherYear =
     firstHigherEducation?.start ?? "";
-  const higherEdType =
+  const firstHigherType =
     firstHigherEducation?.type ?? "university";
-  const graduateY =
+  const firstGraduateYear =
     firstGraduateEducation?.start ?? "";
-  const graduateType =
+  const firstGraduateType =
     firstGraduateEducation?.type ?? "masters";
 
   const updateAdultPeriod = (index, key, value) => {
@@ -263,10 +263,10 @@ export default function useLifeSettings({
     updateHigherEducationHistory,
     graduateEducationHistory,
     updateGraduateEducationHistory,
-    higherEdY,
-    higherEdType,
-    graduateY,
-    graduateType,
+    firstHigherYear,
+    firstHigherType,
+    firstGraduateYear,
+    firstGraduateType,
     adultPeriodsEnabled,
     adultPeriods,
     lifeSettingsStatus,

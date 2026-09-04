@@ -23,7 +23,7 @@ const parseYear = (value, { allowBlank = false } = {}) => {
 
 export function validateAdultPeriods(
   rows,
-  { adultYear = null, retirementYear = null } = {}
+  { adultYear = null } = {}
 ) {
   const periods = [];
   const errors = [];
@@ -57,24 +57,6 @@ export function validateAdultPeriods(
     if (adultYear != null && from < adultYear) {
       errors.push(
         `${line}行目: 開始年は成人期の開始年 ${adultYear}年以後にしてください。`
-      );
-      return;
-    }
-
-    if (retirementYear != null && from >= retirementYear) {
-      errors.push(
-        `${line}行目: 開始年は退職年 ${retirementYear}年より前にしてください。`
-      );
-      return;
-    }
-
-    if (
-      retirementYear != null &&
-      to !== null &&
-      to >= retirementYear
-    ) {
-      errors.push(
-        `${line}行目: 終了年は退職年 ${retirementYear}年より前にしてください。`
       );
       return;
     }

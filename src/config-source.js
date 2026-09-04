@@ -1,3 +1,10 @@
+import {
+  EARLY_CHILDHOOD_TYPES,
+  HIGHER_ED_TYPES,
+  GRADUATE_TYPES,
+  normalizeEducationHistory,
+} from "./education-history.js";
+
 const BUILTIN_CONFIG = {
   title: "自分史プロジェクション",
   hashtag: "#自分史プロジェクション",
@@ -6,11 +13,9 @@ const BUILTIN_CONFIG = {
   defaults: {
     birthYear: 1965,
     birthMonth: 0,
-    higherEdYear: "",
-    higherEdType: "university",
-    graduateYear: "",
-    graduateType: "masters",
-    retirementYear: "",
+    earlyChildhoodHistory: [],
+    higherEducationHistory: [],
+    graduateEducationHistory: [],
   },
 };
 
@@ -25,16 +30,6 @@ function numberOr(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function yearOrBlank(value) {
-  if (value === "" || value == null) return "";
-  const n = Number(value);
-  return Number.isFinite(n) ? String(n) : "";
-}
-
-function choiceOr(value, choices, fallback) {
-  return choices.includes(value) ? value : fallback;
-}
-
 function normalizeConfig(raw) {
   const defaults = raw?.defaults ?? {};
   const normalizedDefaults = {
@@ -46,27 +41,22 @@ function normalizeConfig(raw) {
       defaults.birthMonth,
       BUILTIN_CONFIG.defaults.birthMonth
     ),
-    higherEdYear: yearOrBlank(defaults.higherEdYear),
-    higherEdType: choiceOr(
-      defaults.higherEdType,
-      ["university", "vocational", "kosen", "medical"],
-      BUILTIN_CONFIG.defaults.higherEdType
+    earlyChildhoodHistory: normalizeEducationHistory(
+      defaults.earlyChildhoodHistory,
+      EARLY_CHILDHOOD_TYPES,
+      "kindergarten"
     ),
-    graduateYear: yearOrBlank(defaults.graduateYear),
-    graduateType: choiceOr(
-      defaults.graduateType,
-      ["masters", "mastersDoctorate"],
-      BUILTIN_CONFIG.defaults.graduateType
+    higherEducationHistory: normalizeEducationHistory(
+      defaults.higherEducationHistory,
+      HIGHER_ED_TYPES,
+      "university"
     ),
-    retirementYear: yearOrBlank(defaults.retirementYear),
+    graduateEducationHistory: normalizeEducationHistory(
+      defaults.graduateEducationHistory,
+      GRADUATE_TYPES,
+      "masters"
+    ),
   };
-
-  // 旧config.jsonから新しい入力方式へ移行するため、存在する旧項目だけ残す。
-  if (typeof defaults.path === "string" && defaults.path) {
-    normalizedDefaults.path = defaults.path;
-    normalizedDefaults.roninYears = numberOr(defaults.roninYears, 0);
-    normalizedDefaults.ryunenYears = numberOr(defaults.ryunenYears, 0);
-  }
 
   return {
     title:

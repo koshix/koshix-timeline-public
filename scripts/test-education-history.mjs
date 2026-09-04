@@ -4,7 +4,6 @@ import {
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
   defaultYearsFor,
-  expandLegacyGraduateHistory,
   normalizeEducationHistory,
 } from "../src/education-history.js";
 
@@ -27,8 +26,6 @@ assert.deepEqual(Object.keys(GRADUATE_TYPES), [
   "doctorate",
 ]);
 
-assert.equal(GRADUATE_TYPES.mastersDoctorate.label, "修士＋博士");
-assert.equal(defaultYearsFor(GRADUATE_TYPES, "mastersDoctorate"), "5");
 
 assert.deepEqual(
   normalizeEducationHistory(
@@ -46,25 +43,4 @@ assert.deepEqual(
   ]
 );
 
-assert.deepEqual(
-  expandLegacyGraduateHistory([
-    { start: "1976", years: "5", type: "mastersDoctorate" },
-  ]),
-  [
-    { start: "1976", years: "2", type: "masters" },
-    { start: "1978", years: "3", type: "doctorate" },
-  ]
-);
-
-assert.deepEqual(
-  expandLegacyGraduateHistory([
-    { start: "1976", years: "2", type: "masters" },
-    { start: "1978", years: "3", type: "doctorate" },
-  ]),
-  [
-    { start: "1976", years: "2", type: "masters" },
-    { start: "1978", years: "3", type: "doctorate" },
-  ]
-);
-
-console.log("OK: 教育歴の型定義・正規化・旧大学院設定移行を検査しました");
+console.log("OK: 教育歴の型定義・正規化を検査しました");

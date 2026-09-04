@@ -6,8 +6,10 @@ import { THREADS } from "./threads";
 import {
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
-  migrateEducationSettings,
 } from "./life-stages";
+import {
+  createInitialEducationSettings,
+} from "./life-settings";
 import AdultPeriodsEditor from "./AdultPeriodsEditor";
 import BirthSettingsEditor from "./BirthSettingsEditor";
 import EducationHistoryEditor from "./EducationHistoryEditor";
@@ -196,7 +198,7 @@ const SAVED =
   {};
 const INITIAL_BIRTH = SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? 1965;
 const INITIAL_MONTH = SAVED.month ?? PROFILE_DEFAULTS.birthMonth ?? 0;
-const INITIAL_EDUCATION = migrateEducationSettings(
+const INITIAL_EDUCATION = createInitialEducationSettings(
   SAVED,
   PROFILE_DEFAULTS,
   INITIAL_BIRTH,
@@ -216,10 +218,10 @@ export default function App() {
     updateHigherEducationHistory,
     graduateEducationHistory,
     updateGraduateEducationHistory,
-    higherEdY,
-    higherEdType,
-    graduateY,
-    graduateType,
+    firstHigherYear,
+    firstHigherType,
+    firstGraduateYear,
+    firstGraduateType,
     adultPeriodsEnabled,
     adultPeriods,
     lifeSettingsStatus,
@@ -355,10 +357,6 @@ export default function App() {
       earlyChildhoodHistory,
       higherEducationHistory,
       graduateEducationHistory,
-      higherEdYear: higherEdY,
-      higherEdType,
-      graduateYear: graduateY,
-      graduateType,
       adultPeriodsEnabled,
       adultPeriods,
       catOff,
@@ -368,7 +366,7 @@ export default function App() {
       setupOpen,
       speed,
     });
-  }, [birth, month, earlyChildhoodHistory, higherEducationHistory, graduateEducationHistory, higherEdY, higherEdType, graduateY, graduateType, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, closedStages, setupOpen, speed]);
+  }, [birth, month, earlyChildhoodHistory, higherEducationHistory, graduateEducationHistory, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, closedStages, setupOpen, speed]);
 
   const toggleMyEvents = () => {
     setShowMe((value) => !value);
@@ -421,10 +419,6 @@ export default function App() {
     earlyChildhoodHistory,
     higherEducationHistory,
     graduateEducationHistory,
-    higherEdYear: higherEdY,
-    higherEdType,
-    graduateYear: graduateY,
-    graduateType,
     adultPeriodsEnabled,
     adultPeriods,
     personalEvents: myEvents,
@@ -1849,11 +1843,11 @@ export default function App() {
             }}
           >
             {birth}年{month ? `${month}月` : ""}生まれ
-            {higherEdY
-              ? `・${higherEdY}年 ${HIGHER_ED_TYPES[higherEdType]?.label}`
+            {firstHigherYear
+              ? `・${firstHigherYear}年 ${HIGHER_ED_TYPES[firstHigherType]?.label}`
               : ""}
-            {graduateY
-              ? `・${graduateY}年 大学院（${GRADUATE_TYPES[graduateType]?.label}）`
+            {firstGraduateYear
+              ? `・${firstGraduateYear}年 大学院（${GRADUATE_TYPES[firstGraduateType]?.label}）`
               : ""}
             ・成人期{grouped.adultYear}年〜（自動）
             {adultPeriodsEnabled
