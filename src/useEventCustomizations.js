@@ -4,17 +4,17 @@ import {
   useState,
 } from "react";
 
-import { applyEventCustomizations } from "./event-customizations.js";
+import {
+  applyEventCustomizations,
+  EMPTY_EVENT_CUSTOMIZATIONS,
+} from "./event-customizations.js";
 import {
   parseEventCustomizationsTsv,
   serializeEventCustomizationsTsv,
 } from "./event-customizations-tsv.js";
 import {
-  EMPTY_EVENT_CUSTOMIZATIONS,
-  loadBrowserEventCustomizations,
-  saveBrowserEventCustomizations,
-  clearBrowserEventCustomizations,
-} from "./event-customizations-store.js";
+  workspaceStore,
+} from "./workspace-store.js";
 
 export default function useEventCustomizations({
   events = [],
@@ -66,7 +66,7 @@ export default function useEventCustomizations({
   useEffect(() => {
     let cancelled = false;
 
-    loadBrowserEventCustomizations()
+    workspaceStore.eventCustomizations.load()
       .then((customizations) => {
         if (!cancelled) {
           setEventCustomizations(customizations);
@@ -114,8 +114,8 @@ export default function useEventCustomizations({
 
     const changes = {};
 
-    if (title !== base.t) changes.t = title;
-    if (summary !== base.n) changes.n = summary;
+    if (title !== base.title) changes.title = title;
+    if (summary !== base.summary) changes.summary = summary;
     if (importance !== base.importance) {
       changes.importance = importance;
     }
@@ -150,7 +150,7 @@ export default function useEventCustomizations({
     };
 
     try {
-      await saveBrowserEventCustomizations(next);
+      await workspaceStore.eventCustomizations.save(next);
       setEventCustomizations(next);
 
       setEditingEventId(null);
@@ -162,7 +162,7 @@ export default function useEventCustomizations({
 
       setEventCustomizationStatus(
         Object.keys(merged).length === 0
-          ? `「${base.t}」を正本の内容に戻しました`
+          ? `「${base.title}」を正本の内容に戻しました`
           : `「${title}」の修正をこのブラウザに保存しました`
       );
     } catch (err) {
@@ -208,7 +208,7 @@ export default function useEventCustomizations({
 
       if (!ok) return;
 
-      await saveBrowserEventCustomizations(parsed);
+      await workspaceStore.eventCustomizations.save(parsed);
       setEventCustomizations(parsed);
 
       setEditingEventId(null);
@@ -375,15 +375,13 @@ export default function useEventCustomizations({
     const addition = {
       id,
       date,
-      y: Number(date.slice(0, 4)),
-      t: title,
+      title: title,
       cats: [category],
       primary: category,
-      cat: category,
       importance,
       core: false,
-      ic: iconByCategory[category],
-      n: summary,
+      icon: iconByCategory[category],
+      summary: summary,
     };
 
     const next = {
@@ -397,7 +395,7 @@ export default function useEventCustomizations({
     };
 
     try {
-      await saveBrowserEventCustomizations(next);
+      await workspaceStore.eventCustomizations.save(next);
       setEventCustomizations(next);
       setEventAddOpen(false);
       resetEventAddDraft();
@@ -428,7 +426,7 @@ export default function useEventCustomizations({
     }
 
     const ok = window.confirm(
-      `追加項目「${addition.t}」をこのブラウザから削除しますか？`
+      `追加項目「${addition.title}」をこのブラウザから削除しますか？`
     );
 
     if (!ok) return;
@@ -446,13 +444,13 @@ export default function useEventCustomizations({
     };
 
     try {
-      await saveBrowserEventCustomizations(next);
+      await workspaceStore.eventCustomizations.save(next);
       setEventCustomizations(next);
 
       onEventRemoved?.(event);
 
       setEventCustomizationStatus(
-        `「${addition.t}」を削除しました`
+        `「${addition.title}」を削除しました`
       );
     } catch (err) {
       console.error(
@@ -467,7 +465,7 @@ export default function useEventCustomizations({
 
   const hideEvent = async (event) => {
     const ok = window.confirm(
-      `年表項目「${event.t}」をこのブラウザで非表示にしますか？`
+      `年表項目「${event.title}」をこのブラウザで非表示にしますか？`
     );
 
     if (!ok) return;
@@ -490,7 +488,7 @@ export default function useEventCustomizations({
     };
 
     try {
-      await saveBrowserEventCustomizations(next);
+      await workspaceStore.eventCustomizations.save(next);
       setEventCustomizations(next);
 
       if (editingEventId === event.id) {
@@ -505,7 +503,7 @@ export default function useEventCustomizations({
       onEventRemoved?.(event);
 
       setEventCustomizationStatus(
-        `「${event.t}」を非表示にしました`
+        `「${event.title}」を非表示にしました`
       );
     } catch (err) {
       console.error(
@@ -534,11 +532,11 @@ export default function useEventCustomizations({
     };
 
     try {
-      await saveBrowserEventCustomizations(next);
+      await workspaceStore.eventCustomizations.save(next);
       setEventCustomizations(next);
       setEventCustomizationStatus(
         base
-          ? `「${base.t}」を表示に戻しました`
+          ? `「${base.title}」を表示に戻しました`
           : `項目 ${id} の非表示指定を解除しました`
       );
     } catch (err) {
@@ -574,7 +572,7 @@ export default function useEventCustomizations({
     if (!ok) return;
 
     try {
-      await clearBrowserEventCustomizations();
+      await workspaceStore.eventCustomizations.clear();
       setEventCustomizations({
         overrides: {},
         hidden: [],
@@ -603,12 +601,12 @@ export default function useEventCustomizations({
   const startEditingEvent = (event) => {
     setEditingEventId(event.id);
     setEventEditDraft({
-      title: event.t ?? "",
-      summary: event.n ?? "",
+      title: event.title ?? "",
+      summary: event.summary ?? "",
       importance: event.importance ?? 2,
     });
     setEventCustomizationStatus(
-      `「${event.t}」を修正中です`
+      `「${event.title}」を修正中です`
     );
   };
 

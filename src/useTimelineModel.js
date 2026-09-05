@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import {
+  buildTimelineControlTargets,
   buildTimelineEventList,
   buildTimelineGroups,
   buildTimelineLifeContext,
@@ -11,10 +12,7 @@ import {
 export default function useTimelineModel({
   birth,
   month,
-  earlyChildhoodHistory,
-  higherEducationHistory,
-  graduateEducationHistory,
-  adultPeriodsEnabled,
+  education,
   adultPeriods,
   personalEvents,
   publicEvents,
@@ -35,10 +33,7 @@ export default function useTimelineModel({
     } = buildTimelineLifeContext({
       birth,
       month,
-      earlyChildhoodHistory,
-      higherEducationHistory,
-      graduateEducationHistory,
-      adultPeriodsEnabled,
+      education,
       adultPeriods,
     });
 
@@ -66,9 +61,16 @@ export default function useTimelineModel({
       closedStages,
     });
 
+    const controlTargets =
+      buildTimelineControlTargets({
+        groups: visibility.groups,
+        birth,
+      });
+
     return {
       groups: visibility.groups,
       visibleItems: visibility.visibleItems,
+      controlTargets,
       gradeLabel: life.gradeLabel,
       adultYear: life.adultYear,
       adultPeriodErrors,
@@ -81,10 +83,7 @@ export default function useTimelineModel({
   }, [
     birth,
     month,
-    earlyChildhoodHistory,
-    higherEducationHistory,
-    graduateEducationHistory,
-    adultPeriodsEnabled,
+    education,
     adultPeriods,
     personalEvents,
     publicEvents,

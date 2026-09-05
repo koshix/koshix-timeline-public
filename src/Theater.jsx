@@ -1,3 +1,4 @@
+import { eventYear } from "./event-schema.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "./Icon";
 import { CAT, catKey } from "./categories";
@@ -11,8 +12,6 @@ const BG_COLOR = {
   culture: "#80AFE0",
   society: "#8D97D8",
   me: "#B18AD0",
-  tech: "#7DBF91",
-  music: "#80AFE0",
 };
 const BG_ROWS = 7;
 
@@ -52,7 +51,7 @@ export default function Theater({
         setPlaying(false);
       }
     };
-    const text = `${evs[idx].y}年。${evs[idx].t}。${evs[idx].n || ""}`;
+    const text = `${eventYear(evs[idx])}年。${evs[idx].title}。${evs[idx].summary || ""}`;
     const ms = Math.min(16000, 1800 + [...text].length * 70) / speed;
     const timer = setTimeout(next, ms);
     return () => clearTimeout(timer);
@@ -89,16 +88,16 @@ export default function Theater({
   }, [idx, onClose]);
 
   const gradeOf = (ev) =>
-    ev.y < birth ? "生まれる前" : gradeLabel(ev.y);
+    eventYear(ev) < birth ? "生まれる前" : gradeLabel(eventYear(ev));
 
   // 背景の左右に流す、同じころの別カテゴリーの項目(その糸に入っているものは除く)。
   // 何が同時に起きていた時代なのかを、読まなくても感じられるようにするための層
   const bgRows = useMemo(() => {
     const inThread = new Set(evs.map(eventId));
-    const year = evs[idx].y;
+    const year = eventYear(evs[idx]);
     let near = [];
     for (let win = 3; win <= 40 && near.length < 21; win += 3) {
-      near = allEvents.filter((e) => Math.abs(e.y - year) <= win && !inThread.has(eventId(e)));
+      near = allEvents.filter((e) => Math.abs(eventYear(e) - year) <= win && !inThread.has(eventId(e)));
     }
     const rows = Array.from({ length: BG_ROWS }, () => []);
     near.forEach((e, i) => rows[i % BG_ROWS].push(e));
@@ -172,8 +171,8 @@ export default function Theater({
                     opacity: 0.34, fontWeight: 600,
                   }}
                 >
-                  <span style={{ fontFamily: mono, marginRight: 8, opacity: 0.65 }}>{e.y}</span>
-                  {e.t.replace(/[((].*$/, "")}
+                  <span style={{ fontFamily: mono, marginRight: 8, opacity: 0.65 }}>{eventYear(e)}</span>
+                  {e.title.replace(/[((].*$/, "")}
                 </span>
               ))}
             </div>
@@ -210,7 +209,7 @@ export default function Theater({
                       color: "#8a93a3", width: 48, flexShrink: 0,
                     }}
                   >
-                    {ev.y}
+                    {eventYear(ev)}
                   </span>
                   <span
                     style={{
@@ -220,17 +219,17 @@ export default function Theater({
                   >
                     {gradeOf(ev)}
                   </span>
-                  <Icon name={ev.ic} color={color} size={active ? 20 : 16} />
+                  <Icon name={ev.icon} color={color} size={active ? 20 : 16} />
                   <span
                     style={{
                       fontSize: active ? 19 : 14, fontWeight: active ? 800 : 500,
                       lineHeight: 1.5, flex: 1,
                     }}
                   >
-                    {ev.t}
+                    {ev.title}
                   </span>
                 </div>
-                {active && ev.n && (
+                {active && ev.summary && (
                   <div
                     style={{
                       marginTop: 10, marginLeft: 58, paddingLeft: 12,
@@ -238,7 +237,7 @@ export default function Theater({
                       fontSize: 13.5, lineHeight: 1.85, color: "#4b5563",
                     }}
                   >
-                    {ev.n}
+                    {ev.summary}
                   </div>
                 )}
               </div>

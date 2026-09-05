@@ -7,7 +7,6 @@ export default function PersonalHistoryControls({
   exportPersonalEventsFile,
   togglePersonalEditor,
   clearPersonalEventsFile,
-  loadServerPersonalEvents,
   titleColor,
   miniBtn,
 }) {
@@ -161,42 +160,6 @@ export default function PersonalHistoryControls({
           ファイルに保存
         </button>
 
-        <details
-          style={{
-            marginLeft: 6,
-            fontSize: 11,
-            color: "#8a8f98",
-          }}
-        >
-          <summary
-            style={{
-              cursor: "pointer",
-              userSelect: "none",
-              padding: "4px 6px",
-            }}
-          >
-            管理者向け
-          </summary>
-
-          <button
-            type="button"
-            onClick={loadServerPersonalEvents}
-            style={{
-              ...miniBtn,
-              marginTop: 6,
-              ...(serverSource
-                ? {
-                    background: "#fff1dc",
-                    border: "1px solid #d79a43",
-                    color: "#8a5208",
-                    fontWeight: 800,
-                  }
-                : {}),
-            }}
-          >
-            管理者データ読込
-          </button>
-        </details>
 
         <input
           ref={personalFileInputRef}

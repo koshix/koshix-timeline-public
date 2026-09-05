@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 
 import {
   LIFE_SETTINGS_FORMAT,
+  LIFE_SETTINGS_VERSION,
+  createInitialEducationSettings,
   mergeLifeSettings,
   parseLifeSettingsTsv,
   serializeLifeSettingsTsv,
@@ -10,7 +12,7 @@ import {
 const source = {
   birth: 1953,
   month: 4,
-  earlyChildhoodHistory: [
+  education: [
     {
       start: "1955",
       years: "3",
@@ -21,15 +23,11 @@ const source = {
       years: "2",
       type: "kindergarten",
     },
-  ],
-  higherEducationHistory: [
     {
       start: "1972",
       years: "4",
       type: "university",
     },
-  ],
-  graduateEducationHistory: [
     {
       start: "1976",
       years: "2",
@@ -41,7 +39,6 @@ const source = {
       type: "doctorate",
     },
   ],
-  adultPeriodsEnabled: true,
   adultPeriods: [
     {
       start: "1981",
@@ -59,8 +56,97 @@ const source = {
   },
 };
 
+assert.deepEqual(
+  createInitialEducationSettings(
+    {},
+    { education: [] },
+    1953,
+    4
+  ),
+  [
+    {
+      start: "1958",
+      years: "2",
+      type: "kindergarten",
+    },
+  ]
+);
+
+assert.deepEqual(
+  createInitialEducationSettings(
+    { education: [] },
+    {
+      education: [
+        {
+          start: "1972",
+          years: "4",
+          type: "university",
+        },
+      ],
+    },
+    1953,
+    4
+  ),
+  []
+);
+
+assert.deepEqual(
+  createInitialEducationSettings(
+    {},
+    {
+      education: [
+        {
+          start: "1972",
+          years: "4",
+          type: "university",
+        },
+      ],
+    },
+    1953,
+    4
+  ),
+  [
+    {
+      start: "1958",
+      years: "2",
+      type: "kindergarten",
+    },
+    {
+      start: "1972",
+      years: "4",
+      type: "university",
+    },
+  ]
+);
+
 const text =
   serializeLifeSettingsTsv(source);
+
+assert.equal(LIFE_SETTINGS_VERSION, 3);
+assert.equal(
+  text.includes("adult_periods_enabled"),
+  false
+);
+
+const oldVersion1Text = text.replace(
+  `\tversion\t${LIFE_SETTINGS_VERSION}\n`,
+  "\tversion\t1\n"
+);
+
+const oldVersion2Text = text.replace(
+  `\tversion\t${LIFE_SETTINGS_VERSION}\n`,
+  "\tversion\t2\n"
+);
+
+assert.throws(
+  () => parseLifeSettingsTsv(oldVersion1Text),
+  /対応していないversion/
+);
+
+assert.throws(
+  () => parseLifeSettingsTsv(oldVersion2Text),
+  /対応していないversion/
+);
 
 assert.match(
   text,
@@ -76,7 +162,12 @@ assert.match(
 
 assert.match(
   text,
-  /early\t1955\t\t3\tnursery\t/
+  /education\t1955\t\t3\tnursery\t/
+);
+
+assert.equal(
+  /\n(?:early|higher|graduate)\t/.test(text),
+  false
 );
 
 assert.match(
@@ -90,20 +181,23 @@ const parsed =
 assert.equal(parsed.birth, 1953);
 assert.equal(parsed.month, 4);
 assert.equal(
-  parsed.earlyChildhoodHistory.length,
-  2
+  parsed.education.length,
+  5
 );
+
 assert.equal(
-  parsed.higherEducationHistory.length,
-  1
+  Object.hasOwn(parsed, "earlyChildhoodHistory"),
+  false
 );
+
 assert.equal(
-  parsed.graduateEducationHistory.length,
-  2
+  Object.hasOwn(parsed, "higherEducationHistory"),
+  false
 );
+
 assert.equal(
-  parsed.adultPeriodsEnabled,
-  true
+  Object.hasOwn(parsed, "graduateEducationHistory"),
+  false
 );
 assert.equal(
   parsed.adultPeriods.length,
@@ -139,7 +233,7 @@ assert.throws(
   () =>
     parseLifeSettingsTsv(
       text.replace(
-        "\nearly\t",
+        "\neducation\t",
         "\nunknown\t"
       )
     ),

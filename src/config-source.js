@@ -1,8 +1,5 @@
 import {
-  EARLY_CHILDHOOD_TYPES,
-  HIGHER_ED_TYPES,
-  GRADUATE_TYPES,
-  normalizeEducationHistory,
+  normalizeEducation,
 } from "./education-history.js";
 
 const BUILTIN_CONFIG = {
@@ -10,17 +7,21 @@ const BUILTIN_CONFIG = {
   hashtag: "#自分史プロジェクション",
   shareUrl: "",
   downloadUrl: "",
+  publicSourceUrl: "",
+  accessStats: {
+    endpoint: "",
+    pageUrl: "",
+  },
   defaults: {
     birthYear: 1965,
     birthMonth: 0,
-    earlyChildhoodHistory: [],
-    higherEducationHistory: [],
-    graduateEducationHistory: [],
+    education: [],
   },
 };
 
 let currentConfig = {
   ...BUILTIN_CONFIG,
+  accessStats: { ...BUILTIN_CONFIG.accessStats },
   defaults: { ...BUILTIN_CONFIG.defaults },
 };
 
@@ -41,20 +42,8 @@ function normalizeConfig(raw) {
       defaults.birthMonth,
       BUILTIN_CONFIG.defaults.birthMonth
     ),
-    earlyChildhoodHistory: normalizeEducationHistory(
-      defaults.earlyChildhoodHistory,
-      EARLY_CHILDHOOD_TYPES,
-      "kindergarten"
-    ),
-    higherEducationHistory: normalizeEducationHistory(
-      defaults.higherEducationHistory,
-      HIGHER_ED_TYPES,
-      "university"
-    ),
-    graduateEducationHistory: normalizeEducationHistory(
-      defaults.graduateEducationHistory,
-      GRADUATE_TYPES,
-      "masters"
+    education: normalizeEducation(
+      defaults.education
     ),
   };
 
@@ -78,6 +67,22 @@ function normalizeConfig(raw) {
       typeof raw?.downloadUrl === "string"
         ? raw.downloadUrl.trim()
         : BUILTIN_CONFIG.downloadUrl,
+
+    publicSourceUrl:
+      typeof raw?.publicSourceUrl === "string"
+        ? raw.publicSourceUrl.trim()
+        : BUILTIN_CONFIG.publicSourceUrl,
+
+    accessStats: {
+      endpoint:
+        typeof raw?.accessStats?.endpoint === "string"
+          ? raw.accessStats.endpoint.trim()
+          : BUILTIN_CONFIG.accessStats.endpoint,
+      pageUrl:
+        typeof raw?.accessStats?.pageUrl === "string"
+          ? raw.accessStats.pageUrl.trim()
+          : BUILTIN_CONFIG.accessStats.pageUrl,
+    },
 
     defaults: normalizedDefaults,
   };

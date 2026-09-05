@@ -1,49 +1,35 @@
+import { eventYear } from "./event-schema.js";
 import { useState, useMemo, useEffect } from "react";
 import { loadEvents } from "./events-source";
 import { loadConfig } from "./config-source";
 import { applyEventCustomizations } from "./event-customizations";
 import { THREADS } from "./threads";
 import {
-  GRADUATE_TYPES,
-  HIGHER_ED_TYPES,
-} from "./life-stages";
-import {
   createInitialEducationSettings,
 } from "./life-settings";
-import AdultPeriodsEditor from "./AdultPeriodsEditor";
-import BirthSettingsEditor from "./BirthSettingsEditor";
-import EducationHistoryEditor from "./EducationHistoryEditor";
-import EventCustomizationAddForm from "./EventCustomizationAddForm";
-import EventCustomizationControls from "./EventCustomizationControls";
-import EventCustomizationEditForm from "./EventCustomizationEditForm";
-import EventCustomizationActions from "./EventCustomizationActions";
-import EventReferenceLinks from "./EventReferenceLinks";
-import EventCustomizationHiddenList from "./EventCustomizationHiddenList";
-import LifeSettingsFileControls from "./LifeSettingsFileControls";
-import PersonalHistoryControls from "./PersonalHistoryControls";
-import PersonalHistoryEventForm from "./PersonalHistoryEventForm";
-import PersonalHistoryEditorList from "./PersonalHistoryEditorList";
 import useTimelineModel from "./useTimelineModel";
+import {
+  buildInitialTimelineClosedStageKeys,
+} from "./timeline-model.js";
 import usePersonalEvents from "./usePersonalEvents";
+import {
+  loadPersonalEvents,
+} from "./personal-events-source.js";
+import {
+  loadLifeSettings,
+} from "./life-settings-source.js";
 import useEventCustomizations from "./useEventCustomizations";
 import useLifeSettings from "./useLifeSettings";
 import useDisplaySettings from "./useDisplaySettings";
 import useOpenEvents from "./useOpenEvents";
 import {
-  settingsStore,
-} from "./settings-store";
-import {
-  backgroundEraOf,
-  halfCenturyMarkerOf,
-  japaneseEraOf,
-  preBirthPeriodsOf,
-} from "./timeline-eras";
+  workspaceStore,
+} from "./workspace-store.js";
 import {
   eventId,
   findEventByShareParam,
 } from "./event-links";
 import ShareBar from "./ShareBar";
-import Icon from "./Icon";
 import {
   CAT,
   catsOf,
@@ -53,6 +39,12 @@ import {
 import Theater from "./Theater";
 import TimelineCategoryFilters from "./TimelineCategoryFilters";
 import TimelineDisplayControls from "./TimelineDisplayControls";
+import TimelineEraHeadings from "./TimelineEraHeadings";
+import TimelinePersonalEventRow from "./TimelinePersonalEventRow";
+import TimelinePublicEventRow from "./TimelinePublicEventRow";
+import TimelineCustomizationSection from "./TimelineCustomizationSection";
+import PersonalHistorySection from "./PersonalHistorySection";
+import TimelineSettingsSection from "./TimelineSettingsSection";
 import TimelineSearchControls from "./TimelineSearchControls";
 import useVisibleEventsExport from "./useVisibleEventsExport";
 
@@ -109,7 +101,7 @@ function ImportanceBadge({ level }) {
 
 const ADULT_STAGE = { key: "adult", label: "成人期", color: "#37414f", bg: "#eef1f5" };
 
-// ---- 社会人の年齢ラベル色 ----
+// ---- 成人期の年齢ラベル色 ----
 // 30代は従来色を保ち、10歳ごとに少しずつ無彩色・明色側へ移す。
 // 70代以降は背景が明るくなるため、文字色を濃いグレーに切り替えて可読性を保つ。
 const ADULT_AGE_BADGE = [
@@ -123,7 +115,7 @@ const ADULT_AGE_BADGE = [
 ];
 
 const gradeBadgeStyle = (stage, age) => {
-  if (stage?.key !== "adult" && stage?.key !== "retired") {
+  if (stage?.key !== "adult") {
     return { background: stage?.color || ADULT_STAGE.color, color: "#ffffff" };
   }
   const tone = ADULT_AGE_BADGE.find((x) => age >= x.from) || ADULT_AGE_BADGE.at(-1);
@@ -136,27 +128,16 @@ function formatEventDate(value) {
   return `${Number(year)}年${month ? `${Number(month)}月` : ""}${day ? `${Number(day)}日` : ""}`;
 }
 
-// ---- 最近の追加(aフィールドの日付が新しいものを拾う) ----
-const RECENT = (() => {
-  const dated = EVENTS.filter((e) => e.a);
-  if (!dated.length) return null;
-  const latest = dated.reduce((m, e) => (e.a > m ? e.a : m), "");
-  const items = dated.filter((e) => e.a === latest).sort((x, y) => x.y - y.y);
-  // 年代が偏らないよう、範囲全体から等間隔に抜き出して見出しに出す
-  const N = Math.min(6, items.length);
-  const picks = Array.from({ length: N }, (_, i) =>
-    items[Math.round((i * (items.length - 1)) / Math.max(1, N - 1))]
-  );
-  return { date: latest, items, picks };
-})();
-
-// ---- 最近の新機能(手で追記する) ----
-const FEATURES = [];
-
 // ---- 共有 ----
 const APP_TITLE = CONFIG.title || "自分史プロジェクション";
 const HASHTAG = CONFIG.hashtag ?? "#自分史プロジェクション";
 const DOWNLOAD_URL = String(CONFIG.downloadUrl || "").trim();
+const PUBLIC_SOURCE_URL = String(
+  CONFIG.publicSourceUrl || ""
+).trim();
+const ACCESS_STATS_URL = String(
+  CONFIG.accessStats?.pageUrl || ""
+).trim();
 
 const SHARE_URL = (() => {
   const configured = String(CONFIG.shareUrl || "").trim();
@@ -174,14 +155,9 @@ const SHARE_URL = (() => {
 })();
 
 // ---- テーマの糸(年表に散らばった項目を、一本の流れとして自動再生する) ----
-// 新しい定義は永久ID { id } で参照する。
-// 旧 threads.js の { y, m } 形式も移行中は読み込めるようにしておく。
-const resolveThreadItem = ({ id, y, m }) => {
-  if (id) {
-    return EVENTS.find((e) => e.id === id);
-  }
-  return EVENTS.find((e) => e.y === y && e.t.includes(m));
-};
+// 永久ID { id } で参照する。
+const resolveThreadItem = ({ id }) =>
+  EVENTS.find((event) => event.id === id);
 
 const THREAD_LIST = THREADS.map((th) => ({
   ...th,
@@ -194,7 +170,7 @@ const findThread = (key) => THREAD_LIST.find((t) => t.key === key) || null;
 // ---- 保存(ブラウザのみ。使えない環境では黙ってメモリ動作) ----
 const SAVED =
   (typeof window !== "undefined" &&
-    settingsStore.load()) ||
+    workspaceStore.settings.load()) ||
   {};
 const INITIAL_BIRTH = SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? 1965;
 const INITIAL_MONTH = SAVED.month ?? PROFILE_DEFAULTS.birthMonth ?? 0;
@@ -212,23 +188,19 @@ export default function App() {
     adjustBirthYear,
     setBirthYear,
     setBirthMonth,
-    earlyChildhoodHistory,
-    updateEarlyChildhoodHistory,
-    higherEducationHistory,
-    updateHigherEducationHistory,
-    graduateEducationHistory,
-    updateGraduateEducationHistory,
+    education,
+    updateEducation,
     firstHigherYear,
     firstHigherType,
     firstGraduateYear,
     firstGraduateType,
-    adultPeriodsEnabled,
     adultPeriods,
     lifeSettingsStatus,
+    lifeSettingsSource,
     lifeSettingsFileInputRef,
     importLifeSettingsFile,
     exportLifeSettingsFile,
-    setAdultPeriodSplittingEnabled,
+    applyServerLifeSettings,
     resetAdultPeriods,
     updateAdultPeriod,
     addAdultPeriod,
@@ -237,8 +209,6 @@ export default function App() {
     initialBirth: INITIAL_BIRTH,
     initialMonth: INITIAL_MONTH,
     initialEducation: INITIAL_EDUCATION,
-    savedAdultPeriodsEnabled:
-      SAVED.adultPeriodsEnabled ?? false,
     savedAdultPeriods: SAVED.adultPeriods,
   });
 
@@ -308,7 +278,7 @@ export default function App() {
     clearPersonalEventsFile,
     savePersonalEvent,
     deletePersonalEvent,
-    loadServerPersonalEvents,
+    applyServerPersonalEvents,
   } = usePersonalEvents({
     onCleared: () => {
       setShowMe(false);
@@ -340,9 +310,9 @@ export default function App() {
     saved: SAVED,
     mainCategories: MAIN_CATS,
     initialClosedStages:
-      preBirthPeriodsOf(INITIAL_BIRTH).map(
-        (period) => period.key
-      ),
+      buildInitialTimelineClosedStageKeys({
+        birth: INITIAL_BIRTH,
+      }),
   });
 
   const [showMe, setShowMe] = useState(false);
@@ -350,15 +320,70 @@ export default function App() {
   const [thread, setThread] = useState(null);
   // 年表内検索は一時的な表示条件として扱い、ブラウザ保存はしない。
   const [searchText, setSearchText] = useState("");
+  const [
+    administratorDataStatus,
+    setAdministratorDataStatus,
+  ] = useState("");
+
+  const loadAdministratorData = async () => {
+    setAdministratorDataStatus("");
+
+    try {
+      const [
+        personalEvents,
+        lifeSettings,
+      ] = await Promise.all([
+        loadPersonalEvents(),
+        loadLifeSettings(),
+      ]);
+
+      if (personalEvents === null) {
+        throw new Error(
+          "個人史TSVを取得できませんでした"
+        );
+      }
+
+      if (lifeSettings === null) {
+        throw new Error(
+          "人生設定TSVを取得できませんでした"
+        );
+      }
+
+      applyServerPersonalEvents(
+        personalEvents
+      );
+      applyServerLifeSettings(
+        lifeSettings
+      );
+    } catch (err) {
+      console.error(
+        "Administrator data could not be loaded:",
+        err
+      );
+      setAdministratorDataStatus(
+        `管理者データの読み込み失敗: ${
+          err?.message || String(err)
+        }`
+      );
+    }
+  };
+
   useEffect(() => {
-    settingsStore.save({
-      birth,
-      month,
-      earlyChildhoodHistory,
-      higherEducationHistory,
-      graduateEducationHistory,
-      adultPeriodsEnabled,
-      adultPeriods,
+    const currentSettings =
+      lifeSettingsSource === "server"
+        ? workspaceStore.settings.load() || {}
+        : {};
+
+    workspaceStore.settings.save({
+      ...currentSettings,
+      ...(lifeSettingsSource === "server"
+        ? {}
+        : {
+            birth,
+            month,
+            education,
+            adultPeriods,
+          }),
       catOff,
       sfOnly,
       importanceMin,
@@ -366,7 +391,19 @@ export default function App() {
       setupOpen,
       speed,
     });
-  }, [birth, month, earlyChildhoodHistory, higherEducationHistory, graduateEducationHistory, adultPeriodsEnabled, adultPeriods, catOff, sfOnly, importanceMin, closedStages, setupOpen, speed]);
+  }, [
+    birth,
+    month,
+    education,
+    adultPeriods,
+    catOff,
+    sfOnly,
+    importanceMin,
+    closedStages,
+    setupOpen,
+    speed,
+    lifeSettingsSource,
+  ]);
 
   const toggleMyEvents = () => {
     setShowMe((value) => !value);
@@ -406,7 +443,7 @@ export default function App() {
       effectiveEvents.reduce(
         (a, e) => ({
           count: a.count + 1,
-          chars: a.chars + [...(e.n || "")].length,
+          chars: a.chars + [...(e.summary || "")].length,
         }),
         { count: 0, chars: 0 }
       ),
@@ -416,10 +453,7 @@ export default function App() {
   const grouped = useTimelineModel({
     birth,
     month,
-    earlyChildhoodHistory,
-    higherEducationHistory,
-    graduateEducationHistory,
-    adultPeriodsEnabled,
+    education,
     adultPeriods,
     personalEvents: myEvents,
     publicEvents: effectiveEvents,
@@ -618,7 +652,7 @@ export default function App() {
         {/* ヘッダー */}
         <header style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 11, letterSpacing: "0.25em", color: "#8a8f98", marginBottom: 6 }}>
-            6つのテーマでたどる、自分の時代
+            {THREAD_LIST.length}のテーマでたどる、自分の時代
           </div>
           <div
             style={{
@@ -662,56 +696,13 @@ export default function App() {
                 labelOnly
                 hashtag={HASHTAG}
                 url={SHARE_URL}
-                text={`${APP_TITLE}——6つのテーマで時代を自分の年齢から読む(${EVENTS.length}項目) ${HASHTAG}`}
+                text={`${APP_TITLE}——${THREAD_LIST.length}のテーマで時代を自分の年齢から読む(${EVENTS.length}項目) ${HASHTAG}`}
               />
             </div>
           </div>
           <div style={{ fontSize: 11.5, color: "#8a8f98", marginTop: 8, fontFamily: mono }}>
             全{effectiveStats.count}項目・解説{effectiveStats.chars.toLocaleString()}字
           </div>
-          {RECENT && (
-            <div
-              style={{
-                marginTop: 8, fontSize: 11.5, lineHeight: 1.7, color: "#6b7280",
-                background: "#fdf3e0", border: "1px solid #efe0c0",
-                borderRadius: 8, padding: "7px 12px",
-              }}
-            >
-              <span style={{ fontWeight: 700, color: "#8a5a12" }}>
-                最近の追加({RECENT.date}・{RECENT.items.length}項目)
-              </span>{" "}
-              {RECENT.picks.map((e, i) => (
-                <span key={eventId(e)}>
-                  {i > 0 && " / "}
-                  <a
-                    href={`?e=${eventId(e)}`}
-                    style={{ color: "#6b7280", textDecoration: "none", borderBottom: "1px dotted #b0771e" }}
-                  >
-                    {e.y} {e.t.replace(/[((].*$/, "")}
-                  </a>
-                </span>
-              ))}
-              {RECENT.items.length > RECENT.picks.length &&
-                ` ほか${RECENT.items.length - RECENT.picks.length}件`}
-            </div>
-          )}
-          {FEATURES.length > 0 && (
-            <div
-              style={{
-                marginTop: 6, fontSize: 11.5, lineHeight: 1.7, color: "#6b7280",
-                background: "#eef1f5", border: "1px solid #dde2e8",
-                borderRadius: 8, padding: "7px 12px",
-              }}
-            >
-              <span style={{ fontWeight: 700, color: "#37414f" }}>最近の新機能</span>{" "}
-              {FEATURES.slice(0, 2).map((f, i) => (
-                <span key={i}>
-                  {i > 0 && " / "}
-                  <span style={{ fontFamily: mono, fontSize: 10.5 }}>{f.d}</span> {f.t}
-                </span>
-              ))}
-            </div>
-          )}
         </header>
 
         <section
@@ -949,8 +940,7 @@ export default function App() {
           />
           </div>
           <TimelineDisplayControls
-            groups={grouped.groups}
-            birth={birth}
+            controlTargets={grouped.controlTargets}
             setAllCats={setAllCats}
             importanceMin={importanceMin}
             setImportanceLevel={setImportanceLevel}
@@ -1073,7 +1063,7 @@ export default function App() {
               <span style={{ fontFamily: mono, fontSize: 12, color: "#6b7280" }}>
                 {g.rangeFrom != null
                   ? `${g.rangeFrom}–${g.rangeTo}`
-                  : `${g.items[0].y}–${g.items[g.items.length - 1].y}`}
+                  : `${eventYear(g.items[0])}–${eventYear(g.items[g.items.length - 1])}`}
               </span>
               <span style={{ flex: 1 }} />
               <span style={{ fontFamily: mono, fontSize: 11.5, color: "#8a8f98" }}>
@@ -1086,523 +1076,99 @@ export default function App() {
             {!stageClosed && (
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {g.items.map((ev, i) => {
-                const backgroundEra = backgroundEraOf(ev.y);
-                const previousBackgroundEra =
-                  i > 0
-                    ? backgroundEraOf(g.items[i - 1].y)
-                    : null;
+                const eraHeadings = (
+                  <TimelineEraHeadings
+                    event={ev}
+                    previousEvent={
+                      i > 0
+                        ? g.items[i - 1]
+                        : null
+                    }
+                    mono={mono}
+                  />
+                );
 
-                const showBackgroundHeading =
-                  backgroundEra &&
-                  (
-                    i === 0 ||
-                    previousBackgroundEra?.key !== backgroundEra.key
-                  );
-
-                const backgroundHeading =
-                  showBackgroundHeading ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        flexWrap: "wrap",
-                        padding: "7px 10px 7px 58px",
-                        borderTop: "2px solid #758395",
-                        borderBottom: "1px solid #d3dae2",
-                        background:
-                          "linear-gradient(90deg, #e9eef3 0%, #f7f8fa 80%)",
-                        color: "#3f4b59",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          padding: "2px 7px",
-                          borderRadius: 999,
-                          background: "#748294",
-                          color: "#fff",
-                          fontSize: 10.5,
-                          fontWeight: 800,
-                          letterSpacing: "0.05em",
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        背景史
-                      </span>
-
-                      <strong
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 800,
-                          color: "#384553",
-                        }}
-                      >
-                        {backgroundEra.label}
-                      </strong>
-
-                      <span
-                        style={{
-                          fontFamily: mono,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: "#78838f",
-                        }}
-                      >
-                        {backgroundEra.from}–
-                        {Number.isFinite(backgroundEra.to)
-                          ? backgroundEra.to
-                          : ""}
-                      </span>
-                    </div>
-                  ) : null;
-
-                const japaneseEra = japaneseEraOf(ev.y);
-                const previousJapaneseEra =
-                  i > 0
-                    ? japaneseEraOf(g.items[i - 1].y)
-                    : null;
-
-                const showJapaneseEraHeading =
-                  japaneseEra &&
-                  (
-                    i === 0 ||
-                    previousJapaneseEra?.key !== japaneseEra.key
-                  );
-
-                const japaneseEraHeading =
-                  showJapaneseEraHeading ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        flexWrap: "wrap",
-                        padding: "6px 10px 6px 58px",
-                        borderTop: "2px solid #957782",
-                        borderBottom: "1px solid #e0d4d9",
-                        background:
-                          "linear-gradient(90deg, #f2e9ed 0%, #faf8f9 80%)",
-                        color: "#56434a",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          padding: "2px 7px",
-                          borderRadius: 999,
-                          background: "#91717c",
-                          color: "#fff",
-                          fontSize: 10.5,
-                          fontWeight: 800,
-                          letterSpacing: "0.05em",
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        元号
-                      </span>
-
-                      <strong
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 800,
-                          color: "#503d44",
-                        }}
-                      >
-                        {japaneseEra.label}
-                      </strong>
-
-                      <span
-                        style={{
-                          fontFamily: mono,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: "#89737b",
-                        }}
-                      >
-                        {japaneseEra.from}–
-                        {Number.isFinite(japaneseEra.to)
-                          ? japaneseEra.to
-                          : ""}
-                      </span>
-                    </div>
-                  ) : null;
-
-                const halfCenturyMarker =
-                  halfCenturyMarkerOf(ev.y);
-
-                const previousHalfCenturyMarker =
-                  i > 0
-                    ? halfCenturyMarkerOf(g.items[i - 1].y)
-                    : null;
-
-                const showHalfCenturyHeading =
-                  halfCenturyMarker &&
-                  (
-                    i === 0 ||
-                    previousHalfCenturyMarker?.key !== halfCenturyMarker.key
-                  );
-
-                const halfCenturyHeading =
-                  showHalfCenturyHeading ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        flexWrap: "wrap",
-                        padding: "6px 10px 6px 58px",
-                        borderTop: "2px solid #8d949e",
-                        borderBottom: "1px solid #dadde2",
-                        background:
-                          "linear-gradient(90deg, #eff1f4 0%, #fafafa 80%)",
-                        color: "#555e69",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          padding: "2px 7px",
-                          borderRadius: 999,
-                          background: "#8d949e",
-                          color: "#fff",
-                          fontSize: 10.5,
-                          fontWeight: 800,
-                          letterSpacing: "0.05em",
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        世紀
-                      </span>
-
-                      <strong
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 800,
-                          color: "#4f5863",
-                        }}
-                      >
-                        {halfCenturyMarker.label}
-                      </strong>
-
-                      <span
-                        style={{
-                          fontFamily: mono,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: "#808892",
-                        }}
-                      >
-                        {halfCenturyMarker.from}–
-                        {halfCenturyMarker.to}
-                      </span>
-                    </div>
-                  ) : null;
-
-                if (ev.cat === "me") {
-                  const id = eventId(ev);
-                  const isOpen = isEventOpen(id);
+                if (ev.primary === "me") {
                   return (
-                    <li
+                    <TimelinePersonalEventRow
                       key={ev.id}
-                      id={`ev-${id}`}
-                      style={{ borderBottom: "1px solid #ececea", background: "#f2faf6" }}
-                    >
-                      {backgroundHeading}
-                      {halfCenturyHeading}
-                      {japaneseEraHeading}
-                      <button
-                        onClick={() => toggleEvent(id)}
-                        aria-expanded={isOpen}
-                        style={{
-                          display: "flex", alignItems: "flex-start", gap: 10,
-                          padding: "8px 4px", width: "100%", textAlign: "left",
-                          background: "none", border: "none", cursor: "pointer",
-                          fontFamily: font,
-                        }}
-                      >
-                        <span style={{ fontFamily: mono, fontSize: 13, color: "#8a8f98", width: 44, flexShrink: 0, paddingTop: 3 }}>
-                          {ev.y}
-                        </span>
-                        <span
-                          style={{
-                            flexShrink: 0, minWidth: 44, textAlign: "center",
-                            fontSize: 13, fontWeight: 800,
-                            ...gradeBadgeStyle(g.stage, ev.age),
-                            borderRadius: 6, padding: "3px 8px",
-                          }}
-                        >
-                          {grouped.gradeLabel(ev.y)}
-                        </span>
-                        <Icon name={ev.ic ?? "flag"} color={CAT.me.bg} />
-                        <span style={{ fontSize: 14, lineHeight: 1.55, flex: 1, fontWeight: 700, color: CAT.me.bg }}>
-                          {ev.t}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 11, color: "#b0b4bb", paddingTop: 4, flexShrink: 0,
-                            transform: isOpen ? "rotate(90deg)" : "none",
-                            transition: "transform 0.15s",
-                          }}
-                          aria-hidden="true"
-                        >
-                          ▶
-                        </span>
-                      </button>
-
-                      {isOpen && personalEventsSource === "browser" && (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            margin: "0 4px 8px 108px",
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => startEditingPersonalEvent(ev)}
-                            style={miniBtn}
-                          >
-                            修正
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => deletePersonalEvent(ev)}
-                            style={{
-                              ...miniBtn,
-                              color: "#9b2c2c",
-                              border: "1px solid #d8a4a4",
-                              background: "#fff7f7",
-                            }}
-                          >
-                            削除
-                          </button>
-                        </div>
-                      )}
-
-                      {isOpen && ev.n && (
-                        <div
-                          style={{
-                            margin: "0 4px 10px 108px",
-                            padding: "10px 14px",
-                            fontSize: 13, lineHeight: 1.75, color: "#3d4450",
-                            background: g.stage.bg,
-                            borderLeft: `3px solid ${CAT.me.bg}`,
-                            borderRadius: "0 8px 8px 0",
-                          }}
-                        >
-                          <div
-                            style={{
-                              marginBottom: 6, fontSize: 11.5, fontWeight: 700,
-                              color: "#6b7280",
-                            }}
-                          >
-                            日付：{formatEventDate(ev.date)}
-                          </div>
-                          {ev.n}
-
-                          {ev.note && (
-                            <div
-                              style={{
-                                marginTop: 9, padding: "7px 10px",
-                                border: "1px solid #d8dce2", borderRadius: 7,
-                                background: "#ffffff88", color: "#626974",
-                                fontSize: 11.5, lineHeight: 1.65,
-                              }}
-                            >
-                              <span style={{ fontWeight: 800 }}>補足：</span>
-                              {ev.note}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </li>
+                      event={ev}
+                      eraHeadings={eraHeadings}
+                      stage={g.stage}
+                      font={font}
+                      mono={mono}
+                      gradeLabel={grouped.gradeLabel}
+                      isEventOpen={isEventOpen}
+                      toggleEvent={toggleEvent}
+                      personalEventsSource={
+                        personalEventsSource
+                      }
+                      startEditingPersonalEvent={
+                        startEditingPersonalEvent
+                      }
+                      deletePersonalEvent={
+                        deletePersonalEvent
+                      }
+                      miniBtn={miniBtn}
+                      gradeBadgeStyle={
+                        gradeBadgeStyle
+                      }
+                      formatEventDate={
+                        formatEventDate
+                      }
+                    />
                   );
                 }
-                const id = eventId(ev);
-                const isOpen = isEventOpen(id);
-                const grade = grouped.gradeLabel(ev.y);
-                const shareText =
-                  (ev.age < 0
-                    ? `${ev.y}年(生まれる前)`
-                    : `${ev.y}年・${grade}のとき`) + `:${ev.t} ${HASHTAG}`;
-                const secondaryCats = (ev.cats ?? []).filter(
-                  (category) => category !== ev.cat
-                );
-                const isAdded = (
-                  eventCustomizations.additions ?? []
-                ).some((item) => item.id === id);
-                const isEditing = editingEventId === id;
+
                 return (
-                  <li key={i} id={`ev-${id}`} style={{ borderBottom: "1px solid #ececea" }}>
-                    {backgroundHeading}
-                    {halfCenturyHeading}
-                    {japaneseEraHeading}
-                    <button
-                      onClick={() => toggleEvent(id)}
-                      aria-expanded={isOpen}
-                      style={{
-                        display: "flex", alignItems: "flex-start", gap: 10,
-                        padding: "8px 4px", width: "100%", textAlign: "left",
-                        background: "none", border: "none", cursor: "pointer",
-                        fontFamily: font, color: "#22272e",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: mono, fontSize: 13, color: "#8a8f98",
-                          width: 44, flexShrink: 0, paddingTop: 3,
-                        }}
-                      >
-                        {ev.y}
-                      </span>
-                      <span
-                        style={{
-                          flexShrink: 0, minWidth: 44, textAlign: "center",
-                          fontSize: 13, fontWeight: 800,
-                          ...gradeBadgeStyle(g.stage, ev.age),
-                          borderRadius: 6, padding: "3px 8px",
-                        }}
-                      >
-                        {grade}
-                      </span>
-                      <ImportanceBadge level={ev.importance} />
-                      <Icon name={ev.ic} color={CAT[ev.cat].bg} />
-
-                      <span style={{ fontSize: 14, lineHeight: 1.55, flex: 1 }}>
-                        {ev.cats?.includes("sf") && (
-                          <span
-                            title="SF作品"
-                            aria-label="SF作品"
-                            style={{
-                              display: "inline-block",
-                              marginRight: 6,
-                              padding: "1px 5px",
-                              borderRadius: 5,
-                              fontSize: 10.5,
-                              lineHeight: 1.4,
-                              fontWeight: 800,
-                              letterSpacing: 0.2,
-                              color: CAT.sf.fg,
-                              background: CAT.sf.bg,
-                              verticalAlign: 1,
-                            }}
-                          >
-                            ＊SF
-                          </span>
-                        )}
-                        {ev.t}
-                      </span>
-
-                      {secondaryCats.length > 0 && (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            gap: 3,
-                            alignItems: "center",
-                            flexShrink: 0,
-                            paddingTop: 7,
-                          }}
-                          aria-label={`副分類: ${secondaryCats
-                            .map((k) => CAT[k]?.label)
-                            .filter(Boolean)
-                            .join("・")}`}
-                        >
-                          {secondaryCats.map((k) => (
-                            <span
-                              key={k}
-                              title={CAT[k]?.label || k}
-                              style={{
-                                display: "inline-block",
-                                width: 7,
-                                height: 7,
-                                borderRadius: "50%",
-                                background: CAT[k]?.bg || "#999",
-                              }}
-                            />
-                          ))}
-                        </span>
-                      )}
-
-                      <span
-                        style={{
-                          fontSize: 11, color: "#b0b4bb", paddingTop: 4, flexShrink: 0,
-                          transform: isOpen ? "rotate(90deg)" : "none",
-                          transition: "transform 0.15s",
-                        }}
-                        aria-hidden="true"
-                      >
-                        ▶
-                      </span>
-                    </button>
-                    {isOpen && ev.n && (
-                      <div
-                        style={{
-                          margin: "0 4px 10px 108px",
-                          padding: "10px 14px",
-                          fontSize: 13, lineHeight: 1.75, color: "#3d4450",
-                          background: g.stage.bg,
-                          borderLeft: `3px solid ${CAT[ev.cat].bg}`,
-                          borderRadius: "0 8px 8px 0",
-                        }}
-                      >
-                        <div
-                          style={{
-                            marginBottom: 6, fontSize: 11.5, fontWeight: 700,
-                            color: "#6b7280",
-                          }}
-                        >
-                          日付：{formatEventDate(ev.date)}
-                        </div>
-                        {ev.n}
-                        <EventReferenceLinks
-                          query={ev.q}
-                          links={ev.l}
-                          color={CAT[ev.cat].bg}
-                        />
-                        {ev.note && (
-                          <div
-                            style={{
-                              marginTop: 9, padding: "7px 10px",
-                              border: "1px solid #d8dce2", borderRadius: 7,
-                              background: "#ffffff88", color: "#626974",
-                              fontSize: 11.5, lineHeight: 1.65,
-                            }}
-                          >
-                            <span style={{ fontWeight: 800 }}>補足：</span>
-                            {ev.note}
-                          </div>
-                        )}
-                        <EventCustomizationActions
-                          isAdded={isAdded}
-                          isEditing={isEditing}
-                          onDeleteAdded={() => deleteAddedEvent(ev)}
-                          onStartEditing={() => startEditingEvent(ev)}
-                          onHide={() => hideEvent(ev)}
-                          hashtag={HASHTAG}
-                          color={CAT[ev.cat].bg}
-                          shareText={shareText}
-                          note={ev.n}
-                          shareUrl={`${SHARE_URL}?e=${encodeURIComponent(id)}`}
-                          miniBtn={miniBtn}
-                        />
-                        {isEditing && (
-                          <EventCustomizationEditForm
-                            draft={eventEditDraft}
-                            updateDraft={updateEventEditDraft}
-                            onSave={() => saveEditedEvent(ev)}
-                            onCancel={cancelEditingEvent}
-                            font={font}
-                            miniBtn={miniBtn}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </li>
+                  <TimelinePublicEventRow
+                    key={i}
+                    event={ev}
+                    eraHeadings={eraHeadings}
+                    stage={g.stage}
+                    font={font}
+                    mono={mono}
+                    gradeLabel={grouped.gradeLabel}
+                    isEventOpen={isEventOpen}
+                    toggleEvent={toggleEvent}
+                    eventCustomizations={
+                      eventCustomizations
+                    }
+                    editingEventId={
+                      editingEventId
+                    }
+                    eventEditDraft={
+                      eventEditDraft
+                    }
+                    updateEventEditDraft={
+                      updateEventEditDraft
+                    }
+                    deleteAddedEvent={
+                      deleteAddedEvent
+                    }
+                    startEditingEvent={
+                      startEditingEvent
+                    }
+                    hideEvent={hideEvent}
+                    saveEditedEvent={
+                      saveEditedEvent
+                    }
+                    cancelEditingEvent={
+                      cancelEditingEvent
+                    }
+                    hashtag={HASHTAG}
+                    shareBaseUrl={SHARE_URL}
+                    miniBtn={miniBtn}
+                    gradeBadgeStyle={
+                      gradeBadgeStyle
+                    }
+                    formatEventDate={
+                      formatEventDate
+                    }
+                    ImportanceBadge={
+                      ImportanceBadge
+                    }
+                  />
                 );
               })}
             </ul>
@@ -1611,323 +1177,160 @@ export default function App() {
         );
         })}
 
-        <div
-          id="timeline-customization"
-          style={{
-            scrollMarginTop: 16,
-            background: "#f3f7fb",
-            border: "1px solid #cfdce8",
-            borderRadius: 12,
-            padding: "12px 16px",
-            marginTop: 16,
-            marginBottom: 14,
-          }}
-        >
-          <EventCustomizationControls
-            overrideCount={Object.keys(eventCustomizations.overrides ?? {}).length}
-            hiddenCount={eventCustomizations.hidden?.length ?? 0}
-            additionCount={eventCustomizations.additions?.length ?? 0}
-            eventCustomizationStatus={eventCustomizationStatus}
-            eventCustomizationEditorOpen={eventCustomizationEditorOpen}
-            eventCustomizationFileInputRef={eventCustomizationFileInputRef}
-            importEventCustomizationsFile={importEventCustomizationsFile}
-            exportEventCustomizationsFile={exportEventCustomizationsFile}
-            toggleEventCustomizationEditor={toggleEventCustomizationEditor}
-            clearEventCustomizations={clearEventCustomizations}
-            miniBtn={miniBtn}
-          />
+        <TimelineCustomizationSection
+          eventCustomizations={
+            eventCustomizations
+          }
+          eventCustomizationStatus={
+            eventCustomizationStatus
+          }
+          eventCustomizationEditorOpen={
+            eventCustomizationEditorOpen
+          }
+          eventCustomizationFileInputRef={
+            eventCustomizationFileInputRef
+          }
+          importEventCustomizationsFile={
+            importEventCustomizationsFile
+          }
+          exportEventCustomizationsFile={
+            exportEventCustomizationsFile
+          }
+          toggleEventCustomizationEditor={
+            toggleEventCustomizationEditor
+          }
+          closeEventCustomizationEditor={
+            closeEventCustomizationEditor
+          }
+          clearEventCustomizations={
+            clearEventCustomizations
+          }
+          openNewEventForm={openNewEventForm}
+          eventAddOpen={eventAddOpen}
+          eventAddDraft={eventAddDraft}
+          updateEventAddDraft={
+            updateEventAddDraft
+          }
+          saveAddedEvent={saveAddedEvent}
+          cancelAddingEvent={
+            cancelAddingEvent
+          }
+          restoreHiddenEvent={
+            restoreHiddenEvent
+          }
+          events={EVENTS}
+          mainCategories={MAIN_CATS}
+          font={font}
+          miniBtn={miniBtn}
+        />
 
-          {eventCustomizationEditorOpen && (
-            <div
-              style={{
-                marginTop: 12,
-                padding: 12,
-                border: "1px solid #cfdce8",
-                borderRadius: 10,
-                background: "#fff",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <strong style={{ fontSize: 12, color: "#365f7d" }}>
-                  年表の変更内容を編集
-                </strong>
+        <PersonalHistorySection
+          myEvents={myEvents}
+          personalEventsSource={
+            personalEventsSource
+          }
+          personalFileStatus={
+            personalFileStatus
+          }
+          personalAddOpen={personalAddOpen}
+          personalEditorOpen={
+            personalEditorOpen
+          }
+          editingPersonalId={
+            editingPersonalId
+          }
+          personalDraft={personalDraft}
+          personalFileInputRef={
+            personalFileInputRef
+          }
+          importPersonalEventsFile={
+            importPersonalEventsFile
+          }
+          exportPersonalEventsFile={
+            exportPersonalEventsFile
+          }
+          togglePersonalEditor={
+            togglePersonalEditor
+          }
+          closePersonalEditor={
+            closePersonalEditor
+          }
+          updatePersonalDraft={
+            updatePersonalDraft
+          }
+          openNewPersonalEventForm={
+            openNewPersonalEventForm
+          }
+          closePersonalEventForm={
+            closePersonalEventForm
+          }
+          startEditingPersonalEvent={
+            startEditingPersonalEvent
+          }
+          clearPersonalEventsFile={
+            clearPersonalEventsFile
+          }
+          savePersonalEvent={
+            savePersonalEvent
+          }
+          deletePersonalEvent={
+            deletePersonalEvent
+          }
+          font={font}
+          miniBtn={miniBtn}
+        />
 
-                <span style={{ flex: 1 }} />
-
-                <button
-                  type="button"
-                  onClick={openNewEventForm}
-                  style={{
-                    ...miniBtn,
-                    background: "#e7f1fb",
-                    border: "1px solid #91b3d2",
-                    color: "#315f87",
-                    fontWeight: 800,
-                  }}
-                >
-                  ＋追加
-                </button>
-
-                <button
-                  type="button"
-                  onClick={closeEventCustomizationEditor}
-                  style={{
-                    ...miniBtn,
-                    marginLeft: 6,
-                  }}
-                >
-                  ×閉じる
-                </button>
-              </div>
-            </div>
-          )}
-
-          {eventCustomizationEditorOpen && eventAddOpen && (
-            <EventCustomizationAddForm
-              draft={eventAddDraft}
-              categoryOptions={MAIN_CATS.map((key) => ({
-                key,
-                label: CAT[key].label,
-              }))}
-              updateDraft={updateEventAddDraft}
-              saveAddedEvent={saveAddedEvent}
-              cancelAddingEvent={cancelAddingEvent}
-              font={font}
-              miniBtn={miniBtn}
-            />
-          )}
-
-          {eventCustomizationEditorOpen &&
-            (eventCustomizations.hidden?.length ?? 0) > 0 && (
-            <EventCustomizationHiddenList
-              items={eventCustomizations.hidden.map((id) => {
-                const base = EVENTS.find(
-                  (event) => event.id === id
-                );
-                return {
-                  id,
-                  label: base
-                    ? `${base.y} ${base.t}`
-                    : id,
-                };
-              })}
-              restoreHiddenEvent={restoreHiddenEvent}
-              miniBtn={miniBtn}
-            />
-          )}
-
-        </div>
-
-        <div
-          id="personal-history"
-          style={{
-            scrollMarginTop: 16,
-            background: "#f7f2fb",
-            border: "1px solid #dfd2ea",
-            borderRadius: 12,
-            padding: "12px 16px",
-            marginTop: 16,
-            marginBottom: 14,
-          }}
-        >
-          <PersonalHistoryControls
-            eventCount={myEvents.length}
-            personalEventsSource={personalEventsSource}
-            personalEditorOpen={personalEditorOpen}
-            personalFileInputRef={personalFileInputRef}
-            importPersonalEventsFile={importPersonalEventsFile}
-            exportPersonalEventsFile={exportPersonalEventsFile}
-            togglePersonalEditor={togglePersonalEditor}
-            clearPersonalEventsFile={clearPersonalEventsFile}
-            loadServerPersonalEvents={loadServerPersonalEvents}
-            titleColor={CAT.me.bg}
-            miniBtn={miniBtn}
-          />
-
-          {personalEditorOpen && personalEventsSource !== "server" && (
-            <PersonalHistoryEditorList
-              events={myEvents}
-              openNewPersonalEventForm={openNewPersonalEventForm}
-              closePersonalEditor={closePersonalEditor}
-              startEditingPersonalEvent={startEditingPersonalEvent}
-              deletePersonalEvent={deletePersonalEvent}
-              miniBtn={miniBtn}
-            />
-          )}
-
-          {personalAddOpen && personalEventsSource !== "server" && (
-            <PersonalHistoryEventForm
-              draft={personalDraft}
-              isEditing={Boolean(editingPersonalId)}
-              updateDraft={updatePersonalDraft}
-              savePersonalEvent={savePersonalEvent}
-              closePersonalEventForm={closePersonalEventForm}
-              font={font}
-              miniBtn={miniBtn}
-            />
-          )}
-
-          {personalEventsSource === "server" && (
-            <div
-              style={{
-                fontSize: 10.5,
-                lineHeight: 1.6,
-                color: "#8a6a3d",
-                marginTop: 8,
-              }}
-            >
-              管理者データを表示中はブラウザ側の追加・編集を行いません。
-            </div>
-          )}
-
-          {personalFileStatus && (
-            <div
-              role="status"
-              style={{
-                fontSize: 11,
-                lineHeight: 1.6,
-                color: "#6b7280",
-                marginTop: 8,
-              }}
-            >
-              {personalFileStatus}
-            </div>
-          )}
-        </div>
-
-        <div
-          id="timeline-settings"
-          style={{
-            scrollMarginTop: 16,
-            background: "#fff",
-            border: "1px solid #e2e4e8",
-            borderRadius: 12,
-            marginBottom: 14,
-            overflow: "hidden",
-          }}
-        >
-        {/* 入力欄(畳めるようにしている) */}
-        <button
-          onClick={toggleSetup}
-          aria-expanded={setupOpen}
-          style={{
-            display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%",
-            background: "#fff",
-            border: "none",
-            borderBottom: setupOpen ? "1px solid #e2e4e8" : "none",
-            borderRadius: 0,
-            padding: "10px 16px",
-            cursor: "pointer", textAlign: "left", fontFamily: font, color: "#22272e",
-          }}
-        >
-          <span
-            style={{
-              flexBasis: "100%",
-              fontSize: 14,
-              fontWeight: 800,
-            }}
-          >
-            ①あなたの設定
-          </span>
-          <span
-            style={{
-              fontSize: 11.5,
-              lineHeight: 1.7,
-              color: "#6b7280",
-            }}
-          >
-            {birth}年{month ? `${month}月` : ""}生まれ
-            {firstHigherYear
-              ? `・${firstHigherYear}年 ${HIGHER_ED_TYPES[firstHigherType]?.label}`
-              : ""}
-            {firstGraduateYear
-              ? `・${firstGraduateYear}年 大学院（${GRADUATE_TYPES[firstGraduateType]?.label}）`
-              : ""}
-            ・成人期{grouped.adultYear}年〜（自動）
-            {adultPeriodsEnabled
-              ? `・社会人区分${adultPeriods.length}件`
-              : ""}
-          </span>
-          <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 11, color: "#8a8f98" }}>{setupOpen ? "畳む ▼" : "変更する ▶"}</span>
-        </button>
-
-        {setupOpen && (<>
-        {/* 生年入力 */}
-        <BirthSettingsEditor
+        <TimelineSettingsSection
+          setupOpen={setupOpen}
+          toggleSetup={toggleSetup}
           birth={birth}
           month={month}
+          firstHigherYear={firstHigherYear}
+          firstHigherType={firstHigherType}
+          firstGraduateYear={
+            firstGraduateYear
+          }
+          firstGraduateType={
+            firstGraduateType
+          }
+          adultPeriods={adultPeriods}
+          adultYear={grouped.adultYear}
+          adultPeriodErrors={
+            grouped.adultPeriodErrors
+          }
+          warnings={grouped.warnings}
           adjustBirthYear={adjustBirthYear}
           setBirthYear={setBirthYear}
           setBirthMonth={setBirthMonth}
+          education={education}
+          updateEducation={updateEducation}
+          resetAdultPeriods={
+            resetAdultPeriods
+          }
+          updateAdultPeriod={
+            updateAdultPeriod
+          }
+          addAdultPeriod={addAdultPeriod}
+          removeAdultPeriod={
+            removeAdultPeriod
+          }
+          lifeSettingsStatus={
+            lifeSettingsStatus
+          }
+          lifeSettingsFileInputRef={
+            lifeSettingsFileInputRef
+          }
+          importLifeSettingsFile={
+            importLifeSettingsFile
+          }
+          exportLifeSettingsFile={
+            exportLifeSettingsFile
+          }
           font={font}
           mono={mono}
           btnStyle={btnStyle}
+          miniBtn={miniBtn}
         />
-        {/* 幼保・大学等・大学院の複数行教育歴 */}
-        <div
-          style={{
-            display: "flex", alignItems: "center", gap: 0, flexWrap: "wrap",
-            padding: "12px 16px 14px",
-          }}
-        >
-          <EducationHistoryEditor
-            earlyChildhoodHistory={earlyChildhoodHistory}
-            higherEducationHistory={higherEducationHistory}
-            graduateEducationHistory={graduateEducationHistory}
-            onEarlyChildhoodHistoryChange={updateEarlyChildhoodHistory}
-            onHigherEducationHistoryChange={updateHigherEducationHistory}
-            onGraduateEducationHistoryChange={updateGraduateEducationHistory}
-          />
-
-          <AdultPeriodsEditor
-            adultPeriodsEnabled={adultPeriodsEnabled}
-            adultPeriods={adultPeriods}
-            adultYear={grouped.adultYear}
-            adultPeriodErrors={grouped.adultPeriodErrors}
-            setAdultPeriodSplittingEnabled={setAdultPeriodSplittingEnabled}
-            resetAdultPeriods={resetAdultPeriods}
-            updateAdultPeriod={updateAdultPeriod}
-            addAdultPeriod={addAdultPeriod}
-            removeAdultPeriod={removeAdultPeriod}
-            font={font}
-            mono={mono}
-            miniBtn={miniBtn}
-          />
-
-          <LifeSettingsFileControls
-            lifeSettingsStatus={lifeSettingsStatus}
-            lifeSettingsFileInputRef={lifeSettingsFileInputRef}
-            importLifeSettingsFile={importLifeSettingsFile}
-            exportLifeSettingsFile={exportLifeSettingsFile}
-            miniBtn={miniBtn}
-          />
-
-          {grouped.warnings.length > 0 && (
-            <div
-              role="alert"
-              style={{
-                width: "100%", padding: "8px 10px", borderRadius: 8,
-                background: "#fff3f1", color: "#a13d31", fontSize: 11.5,
-                lineHeight: 1.7,
-              }}
-            >
-              {grouped.warnings.map((warning) => (
-                <div key={warning}>{warning}</div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        </>)}
-
-        </div>
 
         <footer
           style={{
@@ -1966,26 +1369,97 @@ export default function App() {
             学齢は誕生年と誕生月から概算し、大学等・大学院の設定から人生段階と成人期の開始年を自動計算します。成人期は必要に応じて任意に分割できます。
           </div>
 
-          {DOWNLOAD_URL && (
-            <div
+          <details
+            style={{
+              marginTop: 10,
+              paddingTop: 10,
+              borderTop: "1px solid #eceef1",
+              fontSize: 11,
+              color: "#8a8f98",
+            }}
+          >
+            <summary
               style={{
-                marginTop: 10,
-                paddingTop: 10,
-                borderTop: "1px solid #eceef1",
+                cursor: "pointer",
+                userSelect: "none",
+                padding: "4px 0",
               }}
             >
-              <a
-                href={DOWNLOAD_URL}
-                download="koshix-timeline-starter.zip"
-                style={{ color: "#59616c" }}
+              管理者向け
+            </summary>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 10,
+                marginTop: 6,
+              }}
+            >
+              <button
+                type="button"
+                onClick={loadAdministratorData}
+                style={{
+                  ...miniBtn,
+                  ...(personalEventsSource === "server" &&
+                  lifeSettingsSource === "server"
+                    ? {
+                        background: "#fff1dc",
+                        border: "1px solid #d79a43",
+                        color: "#8a5208",
+                        fontWeight: 800,
+                      }
+                    : {}),
+                }}
               >
-                ダウンロード版
-              </a>
-              <span style={{ marginLeft: 8 }}>
-                自分の年表としてWebサーバーへ設置できる静的Web版です。
-              </span>
+                管理者データ読込
+              </button>
+
+              {administratorDataStatus && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "#9b4a3c",
+                  }}
+                >
+                  {administratorDataStatus}
+                </span>
+              )}
+
+              {personalEventsSource === "server" && DOWNLOAD_URL && (
+                <a
+                  href={DOWNLOAD_URL}
+                  download="koshix-timeline-starter.zip"
+                  style={{ color: "#59616c" }}
+                >
+                  ダウンロード版
+                </a>
+              )}
+
+              {personalEventsSource === "server" && PUBLIC_SOURCE_URL && (
+                <a
+                  href={PUBLIC_SOURCE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#59616c" }}
+                >
+                  公開用ソース
+                </a>
+              )}
+
+              {personalEventsSource === "server" && ACCESS_STATS_URL && (
+                <a
+                  href={ACCESS_STATS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#59616c" }}
+                >
+                  アクセス統計
+                </a>
+              )}
             </div>
-          )}
+          </details>
 
           <div
             style={{

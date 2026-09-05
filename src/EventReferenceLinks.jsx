@@ -1,11 +1,17 @@
+import { buildWikipediaQuery } from "./event-reference-query.js";
+
 export default function EventReferenceLinks({
+  title,
   query,
   links,
   color,
 }) {
+  const wikipediaQuery =
+    buildWikipediaQuery(title, query);
+
   return (
     <>
-      {query && (
+      {(wikipediaQuery || query) && (
         <div
           style={{
             marginTop: 8,
@@ -14,8 +20,9 @@ export default function EventReferenceLinks({
             gap: 6,
           }}
         >
+          {wikipediaQuery && (
           <a
-            href={`https://ja.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}`}
+            href={`https://ja.wikipedia.org/w/index.php?search=${encodeURIComponent(wikipediaQuery)}`}
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -30,7 +37,9 @@ export default function EventReferenceLinks({
           >
             Wikipediaで探す
           </a>
+          )}
 
+          {query && (
           <a
             href={`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`}
             target="_blank"
@@ -47,6 +56,7 @@ export default function EventReferenceLinks({
           >
             YouTubeで探す
           </a>
+          )}
         </div>
       )}
 

@@ -8,18 +8,20 @@ import {
   parseLifeSettingsTsv,
   serializeLifeSettingsTsv,
 } from "./life-settings";
-import { settingsStore } from "./settings-store";
+import {
+  educationForKind,
+  normalizeEducation,
+} from "./education-history";
+import { workspaceStore } from "./workspace-store.js";
 
 const normalizeAdultPeriods = (periods) =>
   Array.isArray(periods)
     ? periods.map((period) => ({
-        start: String(period.start ?? period.from ?? ""),
+        start: String(period.start ?? ""),
         end:
           period.end != null
             ? String(period.end)
-            : period.to != null
-              ? String(period.to)
-              : "",
+            : "",
         label: String(period.label ?? ""),
       }))
     : [];
@@ -27,34 +29,14 @@ const normalizeAdultPeriods = (periods) =>
 export default function useLifeSettings({
   initialBirth,
   initialMonth,
-  initialEducation = {},
-  savedAdultPeriodsEnabled = false,
+  initialEducation = [],
   savedAdultPeriods = [],
 } = {}) {
   const [birth, setBirth] = useState(initialBirth);
   const [month, setMonth] = useState(initialMonth);
-  const [
-    earlyChildhoodHistory,
-    setEarlyChildhoodHistory,
-  ] = useState(
-    initialEducation.earlyChildhoodHistory ?? []
+  const [education, setEducation] = useState(
+    () => normalizeEducation(initialEducation)
   );
-  const [
-    higherEducationHistory,
-    setHigherEducationHistory,
-  ] = useState(
-    initialEducation.higherEducationHistory ?? []
-  );
-  const [
-    graduateEducationHistory,
-    setGraduateEducationHistory,
-  ] = useState(
-    initialEducation.graduateEducationHistory ?? []
-  );
-  const [
-    adultPeriodsEnabled,
-    setAdultPeriodsEnabled,
-  ] = useState(savedAdultPeriodsEnabled);
   const [adultPeriods, setAdultPeriods] = useState(
     () => normalizeAdultPeriods(savedAdultPeriods)
   );
@@ -63,18 +45,17 @@ export default function useLifeSettings({
     setLifeSettingsStatus,
   ] = useState("");
 
+  const [
+    lifeSettingsSource,
+    setLifeSettingsSource,
+  ] = useState("browser");
+
   const lifeSettingsFileInputRef = useRef(null);
 
-  const updateEarlyChildhoodHistory = (history) => {
-    setEarlyChildhoodHistory(history);
-  };
-
-  const updateHigherEducationHistory = (history) => {
-    setHigherEducationHistory(history);
-  };
-
-  const updateGraduateEducationHistory = (history) => {
-    setGraduateEducationHistory(history);
+  const updateEducation = (history) => {
+    setEducation(
+      normalizeEducation(history)
+    );
   };
 
   const adjustBirthYear = (delta) => {
@@ -95,9 +76,15 @@ export default function useLifeSettings({
   };
 
   const firstHigherEducation =
-    higherEducationHistory[0] ?? null;
+    educationForKind(
+      education,
+      "higher"
+    )[0] ?? null;
   const firstGraduateEducation =
-    graduateEducationHistory[0] ?? null;
+    educationForKind(
+      education,
+      "graduate"
+    )[0] ?? null;
 
   const firstHigherYear =
     firstHigherEducation?.start ?? "";
@@ -152,13 +139,7 @@ export default function useLifeSettings({
     setLifeSettingsStatus("");
   };
 
-  const setAdultPeriodSplittingEnabled = (enabled) => {
-    setAdultPeriodsEnabled(Boolean(enabled));
-    setLifeSettingsStatus("");
-  };
-
   const resetAdultPeriods = () => {
-    setAdultPeriodsEnabled(false);
     setAdultPeriods([]);
     setLifeSettingsStatus("");
   };
@@ -166,7 +147,7 @@ export default function useLifeSettings({
   const exportLifeSettingsFile = () => {
     try {
       const text = serializeLifeSettingsTsv(
-        settingsStore.load() || {}
+        workspaceStore.settings.load() || {}
       );
 
       const blob = new Blob(
@@ -228,7 +209,7 @@ export default function useLifeSettings({
       if (!ok) return;
 
       const current =
-        settingsStore.load() || {};
+        workspaceStore.settings.load() || {};
 
       const next =
         mergeLifeSettings(
@@ -236,7 +217,7 @@ export default function useLifeSettings({
           imported
         );
 
-      settingsStore.replace(next);
+      workspaceStore.settings.replace(next);
 
       window.location.reload();
     } catch (err) {
@@ -251,29 +232,44 @@ export default function useLifeSettings({
     }
   };
 
+  const applyServerLifeSettings = (settings) => {
+    setLifeSettingsSource("server");
+    setBirth(settings.birth);
+    setMonth(settings.month);
+    setEducation(
+      normalizeEducation(
+        settings.education
+      )
+    );
+    setAdultPeriods(
+      normalizeAdultPeriods(
+        settings.adultPeriods
+      )
+    );
+    setLifeSettingsStatus(
+      "管理者人生設定を読み込みました"
+    );
+  };
+
   return {
     birth,
     month,
     adjustBirthYear,
     setBirthYear,
     setBirthMonth,
-    earlyChildhoodHistory,
-    updateEarlyChildhoodHistory,
-    higherEducationHistory,
-    updateHigherEducationHistory,
-    graduateEducationHistory,
-    updateGraduateEducationHistory,
+    education,
+    updateEducation,
     firstHigherYear,
     firstHigherType,
     firstGraduateYear,
     firstGraduateType,
-    adultPeriodsEnabled,
     adultPeriods,
     lifeSettingsStatus,
+    lifeSettingsSource,
     lifeSettingsFileInputRef,
     importLifeSettingsFile,
     exportLifeSettingsFile,
-    setAdultPeriodSplittingEnabled,
+    applyServerLifeSettings,
     resetAdultPeriods,
     updateAdultPeriod,
     addAdultPeriod,

@@ -7,7 +7,7 @@ export const SETTINGS_STORAGE_KEY =
   "koshix-timeline:settings";
 export const SETTINGS_STORAGE_FORMAT =
   "koshix-timeline-settings";
-export const SETTINGS_STORAGE_VERSION = 1;
+export const SETTINGS_STORAGE_VERSION = 3;
 
 export function encodeSettingsStorageValue(data) {
   return createVersionedRecord(

@@ -29,8 +29,7 @@ export function decodeEventRow(
     ...(row.end_date
       ? { end_date: row.end_date }
       : {}),
-    y: Number(String(row.date).slice(0, 4)),
-    t: row.title,
+    title: row.title,
     cats: splitEventList(row.cats),
     primary,
     ...(row.subs
@@ -41,12 +40,12 @@ export function decodeEventRow(
     ...(includeCore
       ? { core: row.core === "1" }
       : {}),
-    ic: row.icon || defaultIcon,
-    n: row.summary,
+    icon: row.icon || defaultIcon,
+    summary: row.summary,
     ...(row.sources
-      ? { l: splitEventList(row.sources) }
+      ? { sources: splitEventList(row.sources) }
       : {}),
-    ...(row.search ? { q: row.search } : {}),
+    ...(row.search ? { search: row.search } : {}),
     ...(row.note ? { note: row.note } : {}),
   };
 }
@@ -63,7 +62,7 @@ export function encodeEventRow(
     id: String(event.id ?? ""),
     date: String(event.date ?? ""),
     end_date: String(event.end_date ?? ""),
-    title: String(event.t ?? event.title ?? ""),
+    title: String(event.title ?? ""),
     cats: listCell(event.cats),
     primary: String(
       forcePrimary ??
@@ -74,17 +73,15 @@ export function encodeEventRow(
     region: String(event.region ?? ""),
     importance: String(event.importance ?? 2),
     icon: String(
-      event.ic ??
       event.icon ??
       defaultIcon
     ),
     summary: String(
-      event.n ??
       event.summary ??
       ""
     ),
-    sources: listCell(event.l ?? event.sources),
-    search: String(event.q ?? event.search ?? ""),
+    sources: listCell(event.sources),
+    search: String(event.search ?? ""),
     note: String(event.note ?? ""),
     ...(includeCore
       ? { core: event.core ? "1" : "0" }

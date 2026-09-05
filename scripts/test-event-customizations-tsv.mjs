@@ -8,7 +8,7 @@ import {
 const source = {
   overrides: {
     "1839-daguerreotype-public": {
-      t: "修正後のタイトル",
+      title: "修正後のタイトル",
       importance: 3,
       note: null,
       cats: ["culture", "science"],
@@ -21,15 +21,13 @@ const source = {
     {
       id: "custom-test",
       date: "2026-08-25",
-      y: 2026,
-      t: "追加テスト",
+      title: "追加テスト",
       cats: ["science"],
       primary: "science",
-      cat: "science",
       importance: 2,
       core: false,
-      ic: "chip",
-      n: "改行\nとタブ\tを含む概要",
+      icon: "chip",
+      summary: "改行\nとタブ\tを含む概要",
     },
   ],
 };
@@ -91,6 +89,29 @@ assert.throws(
       "override\tx\tunknown\t1\n"
     ),
   /field "unknown" は未対応/
+);
+
+assert.throws(
+  () =>
+    serializeEventCustomizationsTsv({
+      overrides: {},
+      hidden: [],
+      additions: [
+        {
+          id: "legacy-cat",
+          date: "2026",
+              title: "旧cat検査",
+          cats: ["science"],
+          primary: "science",
+          cat: "science",
+          importance: 2,
+          core: false,
+          icon: "chip",
+          summary: "旧catは許可しない",
+        },
+      ],
+    }),
+  /未対応の内部フィールド "cat"/
 );
 
 console.log("OK: event customizations TSV");

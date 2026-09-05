@@ -11,11 +11,9 @@ const resetBtnStyle = {
 };
 
 export default function AdultPeriodsEditor({
-  adultPeriodsEnabled,
   adultPeriods,
   adultYear,
   adultPeriodErrors,
-  setAdultPeriodSplittingEnabled,
   resetAdultPeriods,
   updateAdultPeriod,
   addAdultPeriod,
@@ -63,29 +61,6 @@ export default function AdultPeriodsEditor({
         </button>
       </div>
 
-      <label
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          fontSize: 13,
-          fontWeight: 800,
-          cursor: "pointer",
-          color: "#4b5563",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={adultPeriodsEnabled}
-          onChange={(e) =>
-            setAdultPeriodSplittingEnabled(
-              e.target.checked
-            )
-          }
-          style={{ accentColor: "#37414f" }}
-        />
-        成人期を分割する
-      </label>
 
       <div
         style={{
@@ -100,8 +75,7 @@ export default function AdultPeriodsEditor({
         最後の期間は終了年を空欄にすると現在まで続きます。
       </div>
 
-      {adultPeriodsEnabled && (
-        <div
+      <div
           style={{
             marginTop: 10,
             padding: 10,
@@ -277,8 +251,7 @@ export default function AdultPeriodsEditor({
               )}
             </div>
           )}
-        </div>
-      )}
+      </div>
 
       <div
         style={{

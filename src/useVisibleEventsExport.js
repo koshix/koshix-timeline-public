@@ -58,10 +58,10 @@ export default function useVisibleEventsExport({
 
   const exportVisibleEventsTsv = (target = "auto") => {
     const visiblePublicItems = visibleItems.filter(
-      (event) => event.cat !== "me"
+      (event) => event.primary !== "me"
     );
     const visiblePersonalItems = visibleItems.filter(
-      (event) => event.cat === "me"
+      (event) => event.primary === "me"
     );
 
     let exportTarget = target;

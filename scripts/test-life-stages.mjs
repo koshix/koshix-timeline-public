@@ -5,15 +5,86 @@ import {
   buildLifeModel,
 } from "../src/life-stages.js";
 
-function model(overrides = {}) {
+function model({
+  early = [],
+  higher = [],
+  graduate = [],
+  education = null,
+  ...overrides
+} = {}) {
   return buildLifeModel({
     birth: 1953,
     month: 4,
-    higherEducationHistory: [],
-    graduateEducationHistory: [],
-    adultYear: "",
+    education:
+      education ?? [
+        ...early,
+        ...higher,
+        ...graduate,
+      ],
     ...overrides,
   });
+}
+
+// Life ModelのCanonical教育歴は単一education配列。
+{
+  const education = [
+    {
+      start: "1972",
+      years: "4",
+      type: "university",
+    },
+    {
+      start: "1976",
+      years: "2",
+      type: "masters",
+    },
+  ];
+
+  const life = model({ education });
+
+  assert.deepEqual(life.education, education);
+  assert.equal(life.adultYear, 1978);
+  assert.equal(
+    Object.hasOwn(
+      life,
+      "earlyChildhoodHistory"
+    ),
+    false
+  );
+  assert.equal(
+    Object.hasOwn(
+      life,
+      "higherEducationHistory"
+    ),
+    false
+  );
+  assert.equal(
+    Object.hasOwn(
+      life,
+      "graduateEducationHistory"
+    ),
+    false
+  );
+}
+
+// 単一education配列では未知のtypeを推測せず警告する。
+{
+  const life = model({
+    education: [
+      {
+        start: "1972",
+        years: "4",
+        type: "unknown",
+      },
+    ],
+  });
+
+  assert.ok(
+    life.warnings.some(
+      (warning) =>
+        warning.includes("未対応の種類")
+    )
+  );
 }
 
 // 大学院の公開選択肢は「修士・専門職・博士」の3つだけ。
@@ -25,42 +96,35 @@ function model(overrides = {}) {
   ]);
 }
 
-// 基本の学齢区分。
+// 基本の学齢区分。幼保歴が空なら小学校入学前まで幼児期。
 {
   const life = model();
 
   assert.equal(life.stageOf(1957).label, "幼児期");
-  assert.equal(life.stageOf(1958).label, "幼稚園");
-  assert.equal(life.stageOf(1959).label, "幼稚園");
+  assert.equal(life.stageOf(1958).label, "幼児期");
+  assert.equal(life.stageOf(1959).label, "幼児期");
   assert.equal(life.stageOf(1960).label, "小学校");
   assert.equal(life.stageOf(1966).label, "中学校");
   assert.equal(life.stageOf(1969).label, "高校");
 }
 
-// 幼保歴が未設定なら従来どおり幼稚園2年間を表示する。
+// 幼稚園を設定した場合は、その期間を幼稚園として表示する。
 {
-  const life = model();
+  const life = model({
+    early: [
+      { start: "1958", years: "2", type: "kindergarten" },
+    ],
+  });
 
   assert.equal(life.stageOf(1958).label, "幼稚園");
   assert.equal(life.stageOf(1959).label, "幼稚園");
-  assert.equal(life.stageOf(1960).label, "小学校");
-}
-
-// 明示的に幼保歴を空配列へ戻した場合は幼稚園を表示しない。
-{
-  const life = model({
-    earlyChildhoodHistory: [],
-  });
-
-  assert.equal(life.stageOf(1958).label, "幼児期");
-  assert.equal(life.stageOf(1959).label, "幼児期");
   assert.equal(life.stageOf(1960).label, "小学校");
 }
 
 // 保育所から幼稚園への移行を複数行で表せる。
 {
   const life = model({
-    earlyChildhoodHistory: [
+    early: [
       { start: "1955", years: "3", type: "nursery" },
       { start: "1958", years: "2", type: "kindergarten" },
     ],
@@ -76,7 +140,7 @@ function model(overrides = {}) {
 // こども園も独立した幼保区分として扱う。
 {
   const life = model({
-    earlyChildhoodHistory: [
+    early: [
       { start: "1957", years: "3", type: "kodomoen" },
     ],
   });
@@ -89,10 +153,10 @@ function model(overrides = {}) {
 // 大学4年＋修士2年＋博士3年を別行で表す。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "4", type: "university" },
     ],
-    graduateEducationHistory: [
+    graduate: [
       { start: "1976", years: "2", type: "masters" },
       { start: "1978", years: "3", type: "doctorate" },
     ],
@@ -111,7 +175,7 @@ function model(overrides = {}) {
 // 高専から大学への編入を2行で表す。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1969", years: "5", type: "kosen" },
       { start: "1974", years: "2", type: "university" },
     ],
@@ -127,7 +191,7 @@ function model(overrides = {}) {
 // 大学等を複数行にして複数の課程を連続して表せる。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "4", type: "university" },
       { start: "1976", years: "2", type: "university" },
     ],
@@ -142,7 +206,7 @@ function model(overrides = {}) {
 // 専門・短大も修学年数を固定せず入力値で扱う。
 {
   const vocational = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "3", type: "vocational" },
     ],
   });
@@ -151,7 +215,7 @@ function model(overrides = {}) {
   assert.equal(vocational.adultYear, 1975);
 
   const juniorCollege = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "2", type: "juniorCollege" },
     ],
   });
@@ -162,7 +226,7 @@ function model(overrides = {}) {
 // 6年制大学も「大学＋修学年数6年」で表現できる。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "6", type: "university" },
     ],
   });
@@ -174,10 +238,10 @@ function model(overrides = {}) {
 // 専門職大学院。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "4", type: "university" },
     ],
-    graduateEducationHistory: [
+    graduate: [
       { start: "1976", years: "2", type: "professional" },
     ],
   });
@@ -190,10 +254,10 @@ function model(overrides = {}) {
 // 大学院も複数行にでき、修士と博士を独立して設定できる。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "4", type: "university" },
     ],
-    graduateEducationHistory: [
+    graduate: [
       { start: "1976", years: "2", type: "masters" },
       { start: "1978", years: "3", type: "doctorate" },
     ],
@@ -208,23 +272,23 @@ function model(overrides = {}) {
 // 入学までに空白があれば勝手に前の課程を延長しない。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "4", type: "university" },
     ],
-    graduateEducationHistory: [
+    graduate: [
       { start: "1978", years: "2", type: "masters" },
     ],
-    adultYear: "1982",
   });
 
   assert.equal(life.stageOf(1976).label, "大学院に入学する前");
-  assert.equal(life.stageOf(1980).label, "次の段階に進む前");
+  assert.equal(life.adultYear, 1980);
+  assert.equal(life.stageOf(1980).label, "成人期");
 }
 
 // 重複期間は警告し、後から始まる行を優先する。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1969", years: "5", type: "kosen" },
       { start: "1973", years: "2", type: "university" },
     ],
@@ -238,7 +302,7 @@ function model(overrides = {}) {
 // 入学年と修学年数の片方だけでは期間として採用しない。
 {
   const life = model({
-    higherEducationHistory: [
+    higher: [
       { start: "1972", years: "", type: "university" },
     ],
   });

@@ -90,7 +90,7 @@ export function parsePersonalEventsTsv(text) {
   events.sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||
-      a.t.localeCompare(b.t, "ja")
+      a.title.localeCompare(b.title, "ja")
   );
 
   return events;
@@ -107,8 +107,8 @@ export function serializePersonalEventsTsv(events) {
   const sorted = [...events].sort(
     (a, b) =>
       String(a.date ?? "").localeCompare(String(b.date ?? "")) ||
-      String(a.t ?? a.title ?? "").localeCompare(
-        String(b.t ?? b.title ?? ""),
+      String(a.title ?? "").localeCompare(
+        String(b.title ?? ""),
         "ja"
       )
   );

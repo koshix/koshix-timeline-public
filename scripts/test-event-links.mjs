@@ -8,8 +8,8 @@ import {
 } from "../src/event-links.js";
 
 const legacyEvent = {
-  y: 2000,
-  t: "Test",
+  date: "2000",
+  title: "Test",
 };
 
 assert.equal(
@@ -20,8 +20,8 @@ assert.equal(
 assert.equal(
   eventId({
     id: "permanent-001",
-    y: 2000,
-    t: "Test",
+    date: "2000",
+    title: "Test",
   }),
   "permanent-001"
 );
@@ -34,17 +34,17 @@ assert.equal(
 const events = [
   {
     id: "event-001",
-    y: 1972,
-    t: "大学入学",
+    date: "1972",
+    title: "大学入学",
   },
   {
-    y: 2000,
-    t: "Test",
+    date: "2000",
+    title: "Test",
   },
   {
     id: "event-003",
-    y: 2020,
-    t: "ＡＩ と 社会",
+    date: "2020",
+    title: "ＡＩ と 社会",
   },
 ];
 

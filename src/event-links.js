@@ -1,5 +1,6 @@
+import { eventYear } from "./event-schema.js";
 export const legacyEventId = (event) => {
-  const source = `${event.y}-${event.t}`;
+  const source = `${eventYear(event)}-${event.title}`;
   let hash = 5381;
 
   for (let i = 0; i < source.length; i += 1) {
@@ -7,7 +8,7 @@ export const legacyEventId = (event) => {
       ((hash * 33) ^ source.charCodeAt(i)) >>> 0;
   }
 
-  return `${event.y}-${hash.toString(36)}`;
+  return `${eventYear(event)}-${hash.toString(36)}`;
 };
 
 export const eventId = (event) =>
@@ -40,14 +41,14 @@ export const findEventByShareParam = (
     events.find(
       (event) =>
         normalizeLegacyShareKey(
-          `${event.y}-${event.t}`
+          `${eventYear(event)}-${event.title}`
         ) === key
     ) ||
     events.find(
       (event) =>
         key.length > 6 &&
         normalizeLegacyShareKey(
-          `${event.y}-${event.t}`
+          `${eventYear(event)}-${event.title}`
         ).startsWith(key)
     ) ||
     null

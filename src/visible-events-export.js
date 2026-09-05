@@ -1,3 +1,4 @@
+import { eventYear } from "./event-schema.js";
 import { catsOf } from "./categories";
 
 function cleanCell(value) {
@@ -38,20 +39,20 @@ export function buildVisiblePublicExport(events, gradeLabel) {
     event.id ?? "",
     event.date ?? "",
     event.end_date ?? "",
-    event.t ?? "",
+    event.title ?? "",
     listCell(catsOf(event)),
-    event.primary ?? event.cat ?? "",
+    event.primary ?? "",
     listCell(event.subs),
     event.region ?? "",
     event.importance ?? 2,
-    event.ic ?? "",
-    event.n ?? "",
-    listCell(event.l),
-    event.q ?? "",
+    event.icon ?? "",
+    event.summary ?? "",
+    listCell(event.sources),
+    event.search ?? "",
     event.note ?? "",
     event.core ? "1" : "0",
     event.age,
-    gradeLabel(event.y),
+    gradeLabel(eventYear(event)),
   ]);
 
   return { header, rows };
@@ -81,19 +82,19 @@ export function buildVisiblePersonalExport(events, gradeLabel) {
     event.id ?? "",
     event.date ?? "",
     event.end_date ?? "",
-    event.t ?? "",
+    event.title ?? "",
     listCell(event.cats ?? ["me"]),
     event.primary ?? "me",
     listCell(event.subs),
     event.region ?? "",
     event.importance ?? 2,
-    event.ic ?? "flag",
-    event.n ?? "",
-    listCell(event.l),
-    event.q ?? "",
+    event.icon ?? "flag",
+    event.summary ?? "",
+    listCell(event.sources),
+    event.search ?? "",
     event.note ?? "",
     event.age,
-    gradeLabel(event.y),
+    gradeLabel(eventYear(event)),
   ]);
 
   return { header, rows };

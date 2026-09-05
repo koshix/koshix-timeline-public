@@ -33,32 +33,10 @@ export const PUBLIC_EVENT_CATEGORIES = new Set(
   PUBLIC_EVENT_CATEGORY_KEYS
 );
 
-export const EVENT_FIELD_MAP = {
-  date: "date",
-  end_date: "end_date",
-  title: "t",
-  cats: "cats",
-  primary: "primary",
-  subs: "subs",
-  region: "region",
-  importance: "importance",
-  icon: "ic",
-  summary: "n",
-  sources: "l",
-  search: "q",
-  note: "note",
-  core: "core",
-};
-
-export const EVENT_INTERNAL_TO_EXTERNAL =
-  Object.fromEntries(
-    Object.entries(EVENT_FIELD_MAP).map(
-      ([external, internal]) => [internal, external]
-    )
-  );
-
+// TSVとRuntime Eventは同じイベントフィールド名を使う。
+// idを除く順序は公開TSV schemaを正本とする。
 export const EVENT_FIELD_ORDER =
-  Object.keys(EVENT_FIELD_MAP);
+  PUBLIC_EVENT_TSV_HEADER.slice(1);
 
 export function splitEventList(value) {
   if (!value) return [];
@@ -67,6 +45,12 @@ export function splitEventList(value) {
     .split("|")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+export function eventYear(event) {
+  return Number(
+    String(event?.date ?? "").slice(0, 4)
+  );
 }
 
 export function isValidEventDate(value) {

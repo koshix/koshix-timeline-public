@@ -1,3 +1,4 @@
+import { eventYear } from "../src/event-schema.js";
 import fs from "node:fs";
 
 import {
@@ -103,9 +104,9 @@ for (let i = 1; i < lines.length; i++) {
 
 events.sort(
   (a, b) =>
-    a.y - b.y ||
+    eventYear(a) - eventYear(b) ||
     a.date.localeCompare(b.date) ||
-    a.t.localeCompare(b.t, "ja")
+    a.title.localeCompare(b.title, "ja")
 );
 
 console.log(

@@ -20,15 +20,34 @@ const personalEventsFile = new URL(
   import.meta.url
 );
 
-function personalEventsDevSource() {
+const lifeSettingsFile = new URL(
+  "./private-data/koshix-timeline-life-settings.tsv",
+  import.meta.url
+);
+
+const personalDataFiles = new Map([
+  [
+    "/personal/personal-events.tsv",
+    personalEventsFile,
+  ],
+  [
+    "/personal/koshix-timeline-life-settings.tsv",
+    lifeSettingsFile,
+  ],
+]);
+
+function personalDataDevSource() {
   return {
-    name: "personal-events-dev-source",
+    name: "personal-data-dev-source",
     apply: "serve",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const pathname = req.url?.split("?")[0];
 
-        if (pathname !== "/personal/personal-events.tsv") {
+        const dataFile =
+          personalDataFiles.get(pathname);
+
+        if (!dataFile) {
           next();
           return;
         }
@@ -41,7 +60,7 @@ function personalEventsDevSource() {
         }
 
         try {
-          const body = readFileSync(personalEventsFile);
+          const body = readFileSync(dataFile);
 
           res.statusCode = 200;
           res.setHeader(
@@ -70,7 +89,7 @@ function personalEventsDevSource() {
 }
 
 export default defineConfig({
-  plugins: [react(), personalEventsDevSource()],
+  plugins: [react(), personalDataDevSource()],
   base: "./",
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),

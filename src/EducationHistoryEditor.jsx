@@ -3,7 +3,9 @@ import {
   EARLY_CHILDHOOD_TYPES,
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
+  educationForKind,
   normalizeEducationHistory,
+  replaceEducationForKind,
 } from "./education-history";
 
 const font =
@@ -276,43 +278,76 @@ function HistoryBlock({
 }
 
 export default function EducationHistoryEditor({
-  earlyChildhoodHistory,
-  higherEducationHistory,
-  graduateEducationHistory,
-  onEarlyChildhoodHistoryChange,
-  onHigherEducationHistoryChange,
-  onGraduateEducationHistoryChange,
+  education,
+  onEducationChange,
 }) {
   const [earlyRows, setEarlyRows] = useState(() =>
-    initialRows(earlyChildhoodHistory, blankEarly)
+    initialRows(
+      educationForKind(education, "early"),
+      blankEarly
+    )
   );
   const [higherRows, setHigherRows] = useState(() =>
-    initialRows(higherEducationHistory, blankHigher)
+    initialRows(
+      educationForKind(education, "higher"),
+      blankHigher
+    )
   );
   const [graduateRows, setGraduateRows] = useState(() =>
-    initialRows(graduateEducationHistory, blankGraduate)
+    initialRows(
+      educationForKind(education, "graduate"),
+      blankGraduate
+    )
   );
 
   const changeEarlyRows = (next, reset = false) => {
     setEarlyRows(next);
-    onEarlyChildhoodHistoryChange(
-      reset
-        ? []
-        : compactRows(next, EARLY_CHILDHOOD_TYPES, "kindergarten")
+    onEducationChange(
+      replaceEducationForKind(
+        education,
+        "early",
+        reset
+          ? []
+          : compactRows(
+              next,
+              EARLY_CHILDHOOD_TYPES,
+              "kindergarten"
+            )
+      )
     );
   };
 
   const changeHigherRows = (next, reset = false) => {
     setHigherRows(next);
-    onHigherEducationHistoryChange(
-      reset ? [] : compactRows(next, HIGHER_ED_TYPES, "university")
+    onEducationChange(
+      replaceEducationForKind(
+        education,
+        "higher",
+        reset
+          ? []
+          : compactRows(
+              next,
+              HIGHER_ED_TYPES,
+              "university"
+            )
+      )
     );
   };
 
   const changeGraduateRows = (next, reset = false) => {
     setGraduateRows(next);
-    onGraduateEducationHistoryChange(
-      reset ? [] : compactRows(next, GRADUATE_TYPES, "masters")
+    onEducationChange(
+      replaceEducationForKind(
+        education,
+        "graduate",
+        reset
+          ? []
+          : compactRows(
+              next,
+              GRADUATE_TYPES,
+              "masters"
+            )
+      )
     );
   };
 

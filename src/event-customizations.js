@@ -1,3 +1,11 @@
+import { eventYear } from "./event-schema.js";
+
+export const EMPTY_EVENT_CUSTOMIZATIONS = {
+  overrides: {},
+  hidden: [],
+  additions: [],
+};
+
 function cloneValue(value) {
   return Array.isArray(value) ? [...value] : value;
 }
@@ -15,10 +23,6 @@ function applyChanges(event, changes) {
     } else {
       next[key] = cloneValue(value);
     }
-  }
-
-  if (Object.prototype.hasOwnProperty.call(changes, "date")) {
-    next.y = Number(String(next.date).slice(0, 4));
   }
 
   return next;
@@ -111,23 +115,20 @@ export function applyEventCustomizations(
       ...(Array.isArray(addition.subs)
         ? { subs: [...addition.subs] }
         : {}),
-      ...(Array.isArray(addition.l)
-        ? { l: [...addition.l] }
+      ...(Array.isArray(addition.sources)
+        ? { sources: [...addition.sources] }
         : {}),
     };
 
-    if (event.date) {
-      event.y = Number(String(event.date).slice(0, 4));
-    }
 
     events.push(event);
   }
 
   events.sort(
     (a, b) =>
-      a.y - b.y ||
+      eventYear(a) - eventYear(b) ||
       String(a.date ?? "").localeCompare(String(b.date ?? "")) ||
-      String(a.t ?? "").localeCompare(String(b.t ?? ""), "ja")
+      String(a.title ?? "").localeCompare(String(b.title ?? ""), "ja")
   );
 
   return {

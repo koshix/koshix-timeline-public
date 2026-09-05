@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   clipShareText,
   weighShareText,
@@ -14,9 +13,6 @@ export default function ShareBar({
   note,
   labelOnly = false,
 }) {
-  const [copiedAll, setCopiedAll] =
-    useState(false);
-
   const encodedText =
     encodeURIComponent(text);
   const encodedUrl =
@@ -65,26 +61,6 @@ export default function ShareBar({
         Math.max(40, room)
       )}\n${hashtag}`
     : "";
-
-  const fullText = note
-    ? `${head}\n\n${note}\n${hashtag}`
-    : "";
-
-  const copyTo = async (
-    value,
-    setter
-  ) => {
-    try {
-      await navigator.clipboard.writeText(
-        value
-      );
-      setter(true);
-      setTimeout(
-        () => setter(false),
-        1600
-      );
-    } catch {}
-  };
 
   const base = {
     fontSize:
@@ -135,6 +111,7 @@ export default function ShareBar({
               fontSize: 10.5,
               color: "#9aa0a8",
               flexShrink: 0,
+              minWidth: 72,
             }}
           >
             タイトルのみ
@@ -174,9 +151,10 @@ export default function ShareBar({
               fontSize: 10.5,
               color: "#9aa0a8",
               flexShrink: 0,
+              minWidth: 72,
             }}
           >
-            解説つき
+            解説をつけて
           </span>
 
           <a
@@ -201,19 +179,6 @@ export default function ShareBar({
             Blueskyに投稿
           </a>
 
-          <button
-            onClick={() =>
-              copyTo(
-                `${fullText}\n${url}`,
-                setCopiedAll
-              )
-            }
-            style={base}
-          >
-            {copiedAll
-              ? "コピーしました"
-              : "解説を全文コピー"}
-          </button>
         </div>
       )}
     </div>

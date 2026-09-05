@@ -2,17 +2,15 @@ import assert from "node:assert/strict";
 
 import {
   adultPeriodOf,
-  parseAdultPeriodsTsv,
-  serializeAdultPeriodsTsv,
   validateAdultPeriods,
 } from "../src/adult-periods.js";
 
 {
   const { periods, errors } = validateAdultPeriods(
     [
-      { from: "1991", to: "2005", label: "奈良勤務" },
-      { from: "1982", to: "1990", label: "最初の勤務期" },
-      { from: "2006", to: "2018", label: "大学勤務" },
+      { start: "1991", end: "2005", label: "奈良勤務" },
+      { start: "1982", end: "1990", label: "最初の勤務期" },
+      { start: "2006", end: "2018", label: "大学勤務" },
     ],
     {
       adultYear: 1982,
@@ -33,8 +31,8 @@ import {
 
 {
   const { errors } = validateAdultPeriods([
-    { from: "1982", to: "1995", label: "前半" },
-    { from: "1990", to: "2000", label: "後半" },
+    { start: "1982", end: "1995", label: "前半" },
+    { start: "1990", end: "2000", label: "後半" },
   ]);
 
   assert.equal(errors.length, 1);
@@ -43,28 +41,12 @@ import {
 
 {
   const { periods, errors } = validateAdultPeriods([
-    { from: "2020", to: "", label: "現在の仕事" },
+    { start: "2020", end: "", label: "現在の仕事" },
   ]);
 
   assert.deepEqual(errors, []);
-  assert.equal(periods[0].to, null);
+  assert.equal(periods[0].end, null);
   assert.equal(adultPeriodOf(2090, periods)?.label, "現在の仕事");
 }
 
-{
-  const source =
-    "start\tend\tlabel\n" +
-    "1982\t1990\t最初の勤務期\n" +
-    "1991\t2005\t奈良勤務\n" +
-    "2006\t2018\t大学勤務\n";
-
-  const periods = parseAdultPeriodsTsv(source);
-
-  assert.equal(periods.length, 3);
-  assert.equal(periods[1].label, "奈良勤務");
-
-  const output = serializeAdultPeriodsTsv(periods);
-  assert.equal(output, source);
-}
-
-console.log("OK: 社会人期間の分割・検査・TSV入出力を検査しました");
+console.log("OK: 成人期の分割・検証を検査しました");

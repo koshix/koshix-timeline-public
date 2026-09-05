@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 
 import {
+  buildInitialTimelineClosedStageKeys,
+  buildTimelineControlTargets,
   buildTimelineEventList,
   buildTimelineGroups,
   buildTimelineLifeContext,
@@ -12,46 +14,45 @@ import {
 const events = [
   {
     id: "science-important",
-    y: 2000,
     date: "2000",
-    t: "量子研究",
-    n: "物理学の成果",
-    cat: "science",
+    title: "量子研究",
+    summary: "物理学の成果",
+    cats: ["science"],
+    primary: "science",
     importance: 3,
   },
   {
-    id: "tech-alias",
-    y: 2001,
+    id: "computer-standard",
     date: "2001",
-    t: "ネットワーク技術",
-    n: "インターネット",
-    cat: "tech",
+    title: "ネットワーク技術",
+    summary: "インターネット",
+    cats: ["computer"],
+    primary: "computer",
     importance: 2,
   },
   {
     id: "work-sf",
-    y: 2002,
     date: "2002",
-    t: "宇宙小説",
-    n: "SF作品",
-    cat: "work",
+    title: "宇宙小説",
+    summary: "SF作品",
     cats: ["work", "sf"],
+    primary: "work",
     importance: 2,
   },
   {
     id: "work-non-sf",
-    y: 2003,
     date: "2003",
-    t: "一般小説",
-    cat: "work",
+    title: "一般小説",
+    cats: ["work"],
+    primary: "work",
     importance: 2,
   },
   {
     id: "low",
-    y: 2004,
     date: "2004",
-    t: "低重要度",
-    cat: "society",
+    title: "低重要度",
+    cats: ["society"],
+    primary: "society",
     importance: 1,
   },
 ];
@@ -70,14 +71,14 @@ assert.deepEqual(
   standard.map((event) => event.id),
   [
     "science-important",
-    "tech-alias",
+    "computer-standard",
     "work-sf",
     "work-non-sf",
   ]
 );
 
 assert.equal(
-  standard.find((event) => event.id === "tech-alias").cat,
+  standard.find((event) => event.id === "computer-standard").primary,
   "computer"
 );
 
@@ -134,7 +135,7 @@ const searched = selectPublicTimelineEvents({
 
 assert.deepEqual(
   searched.map((event) => event.id),
-  ["tech-alias"]
+  ["computer-standard"]
 );
 
 const invalidSearch = createTimelineSearch("(");
@@ -154,9 +155,8 @@ assert.equal(
 const personalEvents = [
   {
     id: "personal",
-    y: 2001,
     date: "2001",
-    t: "私の出来事",
+    title: "私の出来事",
   },
 ];
 
@@ -176,7 +176,7 @@ assert.deepEqual(
   [
     "science-important",
     "personal",
-    "tech-alias",
+    "computer-standard",
     "work-sf",
     "work-non-sf",
   ]
@@ -187,10 +187,13 @@ const personal = timelineList.find(
 );
 
 assert.equal(personal.age, 11);
-assert.equal(personal.cat, "me");
+assert.equal(
+  Object.prototype.hasOwnProperty.call(personal, "cat"),
+  false
+);
 assert.deepEqual(personal.cats, ["me"]);
 assert.equal(personal.primary, "me");
-assert.equal(personal.ic, "flag");
+assert.equal(personal.icon, "flag");
 
 const personalSearch = buildTimelineEventList({
   publicEvents: events,
@@ -229,10 +232,7 @@ assert.equal(
 const lifeContext = buildTimelineLifeContext({
   birth: 1990,
   month: 4,
-  earlyChildhoodHistory: [],
-  higherEducationHistory: [],
-  graduateEducationHistory: [],
-  adultPeriodsEnabled: true,
+  education: [],
   adultPeriods: [
     {
       start: "2010",
@@ -246,19 +246,16 @@ assert.equal(lifeContext.life.adultYear, 2009);
 assert.equal(lifeContext.life.gradeLabel(1997), "小1");
 assert.deepEqual(lifeContext.adultPeriodErrors, []);
 assert.equal(lifeContext.adultPeriods.length, 1);
-assert.equal(lifeContext.adultPeriods[0].from, 2010);
-assert.equal(lifeContext.adultPeriods[0].to, 2014);
+assert.equal(lifeContext.adultPeriods[0].start, 2010);
+assert.equal(lifeContext.adultPeriods[0].end, 2014);
 assert.equal(lifeContext.adultPeriods[0].label, "第1期");
 
 const invalidAdultPeriods =
   buildTimelineLifeContext({
     birth: 1990,
     month: 4,
-    earlyChildhoodHistory: [],
-    higherEducationHistory: [],
-    graduateEducationHistory: [],
-    adultPeriodsEnabled: true,
-    adultPeriods: [
+    education: [],
+      adultPeriods: [
       {
         start: "2000",
         end: "2005",
@@ -270,61 +267,59 @@ const invalidAdultPeriods =
 assert.equal(invalidAdultPeriods.adultPeriods.length, 0);
 assert.ok(invalidAdultPeriods.adultPeriodErrors.length > 0);
 
-const disabledAdultPeriods =
+const emptyAdultPeriods =
   buildTimelineLifeContext({
     birth: 1990,
     month: 4,
-    earlyChildhoodHistory: [],
-    higherEducationHistory: [],
-    graduateEducationHistory: [],
-    adultPeriodsEnabled: false,
-    adultPeriods: [
-      {
-        start: "2010",
-        end: "2014",
-        label: "第1期",
-      },
-    ],
+    education: [],
+    adultPeriods: [],
   });
 
-assert.deepEqual(disabledAdultPeriods.adultPeriods, []);
-assert.deepEqual(disabledAdultPeriods.adultPeriodErrors, []);
+assert.deepEqual(emptyAdultPeriods.adultPeriods, []);
+assert.deepEqual(emptyAdultPeriods.adultPeriodErrors, []);
 
 const groupedEvents = [
   {
     id: "too-early",
-    y: 1500,
-    cat: "science",
+    date: "1500",
+    cats: ["science"],
+    primary: "science",
   },
   {
     id: "pre",
-    y: 1950,
-    cat: "science",
+    date: "1950",
+    cats: ["science"],
+    primary: "science",
   },
   {
     id: "elementary",
-    y: 1997,
-    cat: "science",
+    date: "1997",
+    cats: ["science"],
+    primary: "science",
   },
   {
     id: "adult-before-period",
-    y: 2009,
-    cat: "science",
+    date: "2009",
+    cats: ["science"],
+    primary: "science",
   },
   {
     id: "adult-period-start",
-    y: 2010,
-    cat: "science",
+    date: "2010",
+    cats: ["science"],
+    primary: "science",
   },
   {
     id: "adult-period-end",
-    y: 2014,
-    cat: "science",
+    date: "2014",
+    cats: ["science"],
+    primary: "science",
   },
   {
     id: "adult-after-period",
-    y: 2015,
-    cat: "science",
+    date: "2015",
+    cats: ["science"],
+    primary: "science",
   },
 ];
 
@@ -446,8 +441,8 @@ const personalVisibility =
       {
         key: "test",
         items: [
-          { id: "public", cat: "science" },
-          { id: "personal", cat: "me" },
+          { id: "public", primary: "science" },
+          { id: "personal", primary: "me" },
         ],
       },
     ],
@@ -457,6 +452,77 @@ const personalVisibility =
 
 assert.equal(personalVisibility.shown, 1);
 assert.equal(personalVisibility.myShown, 1);
+
+
+const controlTargets =
+  buildTimelineControlTargets({
+    groups: timelineGroups,
+    birth: 1990,
+  });
+
+assert.equal(
+  controlTargets.preBirthStageKeys.includes(
+    "pre-20-first"
+  ),
+  true
+);
+
+assert.equal(
+  controlTargets.preBirthStageKeys.includes("elem"),
+  false
+);
+
+assert.equal(
+  controlTargets.allStageKeys.includes("elem"),
+  true
+);
+
+assert.deepEqual(
+  controlTargets.allEventIds,
+  [
+    "pre",
+    "elementary",
+    "adult-before-period",
+    "adult-period-start",
+    "adult-period-end",
+    "adult-after-period",
+  ]
+);
+
+assert.deepEqual(
+  controlTargets.birthAndLaterEventIds,
+  [
+    "elementary",
+    "adult-before-period",
+    "adult-period-start",
+    "adult-period-end",
+    "adult-after-period",
+  ]
+);
+
+
+assert.deepEqual(
+  buildInitialTimelineClosedStageKeys({
+    birth: 1990,
+  }),
+  [
+    "pre-17-first",
+    "pre-17-second",
+    "pre-18-first",
+    "pre-18-second",
+    "pre-19-first",
+    "pre-19-second",
+    "pre-20-first",
+    "pre-20-second",
+  ]
+);
+
+assert.deepEqual(
+  buildInitialTimelineClosedStageKeys({
+    birth: 1601,
+  }),
+  []
+);
 
 console.log(
   "OK: 年表の検索・イベント統合・人生モデル・成人期検証・人生段階射影・表示集計を検査しました"

@@ -30,21 +30,21 @@ export function validateAdultPeriods(
 
   (rows ?? []).forEach((row, index) => {
     const line = index + 1;
-    const from = parseYear(row.from ?? row.start);
-    const to = parseYear(row.to ?? row.end, { allowBlank: true });
+    const start = parseYear(row.start);
+    const end = parseYear(row.end, { allowBlank: true });
     const label = cleanLabel(row.label);
 
-    if (!Number.isFinite(from)) {
+    if (!Number.isFinite(start)) {
       errors.push(`${line}行目: 開始年を1930〜2100年で指定してください。`);
       return;
     }
 
-    if (to !== null && !Number.isFinite(to)) {
+    if (end !== null && !Number.isFinite(end)) {
       errors.push(`${line}行目: 終了年を1930〜2100年で指定するか、空欄にしてください。`);
       return;
     }
 
-    if (to !== null && to < from) {
+    if (end !== null && end < start) {
       errors.push(`${line}行目: 終了年は開始年以後にしてください。`);
       return;
     }
@@ -54,7 +54,7 @@ export function validateAdultPeriods(
       return;
     }
 
-    if (adultYear != null && from < adultYear) {
+    if (adultYear != null && start < adultYear) {
       errors.push(
         `${line}行目: 開始年は成人期の開始年 ${adultYear}年以後にしてください。`
       );
@@ -62,26 +62,26 @@ export function validateAdultPeriods(
     }
 
     periods.push({
-      from,
-      to,
+      start,
+      end,
       label,
     });
   });
 
-  periods.sort((a, b) => a.from - b.from);
+  periods.sort((a, b) => a.start - b.start);
 
   for (let i = 1; i < periods.length; i += 1) {
     const previous = periods[i - 1];
     const current = periods[i];
 
-    if (previous.to === null) {
+    if (previous.end === null) {
       errors.push(
         `「${previous.label}」は終了年が空欄なので、その後に別の期間を置けません。`
       );
       continue;
     }
 
-    if (current.from <= previous.to) {
+    if (current.start <= previous.end) {
       errors.push(
         `「${previous.label}」と「${current.label}」の期間が重複しています。`
       );
@@ -95,80 +95,8 @@ export function adultPeriodOf(year, periods) {
   return (
     (periods ?? []).find(
       (period) =>
-        year >= period.from &&
-        (period.to === null || year <= period.to)
+        year >= period.start &&
+        (period.end === null || year <= period.end)
     ) ?? null
   );
-}
-
-export function serializeAdultPeriodsTsv(rows) {
-  const { periods, errors } = validateAdultPeriods(rows);
-
-  if (errors.length > 0) {
-    throw new Error(errors.join("\n"));
-  }
-
-  const lines = [
-    "start\tend\tlabel",
-    ...periods.map((period) =>
-      [
-        period.from,
-        period.to ?? "",
-        cleanLabel(period.label),
-      ].join("\t")
-    ),
-  ];
-
-  return lines.join("\n") + "\n";
-}
-
-export function parseAdultPeriodsTsv(text) {
-  const source = String(text ?? "")
-    .replace(/^\uFEFF/, "")
-    .replace(/\r\n?/g, "\n");
-
-  const lines = source
-    .split("\n")
-    .filter((line) => line.trim() !== "");
-
-  if (lines.length === 0) {
-    return [];
-  }
-
-  const header = lines[0].split("\t");
-
-  if (
-    header.length !== 3 ||
-    header[0] !== "start" ||
-    header[1] !== "end" ||
-    header[2] !== "label"
-  ) {
-    throw new Error(
-      "1行目は start<TAB>end<TAB>label にしてください。"
-    );
-  }
-
-  const rows = lines.slice(1).map((line, index) => {
-    const cells = line.split("\t");
-
-    if (cells.length !== 3) {
-      throw new Error(
-        `${index + 2}行目: 3列（start / end / label）で入力してください。`
-      );
-    }
-
-    return {
-      start: cells[0],
-      end: cells[1],
-      label: cells[2],
-    };
-  });
-
-  const { periods, errors } = validateAdultPeriods(rows);
-
-  if (errors.length > 0) {
-    throw new Error(errors.join("\n"));
-  }
-
-  return periods;
 }

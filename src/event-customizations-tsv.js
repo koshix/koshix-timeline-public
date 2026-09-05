@@ -1,7 +1,5 @@
 import {
-  EVENT_FIELD_MAP,
   EVENT_FIELD_ORDER,
-  EVENT_INTERNAL_TO_EXTERNAL,
   isValidEventDate,
 } from "./event-schema.js";
 
@@ -12,11 +10,7 @@ export const EVENT_CUSTOMIZATIONS_TSV_HEADER = [
   "value_json",
 ];
 
-const ALLOWED_DERIVED_FIELDS = new Set([
-  "id",
-  "y",
-  "cat",
-]);
+const EVENT_FIELDS = new Set(EVENT_FIELD_ORDER);
 
 function parseJsonValue(value, lineNo) {
   if (value === "") {
@@ -35,12 +29,7 @@ function parseJsonValue(value, lineNo) {
 }
 
 function requireKnownField(field, lineNo) {
-  if (
-    !Object.prototype.hasOwnProperty.call(
-      EVENT_FIELD_MAP,
-      field
-    )
-  ) {
+  if (!EVENT_FIELDS.has(field)) {
     throw new Error(
       `${lineNo}行目: field "${field}" は未対応です`
     );
@@ -66,8 +55,8 @@ function validateAddition(event, id) {
   }
 
   if (
-    typeof event.t !== "string" ||
-    !event.t.trim()
+    typeof event.title !== "string" ||
+    !event.title.trim()
   ) {
     throw new Error(
       `追加項目 "${id}": title がありません`
@@ -103,8 +92,8 @@ function validateAddition(event, id) {
   }
 
   if (
-    typeof event.ic !== "string" ||
-    !event.ic.trim()
+    typeof event.icon !== "string" ||
+    !event.icon.trim()
   ) {
     throw new Error(
       `追加項目 "${id}": icon がありません`
@@ -112,8 +101,8 @@ function validateAddition(event, id) {
   }
 
   if (
-    typeof event.n !== "string" ||
-    !event.n.trim()
+    typeof event.summary !== "string" ||
+    !event.summary.trim()
   ) {
     throw new Error(
       `追加項目 "${id}": summary がありません`
@@ -201,8 +190,6 @@ export function parseEventCustomizationsTsv(text) {
 
     if (action === "override") {
       requireKnownField(field, lineNo);
-
-      const internalField = EVENT_FIELD_MAP[field];
       const value = parseJsonValue(
         valueJson,
         lineNo
@@ -215,7 +202,7 @@ export function parseEventCustomizationsTsv(text) {
       if (
         Object.prototype.hasOwnProperty.call(
           overrides[id],
-          internalField
+          field
         )
       ) {
         throw new Error(
@@ -223,14 +210,12 @@ export function parseEventCustomizationsTsv(text) {
         );
       }
 
-      overrides[id][internalField] = value;
+      overrides[id][field] = value;
       continue;
     }
 
     if (action === "add") {
       requireKnownField(field, lineNo);
-
-      const internalField = EVENT_FIELD_MAP[field];
       const value = parseJsonValue(
         valueJson,
         lineNo
@@ -245,7 +230,7 @@ export function parseEventCustomizationsTsv(text) {
       if (
         Object.prototype.hasOwnProperty.call(
           event,
-          internalField
+          field
         )
       ) {
         throw new Error(
@@ -253,7 +238,7 @@ export function parseEventCustomizationsTsv(text) {
         );
       }
 
-      event[internalField] = value;
+      event[field] = value;
       continue;
     }
 
@@ -270,16 +255,6 @@ export function parseEventCustomizationsTsv(text) {
       ...fields,
     };
 
-    if (event.date) {
-      event.y = Number(
-        String(event.date).slice(0, 4)
-      );
-    }
-
-    if (event.primary) {
-      event.cat = event.primary;
-    }
-
     validateAddition(event, id);
     additions.push(event);
   }
@@ -287,7 +262,7 @@ export function parseEventCustomizationsTsv(text) {
   additions.sort(
     (a, b) =>
       String(a.date).localeCompare(String(b.date)) ||
-      String(a.t).localeCompare(String(b.t), "ja")
+      String(a.title).localeCompare(String(b.title), "ja")
   );
 
   return {
@@ -300,11 +275,8 @@ export function parseEventCustomizationsTsv(text) {
 function assertSerializableFields(event, context) {
   for (const key of Object.keys(event)) {
     if (
-      !Object.prototype.hasOwnProperty.call(
-        EVENT_INTERNAL_TO_EXTERNAL,
-        key
-      ) &&
-      !ALLOWED_DERIVED_FIELDS.has(key)
+      key !== "id" &&
+      !EVENT_FIELDS.has(key)
     ) {
       throw new Error(
         `${context}: 未対応の内部フィールド "${key}" があります`
@@ -372,13 +344,12 @@ export function serializeEventCustomizationsTsv(
       `override "${id}"`
     );
 
-    for (const externalField of EVENT_FIELD_ORDER) {
-      const internalField = EVENT_FIELD_MAP[externalField];
+    for (const field of EVENT_FIELD_ORDER) {
 
       if (
         !Object.prototype.hasOwnProperty.call(
           changes,
-          internalField
+          field
         )
       ) {
         continue;
@@ -387,10 +358,10 @@ export function serializeEventCustomizationsTsv(
       rows.push([
         "override",
         id,
-        externalField,
+        field,
         jsonCell(
-          changes[internalField],
-          `override "${id}" field "${externalField}"`
+          changes[field],
+          `override "${id}" field "${field}"`
         ),
       ]);
     }
@@ -430,13 +401,12 @@ export function serializeEventCustomizationsTsv(
 
     validateAddition(event, event.id);
 
-    for (const externalField of EVENT_FIELD_ORDER) {
-      const internalField = EVENT_FIELD_MAP[externalField];
+    for (const field of EVENT_FIELD_ORDER) {
 
       if (
         !Object.prototype.hasOwnProperty.call(
           event,
-          internalField
+          field
         )
       ) {
         continue;
@@ -445,10 +415,10 @@ export function serializeEventCustomizationsTsv(
       rows.push([
         "add",
         event.id,
-        externalField,
+        field,
         jsonCell(
-          event[internalField],
-          `追加項目 "${event.id}" field "${externalField}"`
+          event[field],
+          `追加項目 "${event.id}" field "${field}"`
         ),
       ]);
     }

@@ -1,8 +1,6 @@
-import { eventId } from "./event-links";
 
 export default function TimelineDisplayControls({
-  groups,
-  birth,
+  controlTargets,
   setAllCats,
   importanceMin,
   setImportanceLevel,
@@ -109,13 +107,7 @@ export default function TimelineDisplayControls({
             type="button"
             onClick={() =>
               collapseStages(
-                groups
-                  .filter(
-                    (g) =>
-                      g.rangeTo != null &&
-                      g.rangeTo < birth
-                  )
-                  .map((g) => g.key)
+                controlTargets.preBirthStageKeys
               )
             }
             title="出生前を閉じ、出生年以降を開きます"
@@ -133,7 +125,7 @@ export default function TimelineDisplayControls({
           <button
             type="button"
             onClick={() =>
-              collapseStages(groups.map((g) => g.key))
+              collapseStages(controlTargets.allStageKeys)
             }
             className="timeline-control-button timeline-control-button--closed"
           >
@@ -154,7 +146,7 @@ export default function TimelineDisplayControls({
             type="button"
             onClick={() =>
               openOnlyEvents(
-                groups.flatMap((g) => g.items.map(eventId))
+                controlTargets.allEventIds
               )
             }
             className="timeline-control-button"
@@ -172,10 +164,7 @@ export default function TimelineDisplayControls({
             type="button"
             onClick={() =>
               openOnlyEvents(
-                groups
-                  .flatMap((g) => g.items)
-                  .filter((ev) => ev.y >= birth)
-                  .map(eventId)
+                controlTargets.birthAndLaterEventIds
               )
             }
             title="出生前の解説を閉じ、出生年以降の解説を開きます"

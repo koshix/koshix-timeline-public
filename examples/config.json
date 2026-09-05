@@ -9,5 +9,10 @@
     "higherEducationHistory": [],
     "graduateEducationHistory": []
   },
-  "downloadUrl": ""
+  "downloadUrl": "",
+  "publicSourceUrl": "",
+  "accessStats": {
+    "endpoint": "",
+    "pageUrl": ""
+  }
 }

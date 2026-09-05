@@ -10,38 +10,18 @@ export const CAT = {
 
   // SFは大分類ではなく、作品を強調するタグとして保持する。
   sf:        { label: "SF", bg: "#8B1E2D", fg: "#FFFFFF", soft: "#F7DDE1", border: "#761825" },
-
-  // 松尾版データとの暫定互換。新カテゴリーと同じ配色に投影する。
-  tech:      { label: "実テクノロジー", bg: "#34844F", fg: "#FFFFFF", soft: "#E5F4E9", border: "#286D40" },
-  music:     { label: "音楽・カルチャー", bg: "#3779BC", fg: "#FFFFFF", soft: "#E5F0FA", border: "#2A6198" },
 };
-
-// v0.1では松尾版の旧カテゴリーを新カテゴリーへ暫定投影する
-export const CAT_ALIAS = {
-  tech: "computer",
-  music: "culture",
-};
-
-export const normalizeCatKey = (key) => CAT_ALIAS[key] || key;
 
 // 1つの出来事は複数カテゴリーに所属できる。
-// 旧形式の cat にも当面対応する。
-export const catsOf = (event) => {
-  const raw =
-    Array.isArray(event.cats) && event.cats.length
-      ? event.cats
-      : (event.cat ? [event.cat] : []);
-
-  return [...new Set(raw.map(normalizeCatKey))];
-};
+export const catsOf = (event) =>
+  Array.isArray(event.cats)
+    ? [...new Set(event.cats)]
+    : [];
 
 // アイコン色などに使う主分類
 export const primaryCatOf = (event) =>
-  normalizeCatKey(
-    event.primary ||
-    event.cat ||
-    catsOf(event)[0] ||
-    "society"
-  );
+  event.primary ||
+  catsOf(event)[0] ||
+  "society";
 
 export const catKey = (event) => primaryCatOf(event);

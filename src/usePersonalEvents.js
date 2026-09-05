@@ -5,10 +5,8 @@ import {
 } from "react";
 
 import {
-  clearBrowserPersonalEvents,
-  loadBrowserPersonalEvents,
-  saveBrowserPersonalEvents,
-} from "./personal-events-store.js";
+  workspaceStore,
+} from "./workspace-store.js";
 import { loadPersonalEvents } from "./personal-events-source.js";
 import {
   parsePersonalEventsTsv,
@@ -57,7 +55,7 @@ export default function usePersonalEvents({
   useEffect(() => {
     let cancelled = false;
 
-    loadBrowserPersonalEvents()
+    workspaceStore.personalEvents.load()
       .then((events) => {
         if (!cancelled) {
           setMyEvents(events);
@@ -94,7 +92,7 @@ export default function usePersonalEvents({
       const text = await file.text();
       const events = parsePersonalEventsTsv(text);
 
-      await saveBrowserPersonalEvents(events);
+      await workspaceStore.personalEvents.save(events);
       setMyEvents(events);
       setPersonalEventsSource("browser");
       setEditingPersonalId(null);
@@ -221,13 +219,13 @@ export default function usePersonalEvents({
     setEditingPersonalId(event.id);
     setPersonalDraft({
       date: event.date ?? "",
-      title: event.t ?? "",
+      title: event.title ?? "",
       importance: event.importance ?? 2,
-      summary: event.n ?? "",
+      summary: event.summary ?? "",
     });
     setPersonalAddOpen(true);
     setPersonalFileStatus(
-      `自分史「${event.t}」を編集中です`
+      `自分史「${event.title}」を編集中です`
     );
 
     setTimeout(() => {
@@ -255,7 +253,7 @@ export default function usePersonalEvents({
     if (!ok) return;
 
     try {
-      await clearBrowserPersonalEvents();
+      await workspaceStore.personalEvents.clear();
 
       setMyEvents([]);
       setPersonalEventsSource("");
@@ -314,25 +312,23 @@ export default function usePersonalEvents({
       ? {
           ...existing,
           date,
-          y: Number(date.slice(0, 4)),
-          t: title,
+          title: title,
           importance: Number(
             personalDraft.importance
           ),
-          n: summary,
+          summary: summary,
         }
       : {
           id: `me-${Date.now().toString(36)}`,
           date,
-          y: Number(date.slice(0, 4)),
-          t: title,
+          title: title,
           cats: ["me"],
           primary: "me",
           importance: Number(
             personalDraft.importance
           ),
-          ic: "flag",
-          n: summary,
+          icon: "flag",
+          summary: summary,
         };
 
     const rawEvents = existing
@@ -349,7 +345,7 @@ export default function usePersonalEvents({
         serializePersonalEventsTsv(rawEvents)
       );
 
-      await saveBrowserPersonalEvents(events);
+      await workspaceStore.personalEvents.save(events);
 
       setMyEvents(events);
       setPersonalEventsSource("browser");
@@ -383,7 +379,7 @@ export default function usePersonalEvents({
     }
 
     const ok = window.confirm(
-      `自分史「${event.t}」を削除しますか？`
+      `自分史「${event.title}」を削除しますか？`
     );
 
     if (!ok) return;
@@ -400,7 +396,7 @@ export default function usePersonalEvents({
         )
       );
 
-      await saveBrowserPersonalEvents(events);
+      await workspaceStore.personalEvents.save(events);
 
       setMyEvents(events);
 
@@ -413,7 +409,7 @@ export default function usePersonalEvents({
       onDeleted?.(event);
 
       setPersonalFileStatus(
-        `自分史「${event.t}」を削除し、このブラウザに保存しました`
+        `自分史「${event.title}」を削除し、このブラウザに保存しました`
       );
     } catch (err) {
       console.error(
@@ -424,6 +420,17 @@ export default function usePersonalEvents({
         `削除失敗: ${err?.message || String(err)}`
       );
     }
+  };
+
+  const applyServerPersonalEvents = (events) => {
+    setMyEvents(events);
+    setPersonalEventsSource("server");
+    setEditingPersonalId(null);
+    setPersonalAddOpen(false);
+    setPersonalEditorOpen(false);
+    setPersonalFileStatus(
+      `管理者データ ${events.length}件を読み込みました`
+    );
   };
 
   const loadServerPersonalEvents = async () => {
@@ -439,14 +446,7 @@ export default function usePersonalEvents({
         return;
       }
 
-      setMyEvents(events);
-      setPersonalEventsSource("server");
-      setEditingPersonalId(null);
-      setPersonalAddOpen(false);
-      setPersonalEditorOpen(false);
-      setPersonalFileStatus(
-        `管理者データ ${events.length}件を読み込みました`
-      );
+      applyServerPersonalEvents(events);
     } catch (err) {
       console.error(
         "Personal events could not be loaded:",
@@ -481,6 +481,7 @@ export default function usePersonalEvents({
     clearPersonalEventsFile,
     savePersonalEvent,
     deletePersonalEvent,
+    applyServerPersonalEvents,
     loadServerPersonalEvents,
   };
 }

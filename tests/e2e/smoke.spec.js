@@ -1,7 +1,13 @@
 import { test, expect } from "@playwright/test";
+import {
+  SETTINGS_STORAGE_FORMAT,
+  SETTINGS_STORAGE_KEY,
+  SETTINGS_STORAGE_VERSION,
+} from "../../src/settings-store.js";
 
-const SETTINGS_KEY = "koshix-timeline:settings";
-const SETTINGS_FORMAT = "koshix-timeline-settings";
+const SETTINGS_KEY = SETTINGS_STORAGE_KEY;
+const SETTINGS_FORMAT = SETTINGS_STORAGE_FORMAT;
+const SETTINGS_VERSION = SETTINGS_STORAGE_VERSION;
 
 async function openApp(page) {
   await page.goto("/");
@@ -56,7 +62,7 @@ test("versioned display settings survive reload", async ({ page }) => {
   await expect(educationButton).toHaveAttribute("aria-pressed", "false");
 
   await page.waitForFunction(
-    ({ key, format }) => {
+    ({ key, format, version }) => {
       const raw = globalThis.localStorage.getItem(key);
       if (!raw) return false;
 
@@ -64,7 +70,7 @@ test("versioned display settings survive reload", async ({ page }) => {
         const record = JSON.parse(raw);
         return (
           record?.format === format &&
-          record?.schemaVersion === 1 &&
+          record?.schemaVersion === version &&
           record?.data?.catOff?.education === true
         );
       } catch {
@@ -74,6 +80,7 @@ test("versioned display settings survive reload", async ({ page }) => {
     {
       key: SETTINGS_KEY,
       format: SETTINGS_FORMAT,
+      version: SETTINGS_VERSION,
     }
   );
 
@@ -84,7 +91,7 @@ test("versioned display settings survive reload", async ({ page }) => {
 
   expect(stored).toMatchObject({
     format: SETTINGS_FORMAT,
-    schemaVersion: 1,
+    schemaVersion: SETTINGS_VERSION,
   });
   expect(stored.data.catOff.education).toBe(true);
 

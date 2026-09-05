@@ -2,6 +2,7 @@ import {
   EARLY_CHILDHOOD_TYPES,
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
+  educationKindOf,
   normalizeEducationHistory,
 } from "./education-history.js";
 
@@ -146,29 +147,51 @@ function addGraduateStages(stages, entry, sequence) {
 export function buildLifeModel({
   birth,
   month,
-  earlyChildhoodHistory,
-  higherEducationHistory,
-  graduateEducationHistory,
-  adultYear = "",
+  education,
 }) {
   const cohortBirth = month >= 1 && month <= 3 ? birth - 1 : birth;
-  const earlyHistoryWasExplicit = Array.isArray(earlyChildhoodHistory);
-  const explicitAdult = validYear(adultYear);
   const warnings = [];
-  const histories = {
-    earlyChildhoodHistory: Array.isArray(earlyChildhoodHistory)
-      ? earlyChildhoodHistory
-      : [],
-    higherEducationHistory: Array.isArray(higherEducationHistory)
-      ? higherEducationHistory
-      : [],
-    graduateEducationHistory: Array.isArray(graduateEducationHistory)
-      ? graduateEducationHistory
-      : [],
-  };
+  const educationHistory =
+    Array.isArray(education)
+      ? education
+      : [];
+
+  const earlyHistory =
+    educationHistory.filter(
+      (row) =>
+        educationKindOf(row?.type) === "early"
+    );
+  const higherHistory =
+    educationHistory.filter(
+      (row) =>
+        educationKindOf(row?.type) === "higher"
+    );
+  const graduateHistory =
+    educationHistory.filter(
+      (row) =>
+        educationKindOf(row?.type) === "graduate"
+    );
+
+  const hasUnknownEducationType =
+    educationHistory.some((row) => {
+      const hasValues =
+        String(row?.start ?? "") !== "" ||
+        String(row?.years ?? "") !== "";
+
+      return (
+        hasValues &&
+        educationKindOf(row?.type) == null
+      );
+    });
+
+  if (hasUnknownEducationType) {
+    warnings.push(
+      "教育歴に未対応の種類があります。"
+    );
+  }
 
   const earlyRows = normalizeRowsForModel({
-    rows: histories.earlyChildhoodHistory,
+    rows: earlyHistory,
     types: EARLY_CHILDHOOD_TYPES,
     fallbackType: "kindergarten",
     label: "幼保の",
@@ -211,7 +234,7 @@ export function buildLifeModel({
   }
 
   const higherRows = normalizeRowsForModel({
-    rows: histories.higherEducationHistory,
+    rows: higherHistory,
     types: HIGHER_ED_TYPES,
     fallbackType: "university",
     label: "大学等の",
@@ -219,7 +242,7 @@ export function buildLifeModel({
     warnings,
   });
   const graduateRows = normalizeRowsForModel({
-    rows: histories.graduateEducationHistory,
+    rows: graduateHistory,
     types: GRADUATE_TYPES,
     fallbackType: "masters",
     label: "大学院の",
@@ -242,32 +265,19 @@ export function buildLifeModel({
     }
   }
 
-  if (adultYear !== "" && explicitAdult == null) {
-    warnings.push(`成人期の開始年を${YEAR_MIN}〜${YEAR_MAX}年で指定してください。`);
-  }
-
   let stages;
 
   if (usableEarlyRows.length === 0) {
-    if (earlyHistoryWasExplicit) {
-      // 明示的な空配列は「幼保を未設定に戻す」というユーザー操作。
-      stages = [
-        stage(
-          "infant",
-          "幼児期",
-          birth,
-          elementaryStart - 1,
-          "#b0771e",
-          "#fdf3e0"
-        ),
-      ];
-    } else {
-      // 配列形式以前の呼び出しとの互換用。
-      stages = [
-        stage("infant", "幼児期", birth, cohortBirth + 4, "#b0771e", "#fdf3e0"),
-        stage("kindergarten", "幼稚園", cohortBirth + 5, cohortBirth + 6, "#b87835", "#fbefdf"),
-      ];
-    }
+    stages = [
+      stage(
+        "infant",
+        "幼児期",
+        birth,
+        elementaryStart - 1,
+        "#b0771e",
+        "#fdf3e0"
+      ),
+    ];
   } else {
     // 実際の幼保歴が設定された場合は、それを標準表示より優先する。
     stages = [
@@ -355,28 +365,19 @@ export function buildLifeModel({
     }
   });
 
-  const automaticAdultYear = educationRows.length > 0
+  const adultYear = educationRows.length > 0
     ? Math.max(...educationRows.map((entry) => entry.end)) + 1
     : cohortBirth + 19;
-  const resolvedAdultYear = explicitAdult ?? automaticAdultYear;
-  if (
-    explicitAdult != null &&
-    educationRows.some((entry) => entry.start >= explicitAdult)
-  ) {
-    warnings.push(
-      "成人期の開始年以後に教育期間があります。成人期の開始年を優先し、それ以後の教育期間は表示しません。"
-    );
-  }
 
-  stages = truncateBefore(stages, resolvedAdultYear);
+  stages = truncateBefore(stages, adultYear);
   const educationEnd = stages.at(-1)?.to ?? birth - 1;
-  addGap(stages, educationEnd + 1, resolvedAdultYear - 1, "次の段階に進む前");
+  addGap(stages, educationEnd + 1, adultYear - 1, "次の段階に進む前");
   addStage(
     stages,
     stage(
       "adult",
       "成人期",
-      resolvedAdultYear,
+      adultYear,
       Infinity,
       "#37414f",
       "#eef1f5"
@@ -415,10 +416,8 @@ export function buildLifeModel({
     stageOf,
     gradeLabel,
     cohortBirth,
-    adultYear: resolvedAdultYear,
-    earlyChildhoodHistory: histories.earlyChildhoodHistory,
-    higherEducationHistory: histories.higherEducationHistory,
-    graduateEducationHistory: histories.graduateEducationHistory,
+    adultYear,
+    education: educationHistory,
     warnings: [...new Set(warnings)],
   };
 }

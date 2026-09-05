@@ -1,3 +1,5 @@
+import { eventYear } from "./event-schema.js";
+import { eventId } from "./event-links.js";
 import { catsOf, primaryCatOf } from "./categories.js";
 import { buildLifeModel } from "./life-stages.js";
 import {
@@ -30,9 +32,9 @@ export function createTimelineSearch(searchText) {
         [
           event.date,
           event.end_date,
-          event.t,
-          event.n,
-          event.q,
+          event.title,
+          event.summary,
+          event.search,
           event.note,
           event.region,
         ]
@@ -75,9 +77,7 @@ export function selectPublicTimelineEvents({
     .map((event) => ({
       ...event,
       cats: catsOf(event),
-      // 既存表示コードとの互換のため
-      // cat には正規化した主分類を入れる。
-      cat: primaryCatOf(event),
+      primary: primaryCatOf(event),
     }));
 }
 
@@ -115,10 +115,9 @@ export function buildTimelineEventList({
         .filter(search.matches)
         .map((event) => ({
           ...event,
-          cat: "me",
           cats: event.cats ?? ["me"],
           primary: "me",
-          ic: event.ic ?? "flag",
+          icon: event.icon ?? "flag",
         }))
     : [];
 
@@ -128,43 +127,36 @@ export function buildTimelineEventList({
   ]
     .map((event) => ({
       ...event,
-      age: event.y - birth,
+      age: eventYear(event) - birth,
     }))
     .sort(
       (a, b) =>
-        a.y - b.y ||
-        TIMELINE_CATEGORY_RANK[a.cat] -
-          TIMELINE_CATEGORY_RANK[b.cat]
+        eventYear(a) - eventYear(b) ||
+        TIMELINE_CATEGORY_RANK[a.primary] -
+          TIMELINE_CATEGORY_RANK[b.primary]
     );
 }
 
 export function buildTimelineLifeContext({
   birth,
   month,
-  earlyChildhoodHistory,
-  higherEducationHistory,
-  graduateEducationHistory,
-  adultPeriodsEnabled,
+  education,
   adultPeriods,
 }) {
   const life = buildLifeModel({
     birth,
     month,
-    earlyChildhoodHistory,
-    higherEducationHistory,
-    graduateEducationHistory,
-    adultYear: "",
+    education,
   });
 
   const validation = validateAdultPeriods(
-    adultPeriodsEnabled ? adultPeriods : [],
+    adultPeriods,
     {
       adultYear: life.adultYear,
     }
   );
 
   const usableAdultPeriods =
-    adultPeriodsEnabled &&
     validation.errors.length === 0
       ? validation.periods
       : [];
@@ -203,17 +195,17 @@ export function buildTimelineGroups({
   );
 
   for (const event of events) {
-    const baseStage = life.stageOf(event.y);
+    const baseStage = life.stageOf(eventYear(event));
 
     if (baseStage.key === "pre") {
-      if (event.y < TIMELINE_START_YEAR) {
+      if (eventYear(event) < TIMELINE_START_YEAR) {
         continue;
       }
 
       const period = preBirthPeriods.find(
         (candidate) =>
-          event.y >= candidate.from &&
-          event.y <= candidate.to
+          eventYear(event) >= candidate.from &&
+          eventYear(event) <= candidate.to
       );
 
       if (period) {
@@ -227,7 +219,7 @@ export function buildTimelineGroups({
 
     const customAdultPeriod =
       baseStage.key === "adult"
-        ? adultPeriodOf(event.y, adultPeriods)
+        ? adultPeriodOf(eventYear(event), adultPeriods)
         : null;
 
     const stage = customAdultPeriod
@@ -238,8 +230,8 @@ export function buildTimelineGroups({
       : baseStage;
 
     const key = customAdultPeriod
-      ? `adult-period:${customAdultPeriod.from}:${
-          customAdultPeriod.to ?? "open"
+      ? `adult-period:${customAdultPeriod.start}:${
+          customAdultPeriod.end ?? "open"
         }`
       : baseStage.key;
 
@@ -282,10 +274,50 @@ export function buildTimelineVisibility({
     groups: visibleGroups,
     visibleItems,
     shown: visibleItems.filter(
-      (event) => event.cat !== "me"
+      (event) => event.primary !== "me"
     ).length,
     myShown: visibleItems.filter(
-      (event) => event.cat === "me"
+      (event) => event.primary === "me"
     ).length,
   };
+}
+
+export function buildTimelineControlTargets({
+  groups,
+  birth,
+}) {
+  const allStageKeys = groups.map(
+    (group) => group.key
+  );
+
+  const preBirthStageKeys = groups
+    .filter(
+      (group) =>
+        group.rangeTo != null &&
+        group.rangeTo < birth
+    )
+    .map((group) => group.key);
+
+  const allEvents = groups.flatMap(
+    (group) => group.items
+  );
+
+  return {
+    allStageKeys,
+    preBirthStageKeys,
+    allEventIds: allEvents.map(eventId),
+    birthAndLaterEventIds: allEvents
+      .filter(
+        (event) => eventYear(event) >= birth
+      )
+      .map(eventId),
+  };
+}
+
+export function buildInitialTimelineClosedStageKeys({
+  birth,
+}) {
+  return preBirthPeriodsOf(birth).map(
+    (period) => period.key
+  );
 }

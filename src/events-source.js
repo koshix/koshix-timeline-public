@@ -1,3 +1,4 @@
+import { eventYear } from "./event-schema.js";
 import {
   decodeEventRow,
 } from "./event-codec.js";
@@ -71,9 +72,9 @@ export function parseEventsTsv(text) {
 
   events.sort(
     (a, b) =>
-      a.y - b.y ||
+      eventYear(a) - eventYear(b) ||
       a.date.localeCompare(b.date) ||
-      a.t.localeCompare(b.t, "ja")
+      a.title.localeCompare(b.title, "ja")
   );
 
   return events;

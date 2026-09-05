@@ -1,7 +1,11 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { prepareEvents } from "./events-source";
-import { prepareConfig } from "./config-source";
+import {
+  loadConfig,
+  prepareConfig,
+} from "./config-source";
+import { recordAccess } from "./access-stats";
 import "./styles.css";
 
 async function bootstrap() {
@@ -11,6 +15,10 @@ async function bootstrap() {
     prepareConfig(),
     prepareEvents(),
   ]);
+
+  void recordAccess({
+    endpoint: loadConfig().accessStats?.endpoint,
+  });
 
   const { default: App } = await import("./App.jsx");
 

@@ -3,6 +3,10 @@ import {
   decodeVersionedRecord,
 } from "./versioned-storage.js";
 
+import {
+  createIndexedDbKeyValueStore,
+} from "./indexeddb-key-value-store.js";
+
 const DB_NAME = "koshix-timeline-customizations";
 const DB_VERSION = 1;
 const STORE_NAME = "customizations";
@@ -10,26 +14,7 @@ const CUSTOMIZATIONS_KEY = "event-customizations";
 
 export const EVENT_CUSTOMIZATIONS_STORAGE_FORMAT =
   "koshix-timeline-event-customizations";
-export const EVENT_CUSTOMIZATIONS_STORAGE_VERSION = 1;
-
-export const EMPTY_EVENT_CUSTOMIZATIONS = {
-  overrides: {},
-  hidden: [],
-  additions: [],
-};
-
-function requireIndexedDb() {
-  if (
-    typeof window === "undefined" ||
-    typeof window.indexedDB === "undefined"
-  ) {
-    throw new Error(
-      "このブラウザでは年表カスタマイズのブラウザ保存を利用できません"
-    );
-  }
-
-  return window.indexedDB;
-}
+export const EVENT_CUSTOMIZATIONS_STORAGE_VERSION = 3;
 
 function validateCustomizations(value) {
   if (
@@ -94,85 +79,21 @@ export function decodeEventCustomizationsStorageValue(value) {
   });
 }
 
-function openDatabase() {
-  const indexedDb = requireIndexedDb();
-
-  return new Promise((resolve, reject) => {
-    const request = indexedDb.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-
-    request.onsuccess = () => {
-      resolve(request.result);
-    };
-
-    request.onerror = () => {
-      reject(
-        request.error ||
-          new Error(
-            "年表カスタマイズ保存用データベースを開けませんでした"
-          )
-      );
-    };
+const eventCustomizationsBrowserStore =
+  createIndexedDbKeyValueStore({
+    dbName: DB_NAME,
+    dbVersion: DB_VERSION,
+    storeName: STORE_NAME,
+    unavailableMessage:
+      "このブラウザでは年表カスタマイズのブラウザ保存を利用できません",
+    openErrorMessage:
+      "年表カスタマイズ保存用データベースを開けませんでした",
+    operationErrorMessage:
+      "年表カスタマイズデータの読み書きに失敗しました",
   });
-}
-
-function runTransaction(mode, operation) {
-  return openDatabase().then(
-    (db) =>
-      new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, mode);
-        const store = tx.objectStore(STORE_NAME);
-
-        let request;
-
-        try {
-          request = operation(store);
-        } catch (err) {
-          db.close();
-          reject(err);
-          return;
-        }
-
-        request.onsuccess = () => {
-          resolve(request.result);
-        };
-
-        request.onerror = () => {
-          reject(
-            request.error ||
-              new Error(
-                "年表カスタマイズデータの読み書きに失敗しました"
-              )
-          );
-        };
-
-        tx.oncomplete = () => {
-          db.close();
-        };
-
-        tx.onerror = () => {
-          db.close();
-        };
-
-        tx.onabort = () => {
-          db.close();
-        };
-      })
-  );
-}
 
 export async function loadBrowserEventCustomizations() {
-  const value = await runTransaction(
-    "readonly",
-    (store) => store.get(CUSTOMIZATIONS_KEY)
-  );
+  const value = await eventCustomizationsBrowserStore.get(CUSTOMIZATIONS_KEY);
 
   if (value === undefined) {
     return {
@@ -192,15 +113,9 @@ export async function saveBrowserEventCustomizations(
     customizations
   );
 
-  await runTransaction(
-    "readwrite",
-    (store) => store.put(value, CUSTOMIZATIONS_KEY)
-  );
+  await eventCustomizationsBrowserStore.put(value, CUSTOMIZATIONS_KEY);
 }
 
 export async function clearBrowserEventCustomizations() {
-  await runTransaction(
-    "readwrite",
-    (store) => store.delete(CUSTOMIZATIONS_KEY)
-  );
+  await eventCustomizationsBrowserStore.delete(CUSTOMIZATIONS_KEY);
 }

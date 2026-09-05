@@ -24,9 +24,63 @@ import {
   decodeVersionedRecord,
 } from "../src/versioned-storage.js";
 
+import {
+  workspaceStore,
+} from "../src/workspace-store.js";
+
 assert.equal(
   SETTINGS_STORAGE_KEY,
   "koshix-timeline:settings"
+);
+
+assert.equal(
+  typeof workspaceStore.settings.load,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.settings.save,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.settings.replace,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.personalEvents.load,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.personalEvents.save,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.personalEvents.clear,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.eventCustomizations.load,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.eventCustomizations.save,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.eventCustomizations.clear,
+  "function"
+);
+
+assert.equal(
+  SETTINGS_STORAGE_VERSION,
+  3
 );
 
 const settings = {
@@ -45,6 +99,27 @@ const currentSettings = decodeSettingsStorageValue(encodedSettings);
 assert.equal(currentSettings.migrated, false);
 assert.deepEqual(currentSettings.data, settings);
 
+// 開発中の旧ブラウザ設定version 1 / 2は移行せず、明示的に破棄する。
+assert.throws(
+  () =>
+    decodeSettingsStorageValue({
+      format: SETTINGS_STORAGE_FORMAT,
+      schemaVersion: 1,
+      data: settings,
+    }),
+  /version 1 からの移行処理がありません/
+);
+
+assert.throws(
+  () =>
+    decodeSettingsStorageValue({
+      format: SETTINGS_STORAGE_FORMAT,
+      schemaVersion: 2,
+      data: settings,
+    }),
+  /version 2 からの移行処理がありません/
+);
+
 assert.throws(
   () => decodeSettingsStorageValue(settings),
   /version付き形式が不正/
@@ -54,13 +129,12 @@ const personalEvents = [
   {
     id: "me-1",
     date: "2000-01-01",
-    y: 2000,
-    t: "個人史",
+    title: "個人史",
     cats: ["me"],
     primary: "me",
     importance: 2,
-    ic: "flag",
-    n: "個人史テスト",
+    icon: "flag",
+    summary: "個人史テスト",
   },
 ];
 
@@ -84,6 +158,26 @@ assert.equal(currentPersonal.migrated, false);
 assert.deepEqual(currentPersonal.data, personalEvents);
 
 assert.throws(
+  () =>
+    decodePersonalEventsStorageValue({
+      format: PERSONAL_EVENTS_STORAGE_FORMAT,
+      schemaVersion: 1,
+      data: personalEvents,
+    }),
+  /version 1 からの移行処理がありません/
+);
+
+assert.throws(
+  () =>
+    decodePersonalEventsStorageValue({
+      format: PERSONAL_EVENTS_STORAGE_FORMAT,
+      schemaVersion: 2,
+      data: personalEvents,
+    }),
+  /version 2 からの移行処理がありません/
+);
+
+assert.throws(
   () => decodePersonalEventsStorageValue(personalEvents),
   /version付き形式が不正/
 );
@@ -103,7 +197,7 @@ assert.throws(
 const customizations = {
   overrides: {
     "event-1": {
-      t: "変更後",
+      title: "変更後",
     },
   },
   hidden: ["event-2"],
@@ -128,6 +222,26 @@ const currentCustomizations =
   );
 assert.equal(currentCustomizations.migrated, false);
 assert.deepEqual(currentCustomizations.data, customizations);
+
+assert.throws(
+  () =>
+    decodeEventCustomizationsStorageValue({
+      format: EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
+      schemaVersion: 1,
+      data: customizations,
+    }),
+  /version 1 からの移行処理がありません/
+);
+
+assert.throws(
+  () =>
+    decodeEventCustomizationsStorageValue({
+      format: EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
+      schemaVersion: 2,
+      data: customizations,
+    }),
+  /version 2 からの移行処理がありません/
+);
 
 assert.throws(
   () =>

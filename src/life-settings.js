@@ -1,13 +1,12 @@
 import {
-  EARLY_CHILDHOOD_TYPES,
-  HIGHER_ED_TYPES,
-  GRADUATE_TYPES,
-  normalizeEducationHistory,
+  EDUCATION_TYPES,
+  educationForKind,
+  normalizeEducation,
 } from "./education-history.js";
 import { validateAdultPeriods } from "./adult-periods.js";
 
 export const LIFE_SETTINGS_FORMAT = "koshix-timeline-life-settings";
-export const LIFE_SETTINGS_VERSION = 1;
+export const LIFE_SETTINGS_VERSION = 3;
 
 const HEADER = [
   "section",
@@ -44,61 +43,34 @@ export function createInitialEducationSettings(
       ? birth - 1
       : birth;
 
-  const savedEarly =
-    Array.isArray(saved.earlyChildhoodHistory)
-      ? saved.earlyChildhoodHistory
+  const savedEducation =
+    Array.isArray(saved.education)
+      ? saved.education
       : null;
 
-  const defaultEarly =
-    Array.isArray(defaults.earlyChildhoodHistory)
-      ? defaults.earlyChildhoodHistory
-      : null;
+  let education =
+    savedEducation !== null
+      ? normalizeEducation(savedEducation)
+      : normalizeEducation(defaults.education);
 
-  const earlySource =
-    savedEarly !== null
-      ? savedEarly
-      : defaultEarly?.length
-        ? defaultEarly
-        : [{
-            start: String(cohortBirth + 5),
-            years: "2",
-            type: "kindergarten",
-          }];
+  if (
+    savedEducation === null &&
+    educationForKind(
+      education,
+      "early"
+    ).length === 0
+  ) {
+    education = [
+      {
+        start: String(cohortBirth + 5),
+        years: "2",
+        type: "kindergarten",
+      },
+      ...education,
+    ];
+  }
 
-  const higherSource =
-    Array.isArray(saved.higherEducationHistory)
-      ? saved.higherEducationHistory
-      : Array.isArray(defaults.higherEducationHistory)
-        ? defaults.higherEducationHistory
-        : [];
-
-  const graduateSource =
-    Array.isArray(saved.graduateEducationHistory)
-      ? saved.graduateEducationHistory
-      : Array.isArray(defaults.graduateEducationHistory)
-        ? defaults.graduateEducationHistory
-        : [];
-
-  return {
-    earlyChildhoodHistory:
-      normalizeEducationHistory(
-        earlySource,
-        EARLY_CHILDHOOD_TYPES,
-        "kindergarten"
-      ),
-    higherEducationHistory:
-      normalizeEducationHistory(
-        higherSource,
-        HIGHER_ED_TYPES,
-        "university"
-      ),
-    graduateEducationHistory:
-      normalizeEducationHistory(
-        graduateSource,
-        GRADUATE_TYPES,
-        "masters"
-      ),
-  };
+  return education;
 }
 
 const parseYear = (value, label) => {
@@ -117,27 +89,25 @@ const parseYear = (value, label) => {
   return year;
 };
 
-const normalizeEducationRows = (
-  rows,
-  types,
-  label
-) => {
+const normalizeEducationRows = (rows) => {
   if (rows == null) return [];
 
   if (!Array.isArray(rows)) {
-    throw new Error(`${label}は配列で指定してください。`);
+    throw new Error(
+      "教育歴は配列で指定してください。"
+    );
   }
 
   return rows.map((row, index) => {
     if (!isObject(row)) {
       throw new Error(
-        `${label}の${index + 1}行目が不正です。`
+        `教育歴の${index + 1}行目が不正です。`
       );
     }
 
     const start = parseYear(
       row.start,
-      `${label}の${index + 1}行目の開始年`
+      `教育歴の${index + 1}行目の開始年`
     );
     const years = Number(row.years);
     const type = cleanCell(row.type);
@@ -148,13 +118,18 @@ const normalizeEducationRows = (
       years > 50
     ) {
       throw new Error(
-        `${label}の${index + 1}行目の在年数を1〜50年で指定してください。`
+        `教育歴の${index + 1}行目の在年数を1〜50年で指定してください。`
       );
     }
 
-    if (!Object.hasOwn(types, type)) {
+    if (
+      !Object.hasOwn(
+        EDUCATION_TYPES,
+        type
+      )
+    ) {
       throw new Error(
-        `${label}の${index + 1}行目の種類 "${type}" は不正です。`
+        `教育歴の${index + 1}行目の種類 "${type}" は不正です。`
       );
     }
 
@@ -183,11 +158,11 @@ const normalizeAdultRows = (rows) => {
   }
 
   return periods.map((period) => ({
-    start: String(period.from),
+    start: String(period.start),
     end:
-      period.to == null
+      period.end == null
         ? ""
-        : String(period.to),
+        : String(period.end),
     label: period.label,
   }));
 };
@@ -219,26 +194,10 @@ export function createLifeSettingsSnapshot(
   return {
     birth,
     month,
-    earlyChildhoodHistory:
+    education:
       normalizeEducationRows(
-        saved.earlyChildhoodHistory,
-        EARLY_CHILDHOOD_TYPES,
-        "幼稚園・保育所歴"
+        saved.education
       ),
-    higherEducationHistory:
-      normalizeEducationRows(
-        saved.higherEducationHistory,
-        HIGHER_ED_TYPES,
-        "大学等の履歴"
-      ),
-    graduateEducationHistory:
-      normalizeEducationRows(
-        saved.graduateEducationHistory,
-        GRADUATE_TYPES,
-        "大学院履歴"
-      ),
-    adultPeriodsEnabled:
-      Boolean(saved.adultPeriodsEnabled),
     adultPeriods:
       normalizeAdultRows(
         saved.adultPeriods
@@ -246,19 +205,15 @@ export function createLifeSettingsSnapshot(
   };
 }
 
-const educationLines = (
-  section,
-  rows,
-  types
-) =>
+const educationLines = (rows) =>
   rows.map((row) => [
-    section,
+    "education",
     row.start,
     "",
     row.years,
     row.type,
-    types[row.type]?.stageLabel ??
-      types[row.type]?.label ??
+    EDUCATION_TYPES[row.type]?.stageLabel ??
+      EDUCATION_TYPES[row.type]?.label ??
       "",
     "",
   ]);
@@ -306,31 +261,8 @@ export function serializeLifeSettingsTsv(
       "birth_month",
       String(life.month),
     ],
-    [
-      "profile",
-      "",
-      "",
-      "",
-      "",
-      "adult_periods_enabled",
-      life.adultPeriodsEnabled
-        ? "1"
-        : "0",
-    ],
     ...educationLines(
-      "early",
-      life.earlyChildhoodHistory,
-      EARLY_CHILDHOOD_TYPES
-    ),
-    ...educationLines(
-      "higher",
-      life.higherEducationHistory,
-      HIGHER_ED_TYPES
-    ),
-    ...educationLines(
-      "graduate",
-      life.graduateEducationHistory,
-      GRADUATE_TYPES
+      life.education
     ),
     ...life.adultPeriods.map(
       (period) => [
@@ -386,9 +318,7 @@ export function parseLifeSettingsTsv(
   }
 
   const profile = {};
-  const early = [];
-  const higher = [];
-  const graduate = [];
+  const education = [];
   const adult = [];
 
   lines.slice(1).forEach(
@@ -425,26 +355,8 @@ export function parseLifeSettingsTsv(
         return;
       }
 
-      if (section === "early") {
-        early.push({
-          start,
-          years,
-          type,
-        });
-        return;
-      }
-
-      if (section === "higher") {
-        higher.push({
-          start,
-          years,
-          type,
-        });
-        return;
-      }
-
-      if (section === "graduate") {
-        graduate.push({
+      if (section === "education") {
+        education.push({
           start,
           years,
           type,
@@ -485,27 +397,10 @@ export function parseLifeSettingsTsv(
     );
   }
 
-  if (
-    profile.adult_periods_enabled !==
-      "0" &&
-    profile.adult_periods_enabled !==
-      "1"
-  ) {
-    throw new Error(
-      "adult_periods_enabled は0または1にしてください。"
-    );
-  }
-
   return createLifeSettingsSnapshot({
     birth: profile.birth_year,
     month: profile.birth_month,
-    earlyChildhoodHistory: early,
-    higherEducationHistory: higher,
-    graduateEducationHistory:
-      graduate,
-    adultPeriodsEnabled:
-      profile.adult_periods_enabled ===
-      "1",
+    education,
     adultPeriods: adult,
   });
 }
@@ -527,14 +422,8 @@ export function mergeLifeSettings(
     ...next,
     birth: life.birth,
     month: life.month,
-    earlyChildhoodHistory:
-      life.earlyChildhoodHistory,
-    higherEducationHistory:
-      life.higherEducationHistory,
-    graduateEducationHistory:
-      life.graduateEducationHistory,
-    adultPeriodsEnabled:
-      life.adultPeriodsEnabled,
+    education:
+      life.education,
     adultPeriods:
       life.adultPeriods,
   };

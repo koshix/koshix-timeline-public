@@ -118,7 +118,7 @@ export default function PersonalHistoryEditorList({
                   color: "#333a44",
                 }}
               >
-                {event.t}
+                {event.title}
               </span>
 
               <button

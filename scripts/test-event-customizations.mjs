@@ -1,30 +1,29 @@
 import assert from "node:assert/strict";
 import { applyEventCustomizations } from "../src/event-customizations.js";
+import { eventYear } from "../src/event-schema.js";
 
 const base = [
   {
     id: "a",
     date: "1900",
-    y: 1900,
-    t: "元の項目A",
-    n: "元の要約A",
+    title: "元の項目A",
+    summary: "元の要約A",
     cats: ["science"],
     primary: "science",
     importance: 2,
     core: false,
-    ic: "flask",
+    icon: "flask",
   },
   {
     id: "b",
     date: "1910",
-    y: 1910,
-    t: "元の項目B",
-    n: "元の要約B",
+    title: "元の項目B",
+    summary: "元の要約B",
     cats: ["society"],
     primary: "society",
     importance: 2,
     core: false,
-    ic: "flag",
+    icon: "flag",
   },
 ];
 
@@ -32,11 +31,11 @@ const customizations = {
   overrides: {
     a: {
       date: "1905",
-      n: "ユーザー修正要約",
+      summary: "ユーザー修正要約",
       importance: 3,
     },
     missing: {
-      n: "現在は適用先がない差分",
+      summary: "現在は適用先がない差分",
     },
   },
   hidden: ["b", "also-missing"],
@@ -44,13 +43,13 @@ const customizations = {
     {
       id: "custom-1",
       date: "1920",
-      t: "ユーザー追加項目",
-      n: "追加項目の要約",
+      title: "ユーザー追加項目",
+      summary: "追加項目の要約",
       cats: ["computer"],
       primary: "computer",
       importance: 2,
       core: false,
-      ic: "computer",
+      icon: "computer",
     },
   ],
 };
@@ -62,9 +61,9 @@ assert.equal(result.events.length, 2);
 const changed = result.events.find((event) => event.id === "a");
 assert.ok(changed);
 assert.equal(changed.date, "1905");
-assert.equal(changed.y, 1905);
-assert.equal(changed.t, "元の項目A");
-assert.equal(changed.n, "ユーザー修正要約");
+assert.equal(eventYear(changed), 1905);
+assert.equal(changed.title, "元の項目A");
+assert.equal(changed.summary, "ユーザー修正要約");
 assert.equal(changed.importance, 3);
 
 assert.equal(
@@ -76,7 +75,7 @@ const added = result.events.find(
   (event) => event.id === "custom-1"
 );
 assert.ok(added);
-assert.equal(added.y, 1920);
+assert.equal(eventYear(added), 1920);
 
 assert.deepEqual(
   result.orphaned,
@@ -84,7 +83,7 @@ assert.deepEqual(
 );
 
 assert.equal(base[0].date, "1900");
-assert.equal(base[0].n, "元の要約A");
+assert.equal(base[0].summary, "元の要約A");
 assert.equal(base[1].id, "b");
 
 assert.throws(
