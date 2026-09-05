@@ -1,0 +1,162 @@
+import { readFile } from "node:fs/promises";
+import { test, expect } from "@playwright/test";
+
+const PERSONAL_EVENTS_TSV =
+  "id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote\n";
+
+const LIFE_SETTINGS_TSV = [
+  "section\tstart\tend\tyears\ttype\tlabel\tvalue",
+  "profile\t\t\t\t\tformat\tkoshix-timeline-life-settings",
+  "profile\t\t\t\t\tversion\t3",
+  "profile\t\t\t\t\tbirth_year\t1988",
+  "profile\t\t\t\t\tbirth_month\t4",
+  "education\t1993\t\t2\tkindergarten\t幼稚園\t",
+  "education\t2007\t\t4\tuniversity\t大学\t",
+  "education\t2011\t\t2\tmasters\t大学院（修士）\t",
+  "education\t2013\t\t3\tdoctorate\t大学院（博士）\t",
+  "adult\t2016\t\t\t\tE2E架空成人期\t",
+  "",
+].join("\n");
+
+test("administrator life settings update the editor and exported TSV", async ({
+  page,
+}) => {
+  await page.route(
+    "**/personal/personal-events.tsv",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/tab-separated-values",
+        body: PERSONAL_EVENTS_TSV,
+      })
+  );
+
+  await page.route(
+    "**/personal/koshix-timeline-life-settings.tsv",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/tab-separated-values",
+        body: LIFE_SETTINGS_TSV,
+      })
+  );
+
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", {
+      name: "自分史プロジェクション",
+      exact: true,
+    })
+  ).toBeVisible();
+
+  await page
+    .locator("summary")
+    .filter({ hasText: "管理者向け" })
+    .click();
+
+  await page
+    .getByRole("button", {
+      name: "管理者データ読込",
+      exact: true,
+    })
+    .click();
+
+  const settings = page.locator("#timeline-settings");
+
+  await expect(settings).toContainText(
+    "1988年4月生まれ"
+  );
+
+  const settingsToggle =
+    settings.locator(":scope > button");
+
+  if (
+    (await settingsToggle.getAttribute(
+      "aria-expanded"
+    )) !== "true"
+  ) {
+    await settingsToggle.click();
+  }
+
+  await expect(
+    settingsToggle
+  ).toHaveAttribute(
+    "aria-expanded",
+    "true"
+  );
+
+  await expect(
+    page.getByLabel(
+      "幼稚園・保育所1行目の入学年"
+    )
+  ).toHaveValue("1993");
+
+  await expect(
+    page.getByLabel(
+      "幼稚園・保育所1行目の修学年数"
+    )
+  ).toHaveValue("2");
+
+  await expect(
+    page.getByLabel(
+      "大学等1行目の入学年"
+    )
+  ).toHaveValue("2007");
+
+  await expect(
+    page.getByLabel(
+      "大学等1行目の修学年数"
+    )
+  ).toHaveValue("4");
+
+  await expect(
+    page.getByLabel(
+      "大学院1行目の入学年"
+    )
+  ).toHaveValue("2011");
+
+  await expect(
+    page.getByLabel(
+      "大学院2行目の入学年"
+    )
+  ).toHaveValue("2013");
+
+  await expect(
+    page.getByLabel(
+      "1番目の成人期区分の名称"
+    )
+  ).toHaveValue("E2E架空成人期");
+
+  const downloadPromise =
+    page.waitForEvent("download");
+
+  await settings
+    .getByRole("button", {
+      name: "ファイルに保存",
+      exact: true,
+    })
+    .click();
+
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+
+  expect(downloadPath).not.toBeNull();
+
+  const exported = (
+    await readFile(downloadPath, "utf8")
+  ).replace(/^\uFEFF/, "");
+
+  expect(exported).toContain(
+    "profile\t\t\t\t\tbirth_year\t1988"
+  );
+  expect(exported).toContain(
+    "education\t2007\t\t4\tuniversity"
+  );
+  expect(exported).toContain(
+    "education\t2013\t\t3\tdoctorate"
+  );
+  expect(exported).toContain(
+    "adult\t2016\t\t\t\tE2E架空成人期\t"
+  );
+});

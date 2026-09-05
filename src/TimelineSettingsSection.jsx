@@ -24,6 +24,7 @@ export default function TimelineSettingsSection({
   setBirthYear,
   setBirthMonth,
   education,
+  educationEditorRevision,
   updateEducation,
   resetAdultPeriods,
   updateAdultPeriod,
@@ -152,6 +153,7 @@ export default function TimelineSettingsSection({
             }}
           >
             <EducationHistoryEditor
+              key={educationEditorRevision}
               education={education}
               onEducationChange={
                 updateEducation

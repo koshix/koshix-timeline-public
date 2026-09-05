@@ -50,6 +50,11 @@ export default function useLifeSettings({
     setLifeSettingsSource,
   ] = useState("browser");
 
+  const [
+    educationEditorRevision,
+    setEducationEditorRevision,
+  ] = useState(0);
+
   const lifeSettingsFileInputRef = useRef(null);
 
   const updateEducation = (history) => {
@@ -146,9 +151,12 @@ export default function useLifeSettings({
 
   const exportLifeSettingsFile = () => {
     try {
-      const text = serializeLifeSettingsTsv(
-        workspaceStore.settings.load() || {}
-      );
+      const text = serializeLifeSettingsTsv({
+        birth,
+        month,
+        education,
+        adultPeriods,
+      });
 
       const blob = new Blob(
         ["\uFEFF", text],
@@ -241,6 +249,9 @@ export default function useLifeSettings({
         settings.education
       )
     );
+    setEducationEditorRevision(
+      (current) => current + 1
+    );
     setAdultPeriods(
       normalizeAdultPeriods(
         settings.adultPeriods
@@ -266,6 +277,7 @@ export default function useLifeSettings({
     adultPeriods,
     lifeSettingsStatus,
     lifeSettingsSource,
+    educationEditorRevision,
     lifeSettingsFileInputRef,
     importLifeSettingsFile,
     exportLifeSettingsFile,

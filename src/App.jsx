@@ -197,6 +197,7 @@ export default function App() {
     adultPeriods,
     lifeSettingsStatus,
     lifeSettingsSource,
+    educationEditorRevision,
     lifeSettingsFileInputRef,
     importLifeSettingsFile,
     exportLifeSettingsFile,
@@ -1303,6 +1304,9 @@ export default function App() {
           setBirthYear={setBirthYear}
           setBirthMonth={setBirthMonth}
           education={education}
+          educationEditorRevision={
+            educationEditorRevision
+          }
           updateEducation={updateEducation}
           resetAdultPeriods={
             resetAdultPeriods
