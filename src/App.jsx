@@ -154,7 +154,7 @@ const SHARE_URL = (() => {
   return origin + pathname;
 })();
 
-// ---- テーマの糸(年表に散らばった項目を、一本の流れとして自動再生する) ----
+// ---- テーマの糸(年表に散らばった項目を、一本の流れとしてたどる) ----
 // 永久ID { id } で参照する。
 const resolveThreadItem = ({ id }) =>
   EVENTS.find((event) => event.id === id);
@@ -305,8 +305,6 @@ export default function App() {
     setupOpen,
     openSetup,
     toggleSetup,
-    speed,
-    cyclePlaybackSpeed,
   } = useDisplaySettings({
     saved: SAVED,
     mainCategories: MAIN_CATS,
@@ -317,7 +315,7 @@ export default function App() {
   });
 
   const [showMe, setShowMe] = useState(false);
-  // 再生中のテーマ(nullなら年表を表示)
+  // 閲覧中のテーマ(nullなら年表を表示)
   const [thread, setThread] = useState(null);
   // 年表内検索は一時的な表示条件として扱い、ブラウザ保存はしない。
   const [searchText, setSearchText] = useState("");
@@ -390,7 +388,6 @@ export default function App() {
       importanceMin,
       closed: [...closedStages],
       setupOpen,
-      speed,
     });
   }, [
     birth,
@@ -402,7 +399,6 @@ export default function App() {
     importanceMin,
     closedStages,
     setupOpen,
-    speed,
     lifeSettingsSource,
   ]);
 
@@ -411,7 +407,7 @@ export default function App() {
   };
 
   // ?e=<項目ID> で共有されたリンクは、その項目を開いた状態で表示する
-  // ?t=<テーマのキー> ならそのテーマの再生を開いた状態で始める
+  // ?t=<テーマのキー> ならそのテーマを開いた状態で始める
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const th = findThread(q.get("t"));
@@ -635,11 +631,8 @@ export default function App() {
             thread={thread}
             gradeLabel={grouped.gradeLabel}
             birth={birth}
-            allEvents={EVENTS}
             hashtag={HASHTAG}
             shareUrl={SHARE_URL}
-            speed={speed}
-            onCycleSpeed={cyclePlaybackSpeed}
             onClose={() => setThread(null)}
           />
         )}
@@ -1532,11 +1525,8 @@ export default function App() {
           thread={thread}
           gradeLabel={grouped.gradeLabel}
           birth={birth}
-          allEvents={EVENTS}
           hashtag={HASHTAG}
           shareUrl={SHARE_URL}
-          speed={speed}
-          onCycleSpeed={cyclePlaybackSpeed}
           onClose={() => setThread(null)}
         />
       )}

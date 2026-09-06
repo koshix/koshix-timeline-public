@@ -94,21 +94,6 @@ export default function useDisplaySettings({
     setSetupOpen((previous) => !previous);
   };
 
-  // 再生速度はテーマをまたいでも覚えておく
-  const [speed, setSpeed] = useState(
-    saved.speed ?? 1
-  );
-
-  const cyclePlaybackSpeed = () => {
-    setSpeed((current) =>
-      current === 1
-        ? 1.5
-        : current === 1.5
-          ? 2
-          : 1
-    );
-  };
-
   return {
     catOff,
     sfOnly,
@@ -125,7 +110,5 @@ export default function useDisplaySettings({
     setupOpen,
     openSetup,
     toggleSetup,
-    speed,
-    cyclePlaybackSpeed,
   };
 }

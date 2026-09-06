@@ -1,35 +1,20 @@
 import { eventYear } from "./event-schema.js";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import { CAT, catKey } from "./categories";
 import { eventId } from "./event-links";
-
-const BG_COLOR = {
-  sf: "#EE8F97",
-  science: "#F0A35D",
-  education: "#E5C74F",
-  computer: "#7DBF91",
-  culture: "#80AFE0",
-  society: "#8D97D8",
-  me: "#B18AD0",
-};
-const BG_ROWS = 7;
+import ShareBar from "./ShareBar";
 
 export default function Theater({
   thread,
   gradeLabel,
   birth,
-  speed,
-  onCycleSpeed,
   onClose,
-  allEvents,
   hashtag,
   shareUrl,
 }) {
   const evs = thread.events;
   const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const [done, setDone] = useState(false);
   const listRef = useRef(null);
 
   const font =
@@ -37,27 +22,10 @@ export default function Theater({
   const mono = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
   const go = (i) => {
-    setDone(false);
     setIdx(Math.max(0, Math.min(evs.length - 1, i)));
   };
 
-  // 自動送り。文字数に応じた時間で次へ
-  useEffect(() => {
-    if (!playing || done) return;
-    const next = () => {
-      if (idx + 1 < evs.length) setIdx(idx + 1);
-      else {
-        setDone(true);
-        setPlaying(false);
-      }
-    };
-    const text = `${eventYear(evs[idx])}年。${evs[idx].title}。${evs[idx].summary || ""}`;
-    const ms = Math.min(16000, 1800 + [...text].length * 70) / speed;
-    const timer = setTimeout(next, ms);
-    return () => clearTimeout(timer);
-  }, [idx, playing, done, speed, evs]);
-
-  // 現在の項目を画面の中央へ送る(これが「自動スクロール」の見え方になる)
+  // 現在の項目を画面の中央へ送る
   useEffect(() => {
     listRef.current?.querySelector(`[data-i="${idx}"]`)?.scrollIntoView({
       behavior: "smooth",
@@ -77,10 +45,7 @@ export default function Theater({
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
-      else if (e.key === " ") {
-        e.preventDefault();
-        setPlaying((p) => !p);
-      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") go(idx + 1);
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") go(idx + 1);
       else if (e.key === "ArrowLeft" || e.key === "ArrowUp") go(idx - 1);
     };
     window.addEventListener("keydown", onKey);
@@ -90,20 +55,6 @@ export default function Theater({
   const gradeOf = (ev) =>
     eventYear(ev) < birth ? "生まれる前" : gradeLabel(eventYear(ev));
 
-  // 背景の左右に流す、同じころの別カテゴリーの項目(その糸に入っているものは除く)。
-  // 何が同時に起きていた時代なのかを、読まなくても感じられるようにするための層
-  const bgRows = useMemo(() => {
-    const inThread = new Set(evs.map(eventId));
-    const year = eventYear(evs[idx]);
-    let near = [];
-    for (let win = 3; win <= 40 && near.length < 21; win += 3) {
-      near = allEvents.filter((e) => Math.abs(eventYear(e) - year) <= win && !inThread.has(eventId(e)));
-    }
-    const rows = Array.from({ length: BG_ROWS }, () => []);
-    near.forEach((e, i) => rows[i % BG_ROWS].push(e));
-    return rows.filter((r) => r.length);
-  }, [evs, idx, allEvents]);
-
   const ctlBtn = (on = false) => ({
     fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "6px 12px",
     borderRadius: 999, fontFamily: font, lineHeight: 1.2,
@@ -112,10 +63,32 @@ export default function Theater({
     color: on ? "#6b4610" : "#374151",
   });
 
+  const threadShareUrl = (() => {
+    const url = new URL(
+      shareUrl || window.location.href,
+      window.location.href
+    );
+    url.search = "";
+    url.hash = "";
+
+    if (thread.dynamic && thread.query) {
+      url.searchParams.set("threads", "1");
+      url.searchParams.set("q", thread.query);
+      url.searchParams.set("play", "1");
+    } else {
+      url.searchParams.set("t", thread.key);
+    }
+
+    return url.toString();
+  })();
+
+  const threadShareText =
+    `「${thread.title}」——${thread.lead} ${hashtag}`;
+
   return (
     <div
       role="dialog"
-      aria-label={`テーマ再生:${thread.title}`}
+      aria-label={`テーマ閲覧:${thread.title}`}
       style={{
         position: "fixed", inset: 0, zIndex: 60, display: "flex", flexDirection: "column",
         background: "#f7f7f5", color: "#22272e", fontFamily: font,
@@ -145,48 +118,8 @@ export default function Theater({
         </div>
       </div>
 
-      {/* 本体(現在の項目が中央に来るよう自動でスクロールする) */}
+      {/* 本体(現在の項目が中央に来るようスクロールする) */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <style>{`
-          @keyframes lifelineDriftA { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-          @keyframes lifelineDriftB { from { transform: translateX(-50%) } to { transform: translateX(0) } }
-        `}</style>
-        {/* 同じころに起きていた別カテゴリーの出来事を、左右の背景に薄く流す */}
-        <div style={{ position: "absolute", inset: 0, overflow: "hidden" }} aria-hidden="true">
-          {bgRows.map((row, i) => (
-            <div
-              key={i}
-              style={{
-                position: "absolute", top: `${((i + 0.5) * 100) / bgRows.length}%`,
-                left: 0, width: "max-content", display: "flex", gap: 46,
-                whiteSpace: "nowrap", lineHeight: 1,
-                animation: `lifelineDrift${i % 2 ? "B" : "A"} ${110 + i * 23}s linear infinite`,
-              }}
-            >
-              {[...row, ...row].map((e, j) => (
-                <span
-                  key={j}
-                  style={{
-                    fontSize: 13 + ((i * 5) % 9), color: BG_COLOR[catKey(e)] || "#8a93a3",
-                    opacity: 0.34, fontWeight: 600,
-                  }}
-                >
-                  <span style={{ fontFamily: mono, marginRight: 8, opacity: 0.65 }}>{eventYear(e)}</span>
-                  {e.title.replace(/[((].*$/, "")}
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-        {/* 中央は読ませたいので、背景の層を覆い隠す */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute", inset: 0, pointerEvents: "none",
-            background:
-              "linear-gradient(90deg, rgba(247,247,245,0) 0%, rgba(247,247,245,0.97) 20%, rgba(247,247,245,0.97) 80%, rgba(247,247,245,0) 100%)",
-          }}
-        />
         <div ref={listRef} style={{ position: "absolute", inset: 0, overflowY: "auto", padding: "40vh 16px" }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           {evs.map((ev, i) => {
@@ -243,14 +176,6 @@ export default function Theater({
               </div>
             );
           })}
-          {done && (
-            <div style={{ textAlign: "center", marginTop: 24, fontSize: 12.5, color: "#9aa3b2" }}>
-              この糸はここまで。
-              <button onClick={() => go(0)} style={{ ...ctlBtn(), marginLeft: 10 }}>
-                最初から
-              </button>
-            </div>
-          )}
         </div>
         </div>
       </div>
@@ -263,36 +188,31 @@ export default function Theater({
           justifyContent: "center", background: "#eef0f3",
         }}
       >
-        <button onClick={() => go(idx - 1)} style={ctlBtn()} aria-label="前へ">◀</button>
         <button
-          onClick={() => {
-            if (done) go(0);
-            setPlaying((p) => (done ? true : !p));
-          }}
-          style={{ ...ctlBtn(playing), minWidth: 76 }}
+          onClick={() => go(idx - 1)}
+          disabled={idx === 0}
+          style={{ ...ctlBtn(), opacity: idx === 0 ? 0.45 : 1 }}
+          aria-label="前へ"
         >
-          {playing ? "❙❙ 一時停止" : "▶ 再生"}
+          ◀ 前へ
         </button>
-        <button onClick={() => go(idx + 1)} style={ctlBtn()} aria-label="次へ">▶</button>
         <button
-          onClick={onCycleSpeed}
-          style={ctlBtn(speed !== 1)}
+          onClick={() => go(idx + 1)}
+          disabled={idx === evs.length - 1}
+          style={{ ...ctlBtn(), opacity: idx === evs.length - 1 ? 0.45 : 1 }}
+          aria-label="次へ"
         >
-          {speed}倍速
+          次へ ▶
         </button>
         <span style={{ fontFamily: mono, fontSize: 11.5, color: "#8a93a3" }}>
           {idx + 1} / {evs.length}
         </span>
-        <a
-          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-            `「${thread.title}」——${thread.lead} ${hashtag}`
-          )}&url=${encodeURIComponent(`${shareUrl}?t=${thread.key}`)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ ...ctlBtn(), textDecoration: "none" }}
-        >
-          この糸をXで共有
-        </a>
+        <ShareBar
+          compact
+          text={threadShareText}
+          url={threadShareUrl}
+          hashtag={hashtag}
+        />
       </div>
     </div>
   );

@@ -20,11 +20,18 @@ async function bootstrap() {
     endpoint: loadConfig().accessStats?.endpoint,
   });
 
-  const { default: App } = await import("./App.jsx");
+  const threadWindowMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search)
+      .get("threads") === "1";
+
+  const { default: RootApp } = threadWindowMode
+    ? await import("./ThreadApp.jsx")
+    : await import("./App.jsx");
 
   createRoot(document.getElementById("root")).render(
     <React.StrictMode>
-      <App />
+      <RootApp />
     </React.StrictMode>
   );
 }
