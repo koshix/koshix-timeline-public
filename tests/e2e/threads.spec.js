@@ -17,19 +17,19 @@ test("dynamic thread can be generated and shared", async ({ page }) => {
   ).toBeVisible();
 
   const query = page.getByRole("searchbox", {
-    name: "動的テーマのキーワード",
+    name: "たどるキーワード",
   });
 
   await query.fill("1947 || 1948");
   await page
     .getByRole("button", {
-      name: "糸を作る",
+      name: "たどる",
       exact: true,
     })
     .click();
 
   const generatedThread = page.getByRole("button", {
-    name: /「1947 \|\| 1948」の糸/,
+    name: /1947 \|\| 1948をたどる.*項目/,
   });
 
   await expect(generatedThread).toBeVisible();
@@ -38,7 +38,7 @@ test("dynamic thread can be generated and shared", async ({ page }) => {
   await generatedThread.click();
 
   const dialog = page.getByRole("dialog", {
-    name: /テーマ閲覧:「1947 \|\| 1948」の糸/,
+    name: /テーマ閲覧:1947 \|\| 1948をたどる/,
   });
   await expect(dialog).toBeVisible();
 
@@ -86,13 +86,13 @@ test("a single dynamic match remains visible", async ({ page }) => {
   await page.goto("/?threads=1");
 
   const query = page.getByRole("searchbox", {
-    name: "動的テーマのキーワード",
+    name: "たどるキーワード",
   });
 
   await query.fill("2006 twitter");
   await page
     .getByRole("button", {
-      name: "糸を作る",
+      name: "たどる",
       exact: true,
     })
     .click();

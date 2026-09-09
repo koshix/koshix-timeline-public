@@ -142,9 +142,9 @@ export function buildDynamicThread({
   return {
     thread: {
       key: `dynamic:${text}`,
-      title: `「${text}」の糸`,
+      title: `${text}をたどる`,
       lead:
-        `キーワード「${text}」に関連する共通年表の出来事から自動生成した糸です。`,
+        `キーワード「${text}」に関連する共通年表の出来事を年代順にたどります。`,
       events: selected,
       dynamic: true,
       query: text,

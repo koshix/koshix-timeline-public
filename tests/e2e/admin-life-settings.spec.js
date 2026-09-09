@@ -86,6 +86,11 @@ test("administrator life settings update the editor and exported TSV", async ({
     "true"
   );
 
+  await settings
+    .locator("summary")
+    .filter({ hasText: "詳しく設定する" })
+    .click();
+
   await expect(
     page.getByLabel(
       "幼稚園・保育所1行目の入学年"

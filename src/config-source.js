@@ -13,7 +13,7 @@ const BUILTIN_CONFIG = {
     pageUrl: "",
   },
   defaults: {
-    birthYear: 1965,
+    birthYear: null,
     birthMonth: 0,
     education: [],
   },

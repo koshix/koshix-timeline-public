@@ -25,7 +25,7 @@ export default function EventCustomizationControls({
           color: "#365f7d",
         }}
       >
-        ③共通年表の編集
+        共通年表の編集
       </div>
 
       <div
@@ -56,9 +56,9 @@ export default function EventCustomizationControls({
           }}
         >
           ●現在の年表：
-          修正 {overrideCount}件
-          {" / "}
           非表示 {hiddenCount}件
+          {" / "}
+          修正 {overrideCount}件
           {" / "}
           追加 {additionCount}件
         </span>

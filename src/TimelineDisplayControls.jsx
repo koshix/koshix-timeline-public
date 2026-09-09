@@ -1,15 +1,41 @@
-
 export default function TimelineDisplayControls({
   controlTargets,
   setAllCats,
   importanceMin,
   setImportanceLevel,
+  closedStages,
   expandAllStages,
   collapseStages,
+  isEventOpen,
   openOnlyEvents,
   closeAllEvents,
   font,
 }) {
+  const allStagesOpen =
+    controlTargets.allStageKeys.every(
+      (key) => !closedStages.has(key)
+    );
+
+  const allEventsOpen =
+    controlTargets.allEventIds.length > 0 &&
+    controlTargets.allEventIds.every(isEventOpen);
+
+  const toggleAllStages = () => {
+    if (allStagesOpen) {
+      collapseStages(controlTargets.allStageKeys);
+    } else {
+      expandAllStages();
+    }
+  };
+
+  const toggleAllEvents = () => {
+    if (allEventsOpen) {
+      closeAllEvents();
+    } else {
+      openOnlyEvents(controlTargets.allEventIds);
+    }
+  };
+
   return (
     <div
       aria-label="年表表示操作"
@@ -91,45 +117,20 @@ export default function TimelineDisplayControls({
         <span className="timeline-control-segments">
           <button
             type="button"
-            onClick={() => expandAllStages()}
-            className="timeline-control-button"
-            data-strong="true"
-          >
-            開
-          </button>
-
-          <span
-            aria-hidden="true"
-            className="timeline-control-separator"
-          />
-
-          <button
-            type="button"
-            onClick={() =>
-              collapseStages(
-                controlTargets.preBirthStageKeys
-              )
+            onClick={toggleAllStages}
+            aria-label={
+              allStagesOpen
+                ? "全期間を閉じる"
+                : "全期間を開く"
             }
-            title="出生前を閉じ、出生年以降を開きます"
-            className="timeline-control-button timeline-control-button--half"
-            data-strong="true"
+            className={`timeline-control-button${
+              allStagesOpen
+                ? " timeline-control-button--closed"
+                : ""
+            }`}
+            data-strong={allStagesOpen ? undefined : "true"}
           >
-            半
-          </button>
-
-          <span
-            aria-hidden="true"
-            className="timeline-control-separator"
-          />
-
-          <button
-            type="button"
-            onClick={() =>
-              collapseStages(controlTargets.allStageKeys)
-            }
-            className="timeline-control-button timeline-control-button--closed"
-          >
-            閉
+            {allStagesOpen ? "閉" : "開"}
           </button>
         </span>
       </div>
@@ -144,47 +145,20 @@ export default function TimelineDisplayControls({
         <span className="timeline-control-segments">
           <button
             type="button"
-            onClick={() =>
-              openOnlyEvents(
-                controlTargets.allEventIds
-              )
+            onClick={toggleAllEvents}
+            aria-label={
+              allEventsOpen
+                ? "全解説を閉じる"
+                : "全解説を開く"
             }
-            className="timeline-control-button"
-            data-strong="true"
+            className={`timeline-control-button${
+              allEventsOpen
+                ? " timeline-control-button--closed"
+                : ""
+            }`}
+            data-strong={allEventsOpen ? undefined : "true"}
           >
-            開
-          </button>
-
-          <span
-            aria-hidden="true"
-            className="timeline-control-separator"
-          />
-
-          <button
-            type="button"
-            onClick={() =>
-              openOnlyEvents(
-                controlTargets.birthAndLaterEventIds
-              )
-            }
-            title="出生前の解説を閉じ、出生年以降の解説を開きます"
-            className="timeline-control-button timeline-control-button--half"
-            data-strong="true"
-          >
-            半
-          </button>
-
-          <span
-            aria-hidden="true"
-            className="timeline-control-separator"
-          />
-
-          <button
-            type="button"
-            onClick={closeAllEvents}
-            className="timeline-control-button timeline-control-button--closed"
-          >
-            閉
+            {allEventsOpen ? "閉" : "開"}
           </button>
         </span>
       </div>

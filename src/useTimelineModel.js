@@ -30,6 +30,8 @@ export default function useTimelineModel({
 
     const {
       life,
+      birthConfigured,
+      projectionBirth,
       adultPeriods: usableAdultPeriods,
       adultPeriodErrors,
     } = buildTimelineLifeContext({
@@ -56,7 +58,7 @@ export default function useTimelineModel({
       events,
       life,
       adultPeriods: usableAdultPeriods,
-      birth,
+      birth: projectionBirth,
     });
 
     const visibility = buildTimelineVisibility({
@@ -68,18 +70,27 @@ export default function useTimelineModel({
     const controlTargets =
       buildTimelineControlTargets({
         groups: visibility.groups,
-        birth,
       });
 
     return {
       groups: visibility.groups,
       visibleItems: visibility.visibleItems,
       controlTargets,
-      gradeLabel: life.gradeLabel,
-      adultYear: life.adultYear,
+      gradeLabel:
+        birthConfigured
+          ? life.gradeLabel
+          : () => "",
+      birthConfigured,
+      adultYear:
+        birthConfigured
+          ? life.adultYear
+          : null,
       adultPeriodErrors,
       adultPeriods: usableAdultPeriods,
-      warnings: life.warnings,
+      warnings:
+        birthConfigured
+          ? life.warnings
+          : [],
       shown: visibility.shown,
       myShown: visibility.myShown,
       searchError: search.error,

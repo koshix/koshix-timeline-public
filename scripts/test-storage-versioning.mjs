@@ -20,6 +20,12 @@ import {
   encodeEventCustomizationsStorageValue,
 } from "../src/event-customizations-store.js";
 import {
+  THREAD_QUERIES_STORAGE_FORMAT,
+  THREAD_QUERIES_STORAGE_VERSION,
+  decodeThreadQueriesStorageValue,
+  encodeThreadQueriesStorageValue,
+} from "../src/thread-queries-store.js";
+import {
   createVersionedRecord,
   decodeVersionedRecord,
 } from "../src/versioned-storage.js";
@@ -75,6 +81,21 @@ assert.equal(
 
 assert.equal(
   typeof workspaceStore.eventCustomizations.clear,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.threadQueries.load,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.threadQueries.save,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.threadQueries.clear,
   "function"
 );
 
@@ -269,6 +290,80 @@ assert.throws(
   /形式が不正/
 );
 
+const threadQueries = [
+  "半導体",
+  "量子 || quantum",
+];
+
+const encodedThreadQueries =
+  encodeThreadQueriesStorageValue(
+    threadQueries
+  );
+
+assert.equal(
+  encodedThreadQueries.format,
+  THREAD_QUERIES_STORAGE_FORMAT
+);
+
+assert.equal(
+  encodedThreadQueries.schemaVersion,
+  THREAD_QUERIES_STORAGE_VERSION
+);
+
+assert.deepEqual(
+  encodedThreadQueries.data,
+  threadQueries
+);
+
+const currentThreadQueries =
+  decodeThreadQueriesStorageValue(
+    encodedThreadQueries
+  );
+
+assert.equal(
+  currentThreadQueries.migrated,
+  false
+);
+
+assert.deepEqual(
+  currentThreadQueries.data,
+  threadQueries
+);
+
+assert.deepEqual(
+  encodeThreadQueriesStorageValue([
+    " 半導体 ",
+    "",
+    "半導体",
+    "量子",
+  ]).data,
+  ["半導体", "量子"]
+);
+
+assert.throws(
+  () =>
+    decodeThreadQueriesStorageValue(
+      createVersionedRecord(
+        THREAD_QUERIES_STORAGE_FORMAT,
+        THREAD_QUERIES_STORAGE_VERSION,
+        { bad: true }
+      )
+    ),
+  /たどるキーワードデータ形式が不正/
+);
+
+assert.throws(
+  () =>
+    decodeThreadQueriesStorageValue({
+      format:
+        THREAD_QUERIES_STORAGE_FORMAT,
+      schemaVersion:
+        THREAD_QUERIES_STORAGE_VERSION + 1,
+      data: threadQueries,
+    }),
+  /新しい形式/
+);
+
 const version1 = createVersionedRecord(
   "test-format",
   1,
@@ -303,5 +398,5 @@ assert.throws(
 );
 
 console.log(
-  "OK: settings / personal events / event customizations のversion付き保存・厳密読込・将来version拒否を検査しました"
+  "OK: settings / personal events / event customizations / thread queries のversion付き保存・厳密読込・将来version拒否を検査しました"
 );

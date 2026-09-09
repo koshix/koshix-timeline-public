@@ -1,7 +1,13 @@
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { eventYear } from "./event-schema.js";
 import Theater from "./Theater";
 import { buildDynamicThread } from "./thread-model.js";
+import { workspaceStore } from "./workspace-store.js";
 
 const THREAD_COLORS = [
   ["#f7f3ee", "#ddd1c3"],
@@ -58,18 +64,122 @@ export default function ThreadWindow({
       ? initialDynamicResult?.thread ?? null
       : null
   );
+
   const [query, setQuery] = useState(initialQuery);
-  const [dynamicResult, setDynamicResult] = useState(
-    initialDynamicResult
-  );
+  const nextDynamicThreadId = useRef(1);
+
+  const [dynamicThreads, setDynamicThreads] =
+    useState([]);
+
+  const [dynamicFeedback, setDynamicFeedback] =
+    useState(() =>
+      initialDynamicResult?.thread
+        ? null
+        : initialDynamicResult
+    );
+
+  const [
+    threadQueriesLoaded,
+    setThreadQueriesLoaded,
+  ] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreThreadQueries = async () => {
+      const savedQueries =
+        await workspaceStore.threadQueries.load();
+
+      if (cancelled) return;
+
+      const restoredResults = savedQueries
+        .map((savedQuery) =>
+          buildDynamicThread({
+            query: savedQuery,
+            events,
+          })
+        )
+        .filter((result) => result.thread);
+
+      if (
+        initialDynamicResult?.thread &&
+        !restoredResults.some(
+          (result) =>
+            result.thread.query ===
+            initialDynamicResult.thread.query
+        )
+      ) {
+        restoredResults.unshift(
+          initialDynamicResult
+        );
+      }
+
+      nextDynamicThreadId.current =
+        restoredResults.length + 1;
+
+      setDynamicThreads(
+        restoredResults.map(
+          (result, index) => ({
+            id: index + 1,
+            result,
+          })
+        )
+      );
+
+      setThreadQueriesLoaded(true);
+    };
+
+    restoreThreadQueries().catch(() => {
+      if (!cancelled) {
+        setThreadQueriesLoaded(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    events,
+    initialDynamicResult,
+  ]);
+
+  useEffect(() => {
+    if (!threadQueriesLoaded) return;
+
+    const queries = dynamicThreads
+      .map(
+        (entry) =>
+          entry.result.thread?.query
+      )
+      .filter(Boolean);
+
+    workspaceStore.threadQueries
+      .save(queries)
+      .catch(() => {});
+  }, [
+    dynamicThreads,
+    threadQueriesLoaded,
+  ]);
 
   const createDynamicThread = () => {
-    setDynamicResult(
-      buildDynamicThread({
-        query,
-        events,
-      })
-    );
+    const result = buildDynamicThread({
+      query,
+      events,
+    });
+
+    if (result.thread) {
+      setDynamicThreads((previous) => [
+        ...previous,
+        {
+          id: nextDynamicThreadId.current++,
+          result,
+        },
+      ]);
+      setDynamicFeedback(null);
+      return;
+    }
+
+    setDynamicFeedback(result);
   };
 
   const onSubmit = (event) => {
@@ -77,10 +187,13 @@ export default function ThreadWindow({
     createDynamicThread();
   };
 
-  const sparseMatch =
-    dynamicResult?.selectedCount === 1
-      ? dynamicResult.matches?.[0]
-      : null;
+  const removeDynamicThread = (id) => {
+    setDynamicThreads((previous) =>
+      previous.filter(
+        (entry) => entry.id !== id
+      )
+    );
+  };
 
   return (
     <div
@@ -146,7 +259,7 @@ export default function ThreadWindow({
           }}
         >
           関連する出来事を一本の流れとしてたどります。
-          編集済みのテーマを選ぶか、キーワードからその場で新しい糸を作れます。
+          編集済みのテーマを選ぶか、キーワードからその場でたどれます。
         </div>
 
         <section
@@ -167,7 +280,7 @@ export default function ThreadWindow({
               color: "#4b5563",
             }}
           >
-            キーワードから糸を作る
+            キーワードからたどる
           </h2>
 
           <div
@@ -186,11 +299,25 @@ export default function ThreadWindow({
             onSubmit={onSubmit}
             style={{
               display: "flex",
+              alignItems: "center",
               gap: 8,
-              marginTop: 10,
+              marginTop: 12,
             }}
           >
+            <label
+              htmlFor="dynamic-thread-query"
+              style={{
+                flexShrink: 0,
+                fontSize: 12,
+                fontWeight: 700,
+                color: "#6b7280",
+              }}
+            >
+              キーワード入力：
+            </label>
+
             <input
+              id="dynamic-thread-query"
               type="search"
               value={query}
               onChange={(event) =>
@@ -205,8 +332,8 @@ export default function ThreadWindow({
                   event.preventDefault();
                 }
               }}
-              placeholder="例：半導体 ／ AI || 人工知能 ／ (教育 || 学校) && AI"
-              aria-label="動的テーマのキーワード"
+              placeholder="例：半導体"
+              aria-label="たどるキーワード"
               style={{
                 minWidth: 0,
                 flex: 1,
@@ -227,13 +354,14 @@ export default function ThreadWindow({
                 ...miniBtn,
                 padding: "7px 13px",
                 opacity: query.trim() ? 1 : 0.5,
+                whiteSpace: "nowrap",
               }}
             >
-              糸を作る
+              たどる
             </button>
           </form>
 
-          {dynamicResult?.error && (
+          {dynamicFeedback?.error && (
             <div
               role="alert"
               style={{
@@ -242,13 +370,13 @@ export default function ThreadWindow({
                 color: "#9b4a3c",
               }}
             >
-              {dynamicResult.error}
+              {dynamicFeedback.error}
             </div>
           )}
 
-          {dynamicResult &&
-            !dynamicResult.error &&
-            dynamicResult.selectedCount === 0 && (
+          {dynamicFeedback &&
+            !dynamicFeedback.error &&
+            dynamicFeedback.selectedCount === 0 && (
               <div
                 role="status"
                 style={{
@@ -261,95 +389,149 @@ export default function ThreadWindow({
               </div>
             )}
 
-          {sparseMatch && (
-            <div
-              role="status"
-              style={{
-                marginTop: 10,
-                padding: "10px 12px",
-                borderRadius: 9,
-                border: "1px solid #e1d7c7",
-                background: "#fffaf2",
-                color: "#4b5563",
-              }}
-            >
+          {dynamicFeedback?.selectedCount === 1 &&
+            dynamicFeedback.matches?.[0] && (
               <div
+                role="status"
                 style={{
-                  fontSize: 11.5,
-                  lineHeight: 1.6,
-                  color: "#7a6a55",
+                  marginTop: 10,
+                  padding: "10px 12px",
+                  borderRadius: 9,
+                  border: "1px solid #e1d7c7",
+                  background: "#fffaf2",
+                  color: "#4b5563",
                 }}
               >
-                1件だけ見つかりました。関連語を || で追加すると、検索範囲を広げられます。
-              </div>
-              <div
-                style={{
-                  marginTop: 6,
-                  fontSize: 12.5,
-                  fontWeight: 800,
-                }}
-              >
-                {eventYear(sparseMatch)}　{sparseMatch.title}
-              </div>
-              {sparseMatch.summary && (
                 <div
                   style={{
-                    marginTop: 4,
                     fontSize: 11.5,
-                    lineHeight: 1.7,
-                    color: "#6b7280",
+                    lineHeight: 1.6,
+                    color: "#7a6a55",
                   }}
                 >
-                  {sparseMatch.summary}
+                  1件だけ見つかりました。関連語を || で追加すると、検索範囲を広げられます。
                 </div>
-              )}
-            </div>
-          )}
 
-          {dynamicResult?.thread && (
-            <button
-              type="button"
-              onClick={() =>
-                setThread(dynamicResult.thread)
-              }
-              style={{
-                width: "100%",
-                marginTop: 10,
-                fontFamily: font,
-                textAlign: "left",
-                cursor: "pointer",
-                padding: "11px 13px",
-                borderRadius: 9,
-                border: "1px solid #c6d4c9",
-                background: "#f3f7f3",
-                color: "#4b5563",
-              }}
-            >
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                  }}
+                >
+                  {eventYear(
+                    dynamicFeedback.matches[0]
+                  )}　
+                  {dynamicFeedback.matches[0].title}
+                </div>
+
+                {dynamicFeedback.matches[0].summary && (
+                  <div
+                    style={{
+                      marginTop: 4,
+                      fontSize: 11.5,
+                      lineHeight: 1.7,
+                      color: "#6b7280",
+                    }}
+                  >
+                    {
+                      dynamicFeedback.matches[0]
+                        .summary
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+
+          {dynamicThreads.map((entry, index) => {
+            const result = entry.result;
+            const [background, border] =
+              THREAD_COLORS[
+                index % THREAD_COLORS.length
+              ];
+
+            return (
               <div
+                key={entry.id}
                 style={{
-                  fontSize: 13,
-                  fontWeight: 800,
-                  color: "#466253",
+                  display: "flex",
+                  alignItems: "stretch",
+                  marginTop: 10,
+                  borderRadius: 10,
+                  border: `1px solid ${border}`,
+                  background,
+                  overflow: "hidden",
                 }}
               >
-                ▶ {dynamicResult.thread.title}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setThread(result.thread)
+                  }
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    fontFamily: font,
+                    textAlign: "left",
+                    cursor: "pointer",
+                    padding: "12px 14px",
+                    border: 0,
+                    background: "transparent",
+                    color: "#4b5563",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "#4B56A6",
+                    }}
+                  >
+                    ▶ {result.thread.title}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 5,
+                      fontSize: 11,
+                      lineHeight: 1.6,
+                      color: "#6b7280",
+                    }}
+                  >
+                    {result.selectedCount}項目
+                    {result.totalMatches >
+                    result.selectedCount
+                      ? `（候補${result.totalMatches}件から選択）`
+                      : ""}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    removeDynamicThread(entry.id)
+                  }
+                  aria-label={`${result.thread.title}を削除`}
+                  title="削除"
+                  style={{
+                    width: 38,
+                    flexShrink: 0,
+                    border: 0,
+                    borderLeft:
+                      "1px solid rgba(0, 0, 0, 0.08)",
+                    background: "transparent",
+                    color: "#7b8189",
+                    fontFamily: font,
+                    fontSize: 18,
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
               </div>
-              <div
-                style={{
-                  marginTop: 4,
-                  fontSize: 11,
-                  lineHeight: 1.6,
-                  color: "#6b7280",
-                }}
-              >
-                {dynamicResult.selectedCount}項目
-                {dynamicResult.totalMatches >
-                  dynamicResult.selectedCount
-                  ? `（候補${dynamicResult.totalMatches}件から選択）`
-                  : ""}
-              </div>
-            </button>
-          )}
+            );
+          })}
+
         </section>
 
         <section aria-labelledby="configured-thread-heading">
@@ -365,49 +547,55 @@ export default function ThreadWindow({
           </h2>
 
           <div className="thread-grid">
-            {configuredThreads.map((item, index) => {
-              const [background, border] =
-                THREAD_COLORS[index % THREAD_COLORS.length];
+            {configuredThreads.map(
+              (item, index) => {
+                const [background, border] =
+                  THREAD_COLORS[
+                    index % THREAD_COLORS.length
+                  ];
 
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setThread(item)}
-                  style={{
-                    fontFamily: font,
-                    textAlign: "left",
-                    cursor: "pointer",
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: `1px solid ${border}`,
-                    background,
-                    color: "#4b5563",
-                  }}
-                >
-                  <div
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() =>
+                      setThread(item)
+                    }
                     style={{
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: "#4B56A6",
+                      fontFamily: font,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      padding: "12px 14px",
+                      borderRadius: 10,
+                      border: `1px solid ${border}`,
+                      background,
+                      color: "#4b5563",
                     }}
                   >
-                    ▶ {item.title}
-                  </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: "#4B56A6",
+                      }}
+                    >
+                      ▶ {item.title}
+                    </div>
 
-                  <div
-                    style={{
-                      marginTop: 5,
-                      fontSize: 11,
-                      lineHeight: 1.6,
-                      color: "#6b7280",
-                    }}
-                  >
-                    {item.events.length}項目
-                  </div>
-                </button>
-              );
-            })}
+                    <div
+                      style={{
+                        marginTop: 5,
+                        fontSize: 11,
+                        lineHeight: 1.6,
+                        color: "#6b7280",
+                      }}
+                    >
+                      {item.events.length}項目
+                    </div>
+                  </button>
+                );
+              }
+            )}
           </div>
         </section>
       </div>

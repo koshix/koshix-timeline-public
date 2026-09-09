@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 
 import {
-  buildInitialTimelineClosedStageKeys,
   buildTimelineControlTargets,
   buildTimelineEventList,
   buildTimelineGroups,
@@ -418,6 +417,26 @@ const personal = timelineList.find(
 );
 
 assert.equal(personal.age, 11);
+
+const unprojectedTimelineList =
+  buildTimelineEventList({
+    publicEvents: events,
+    personalEvents,
+    showPersonal: true,
+    birth: null,
+    catOff: {},
+    sfOnly: false,
+    importanceMin: 2,
+    search: allSearch,
+  });
+
+assert.equal(
+  unprojectedTimelineList.every(
+    (event) => event.age === null
+  ),
+  true
+);
+
 assert.equal(
   Object.prototype.hasOwnProperty.call(personal, "cat"),
   false
@@ -475,7 +494,40 @@ const lifeContext = buildTimelineLifeContext({
 
 assert.equal(lifeContext.life.adultYear, 2009);
 assert.equal(lifeContext.life.gradeLabel(1997), "小1");
+assert.equal(lifeContext.birthConfigured, true);
+assert.equal(lifeContext.projectionBirth, 1990);
 assert.deepEqual(lifeContext.adultPeriodErrors, []);
+
+const unprojectedLifeContext =
+  buildTimelineLifeContext({
+    birth: null,
+    month: 0,
+    education: [],
+    adultPeriods: [
+      {
+        start: "2000",
+        end: "2010",
+        label: "未使用",
+      },
+    ],
+  });
+
+assert.equal(
+  unprojectedLifeContext.birthConfigured,
+  false
+);
+assert.equal(
+  unprojectedLifeContext.projectionBirth,
+  2101
+);
+assert.deepEqual(
+  unprojectedLifeContext.adultPeriods,
+  []
+);
+assert.deepEqual(
+  unprojectedLifeContext.adultPeriodErrors,
+  []
+);
 assert.equal(lifeContext.adultPeriods.length, 1);
 assert.equal(lifeContext.adultPeriods[0].start, 2010);
 assert.equal(lifeContext.adultPeriods[0].end, 2014);
@@ -688,20 +740,7 @@ assert.equal(personalVisibility.myShown, 1);
 const controlTargets =
   buildTimelineControlTargets({
     groups: timelineGroups,
-    birth: 1990,
   });
-
-assert.equal(
-  controlTargets.preBirthStageKeys.includes(
-    "pre-20-first"
-  ),
-  true
-);
-
-assert.equal(
-  controlTargets.preBirthStageKeys.includes("elem"),
-  false
-);
 
 assert.equal(
   controlTargets.allStageKeys.includes("elem"),
@@ -718,50 +757,6 @@ assert.deepEqual(
     "adult-period-end",
     "adult-after-period",
   ]
-);
-
-assert.deepEqual(
-  controlTargets.birthAndLaterEventIds,
-  [
-    "elementary",
-    "adult-before-period",
-    "adult-period-start",
-    "adult-period-end",
-    "adult-after-period",
-  ]
-);
-
-
-assert.deepEqual(
-  buildInitialTimelineClosedStageKeys({
-    birth: 1990,
-  }),
-  [
-    "pre-16-first",
-    "pre-16-second",
-    "pre-17-first",
-    "pre-17-second",
-    "pre-18-first",
-    "pre-18-second",
-    "pre-19-first",
-    "pre-19-second",
-    "pre-20-first",
-    "pre-20-second",
-  ]
-);
-
-assert.deepEqual(
-  buildInitialTimelineClosedStageKeys({
-    birth: 1601,
-  }),
-  ["pre-16-first", "pre-16-second"]
-);
-
-assert.deepEqual(
-  buildInitialTimelineClosedStageKeys({
-    birth: 1582,
-  }),
-  ["pre-16-first", "pre-16-second"]
 );
 
 console.log(

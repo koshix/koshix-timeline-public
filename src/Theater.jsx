@@ -1,4 +1,5 @@
 import { eventYear } from "./event-schema.js";
+import { validYear } from "./life-stages.js";
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import { CAT, catKey } from "./categories";
@@ -52,8 +53,13 @@ export default function Theater({
     return () => window.removeEventListener("keydown", onKey);
   }, [idx, onClose]);
 
+  const birthConfigured =
+    validYear(birth) != null;
+
   const gradeOf = (ev) =>
-    eventYear(ev) < birth ? "生まれる前" : gradeLabel(eventYear(ev));
+    eventYear(ev) < birth
+      ? "生まれる前"
+      : gradeLabel(eventYear(ev));
 
   const ctlBtn = (on = false) => ({
     fontSize: 12, fontWeight: 700, cursor: "pointer", padding: "6px 12px",
@@ -144,14 +150,16 @@ export default function Theater({
                   >
                     {eventYear(ev)}
                   </span>
-                  <span
-                    style={{
-                      flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#12151b",
-                      background: "#c9ced8", borderRadius: 5, padding: "2px 7px", marginTop: 1,
-                    }}
-                  >
-                    {gradeOf(ev)}
-                  </span>
+                  {birthConfigured && (
+                    <span
+                      style={{
+                        flexShrink: 0, fontSize: 11, fontWeight: 800, color: "#12151b",
+                        background: "#c9ced8", borderRadius: 5, padding: "2px 7px", marginTop: 1,
+                      }}
+                    >
+                      {gradeOf(ev)}
+                    </span>
+                  )}
                   <Icon name={ev.icon} color={color} size={active ? 20 : 16} />
                   <span
                     style={{

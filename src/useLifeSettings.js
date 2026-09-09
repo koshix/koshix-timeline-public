@@ -89,7 +89,7 @@ export default function useLifeSettings({
   };
 
   const resetBirthSettings = () => {
-    setBirth(initialBirth);
+    setBirth(null);
     setMonth(0);
     setLifeSettingsStatus("");
   };
@@ -126,6 +126,13 @@ export default function useLifeSettings({
   };
 
   const addAdultPeriod = (adultYear) => {
+    if (
+      adultYear == null ||
+      !Number.isInteger(Number(adultYear))
+    ) {
+      return;
+    }
+
     setAdultPeriods((previous) => {
       const last = previous.at(-1);
       const lastEnd = last?.end ?? "";

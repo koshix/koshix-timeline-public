@@ -23,6 +23,7 @@ export default function PersonalHistorySection({
   clearPersonalEventsFile,
   savePersonalEvent,
   deletePersonalEvent,
+  onViewTimeline,
   font,
   miniBtn,
 }) {
@@ -119,6 +120,28 @@ export default function PersonalHistorySection({
           管理者データを表示中はブラウザ側の追加・編集を行いません。
         </div>
       )}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginTop: 10,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onViewTimeline}
+          style={{
+            ...miniBtn,
+            fontWeight: 800,
+            border: "1px solid #9aa4b2",
+            background: "#ffffff",
+            color: "#4b5563",
+          }}
+        >
+          年表で見る ↑
+        </button>
+      </div>
 
       {personalFileStatus && (
         <div

@@ -21,6 +21,8 @@ export default function TimelinePersonalEventRow({
 }) {
   const id = eventId(event);
   const isOpen = isEventOpen(id);
+  const hasAgeProjection =
+    Number.isFinite(event.age);
 
   return (
     <li
@@ -59,23 +61,25 @@ export default function TimelinePersonalEventRow({
         >
           {eventYear(event)}
         </span>
-        <span
-          style={{
-            flexShrink: 0,
-            minWidth: 44,
-            textAlign: "center",
-            fontSize: 13,
-            fontWeight: 800,
-            ...gradeBadgeStyle(
-              stage,
-              event.age
-            ),
-            borderRadius: 6,
-            padding: "3px 8px",
-          }}
-        >
-          {gradeLabel(eventYear(event))}
-        </span>
+        {hasAgeProjection && (
+          <span
+            style={{
+              flexShrink: 0,
+              minWidth: 44,
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 800,
+              ...gradeBadgeStyle(
+                stage,
+                event.age
+              ),
+              borderRadius: 6,
+              padding: "3px 8px",
+            }}
+          >
+            {gradeLabel(eventYear(event))}
+          </span>
+        )}
         <Icon
           name={event.icon ?? "flag"}
           color={CAT.me.bg}

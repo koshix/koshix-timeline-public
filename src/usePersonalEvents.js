@@ -21,6 +21,7 @@ const createPersonalDraft = () => ({
 });
 
 export default function usePersonalEvents({
+  onFirstAdded,
   onCleared,
   onDeleted,
 } = {}) {
@@ -324,6 +325,9 @@ export default function usePersonalEvents({
           summary: summary,
         };
 
+    const firstAdded =
+      !existing && myEvents.length === 0;
+
     const rawEvents = existing
       ? myEvents.map((item) =>
           item.id === editingPersonalId
@@ -342,6 +346,11 @@ export default function usePersonalEvents({
 
       setMyEvents(events);
       setPersonalEventsSource("browser");
+
+      if (firstAdded) {
+        onFirstAdded?.();
+      }
+
       setEditingPersonalId(null);
       resetPersonalDraft();
       setPersonalAddOpen(false);

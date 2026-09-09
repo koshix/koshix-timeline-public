@@ -19,7 +19,7 @@ const SAVED =
   {};
 
 const INITIAL_BIRTH =
-  SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? 1965;
+  SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? null;
 const INITIAL_MONTH =
   SAVED.month ?? PROFILE_DEFAULTS.birthMonth ?? 0;
 const INITIAL_EDUCATION = createInitialEducationSettings(

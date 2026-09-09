@@ -239,11 +239,6 @@
   --control-button-color: #6b5a45;
 }
 
-.timeline-control-group--periods .timeline-control-button--half {
-  --control-button-bg: #f7f3ec;
-  --control-button-color: #74644f;
-}
-
 .timeline-control-group--periods .timeline-control-button--closed {
   --control-button-bg: #eee8dd;
   --control-button-color: #7d7468;
@@ -256,11 +251,6 @@
   --control-segment-border: #6f8798;
   --control-separator-color: #bfd0dc;
   --control-button-color: #405f76;
-}
-
-.timeline-control-group--explanations .timeline-control-button--half {
-  --control-button-bg: #f3f7fa;
-  --control-button-color: #4f6a7e;
 }
 
 .timeline-control-group--explanations .timeline-control-button--closed {

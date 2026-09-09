@@ -1,6 +1,5 @@
 import {
-  GRADUATE_TYPES,
-  HIGHER_ED_TYPES,
+  validYear,
 } from "./life-stages";
 import AdultPeriodsEditor from "./AdultPeriodsEditor";
 import BirthSettingsEditor from "./BirthSettingsEditor";
@@ -12,10 +11,6 @@ export default function TimelineSettingsSection({
   toggleSetup,
   birth,
   month,
-  firstHigherYear,
-  firstHigherType,
-  firstGraduateYear,
-  firstGraduateType,
   adultPeriods,
   adultYear,
   adultPeriodErrors,
@@ -34,10 +29,14 @@ export default function TimelineSettingsSection({
   lifeSettingsFileInputRef,
   importLifeSettingsFile,
   exportLifeSettingsFile,
+  onViewTimeline,
   font,
   mono,
   miniBtn,
 }) {
+  const birthConfigured =
+    validYear(birth) != null;
+
   return (
     <div
       id="timeline-settings"
@@ -89,27 +88,9 @@ export default function TimelineSettingsSection({
             color: "#6b7280",
           }}
         >
-          {birth}年
-          {month ? `${month}月` : ""}
-          生まれ
-          {firstHigherYear
-            ? `・${firstHigherYear}年 ${
-                HIGHER_ED_TYPES[
-                  firstHigherType
-                ]?.label
-              }`
-            : ""}
-          {firstGraduateYear
-            ? `・${firstGraduateYear}年 大学院（${
-                GRADUATE_TYPES[
-                  firstGraduateType
-                ]?.label
-              }）`
-            : ""}
-          ・成人期{adultYear}年〜（自動）
-          {adultPeriods.length > 0
-            ? `・社会人区分${adultPeriods.length}件`
-            : ""}
+          {birthConfigured
+            ? `${birth}年${month ? `${month}月` : ""}生まれ`
+            : "生年未設定・まず生まれた年を入力してください"}
         </span>
 
         <span style={{ flex: 1 }} />
@@ -140,8 +121,29 @@ export default function TimelineSettingsSection({
             mono={mono}
           />
 
-          <div
+          <details
             style={{
+              margin: "0 16px 14px",
+              border: "1px solid #e2e4e8",
+              borderRadius: 9,
+              background: "#fafbfc",
+            }}
+          >
+            <summary
+              style={{
+                cursor: "pointer",
+                padding: "9px 11px",
+                fontFamily: font,
+                fontSize: 12,
+                fontWeight: 800,
+                color: "#59616c",
+              }}
+            >
+              詳しく設定する
+            </summary>
+
+            <div
+              style={{
               display: "flex",
               alignItems: "center",
               gap: 0,
@@ -219,6 +221,29 @@ export default function TimelineSettingsSection({
                 )}
               </div>
             )}
+            </div>
+          </details>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              padding: "0 16px 14px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={onViewTimeline}
+              style={{
+                ...miniBtn,
+                fontWeight: 800,
+                border: "1px solid #9aa4b2",
+                background: "#ffffff",
+                color: "#4b5563",
+              }}
+            >
+              年表で見る ↑
+            </button>
           </div>
         </>
       )}

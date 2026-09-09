@@ -2,7 +2,6 @@ import { useState } from "react";
 
 export default function useDisplaySettings({
   saved = {},
-  initialClosedStages = [],
   mainCategories = [],
 } = {}) {
   // 大分類フィルタ。true が入っているカテゴリーだけを非表示にする
@@ -80,14 +79,13 @@ export default function useDisplaySettings({
   };
 
   // 畳んでいる期間(帯)のキー。
-  // 新規起動時は出生前を閉じ、出生年以降を開く「半」を既定値にする。
-  // 保存済みの開閉状態がある場合は、それを優先する。
+  // 保存済みの開閉状態がなければ全期間を開いた状態で始める。
   const [closedStages, setClosedStages] = useState(
     () =>
       new Set(
         Array.isArray(saved.closed)
           ? saved.closed
-          : initialClosedStages
+          : []
       )
   );
   const toggleStage = (key) =>

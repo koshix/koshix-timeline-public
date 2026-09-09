@@ -38,10 +38,21 @@ export function createInitialEducationSettings(
   birth,
   month
 ) {
-  const cohortBirth =
-    month >= 1 && month <= 3
-      ? birth - 1
-      : birth;
+  const birthYear = Number(birth);
+  const birthConfigured =
+    birth != null &&
+    birth !== "" &&
+    Number.isInteger(birthYear) &&
+    birthYear >= YEAR_MIN &&
+    birthYear <= YEAR_MAX;
+
+  const cohortBirth = birthConfigured
+    ? (
+        month >= 1 && month <= 3
+          ? birthYear - 1
+          : birthYear
+      )
+    : null;
 
   const savedEducation =
     Array.isArray(saved.education)
@@ -54,6 +65,7 @@ export function createInitialEducationSettings(
       : normalizeEducation(defaults.education);
 
   if (
+    birthConfigured &&
     savedEducation === null &&
     educationForKind(
       education,

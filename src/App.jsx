@@ -8,9 +8,6 @@ import {
   createInitialEducationSettings,
 } from "./life-settings";
 import useTimelineModel from "./useTimelineModel";
-import {
-  buildInitialTimelineClosedStageKeys,
-} from "./timeline-model.js";
 import usePersonalEvents from "./usePersonalEvents";
 import {
   loadPersonalEvents,
@@ -171,7 +168,8 @@ const SAVED =
   (typeof window !== "undefined" &&
     workspaceStore.settings.load()) ||
   {};
-const INITIAL_BIRTH = SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? 1965;
+const INITIAL_BIRTH =
+  SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? null;
 const INITIAL_MONTH = SAVED.month ?? PROFILE_DEFAULTS.birthMonth ?? 0;
 const INITIAL_EDUCATION = createInitialEducationSettings(
   SAVED,
@@ -234,7 +232,6 @@ export default function App() {
     cancelEditingEvent,
     openNewEventForm,
     cancelAddingEvent,
-    openEventCustomizationEditor,
     toggleEventCustomizationEditor,
     closeEventCustomizationEditor,
     updateEventEditDraft,
@@ -257,6 +254,17 @@ export default function App() {
       closeEvent(event.id);
     },
   });
+  const [showMe, setShowMe] = useState(false);
+
+  const scrollToTimeline = () => {
+    document
+      .getElementById("timeline-view")
+      ?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+      });
+  };
+
   const {
     myEvents,
     personalEventsSource,
@@ -280,6 +288,9 @@ export default function App() {
     deletePersonalEvent,
     applyServerPersonalEvents,
   } = usePersonalEvents({
+    onFirstAdded: () => {
+      setShowMe(true);
+    },
     onCleared: () => {
       setShowMe(false);
     },
@@ -311,13 +322,8 @@ export default function App() {
   } = useDisplaySettings({
     saved: SAVED,
     mainCategories: MAIN_CATS,
-    initialClosedStages:
-      buildInitialTimelineClosedStageKeys({
-        birth: INITIAL_BIRTH,
-      }),
   });
 
-  const [showMe, setShowMe] = useState(false);
   // 閲覧中のテーマ(nullなら年表を表示)
   const [thread, setThread] = useState(null);
   // 年表内検索は一時的な表示条件として扱い、ブラウザ保存はしない。
@@ -585,8 +591,8 @@ export default function App() {
               marginTop: 3,
             }}
           >
-            生年を合わせるだけで、出来事を「そのとき何歳だったか」で読めます。
-            自分史や年表の変更は、ブラウザ内に保存できます。
+            まず生年を設定し、次に自分史を1件追加して、年表の中で見てみてください。
+            設定や自分史は、このブラウザ内に保存されます。
           </div>
 
           <div
@@ -661,17 +667,7 @@ export default function App() {
 
             <button
               type="button"
-              onClick={() => {
-                openEventCustomizationEditor();
-                setTimeout(() => {
-                  document
-                    .getElementById("timeline-customization")
-                    ?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                }, 0);
-              }}
+              onClick={scrollToTimeline}
               style={{
                 flex: "1 1 190px",
                 fontFamily: font,
@@ -682,18 +678,19 @@ export default function App() {
                 cursor: "pointer",
                 padding: "9px 12px",
                 borderRadius: 9,
-                border: "1px solid #bdd0e5",
+                border: "1px solid #b8c8b4",
                 background: "#ffffff",
-                color: "#365f7d",
+                color: "#496247",
               }}
             >
-              ③共通年表の編集
+              ③年表を見る
             </button>
           </div>
         </section>
 
         {/* 共通年表の表示設定 */}
         <div
+          id="timeline-view"
           role="group"
           aria-label="共通年表の表示設定"
           style={{
@@ -820,8 +817,10 @@ export default function App() {
             setAllCats={setAllCats}
             importanceMin={importanceMin}
             setImportanceLevel={setImportanceLevel}
+            closedStages={closedStages}
             expandAllStages={expandAllStages}
             collapseStages={collapseStages}
+            isEventOpen={isEventOpen}
             openOnlyEvents={openOnlyEvents}
             closeAllEvents={closeAllEvents}
             font={font}
@@ -1152,6 +1151,7 @@ export default function App() {
           deletePersonalEvent={
             deletePersonalEvent
           }
+          onViewTimeline={scrollToTimeline}
           font={font}
           miniBtn={miniBtn}
         />
@@ -1207,6 +1207,7 @@ export default function App() {
           exportLifeSettingsFile={
             exportLifeSettingsFile
           }
+          onViewTimeline={scrollToTimeline}
           font={font}
           mono={mono}
           miniBtn={miniBtn}

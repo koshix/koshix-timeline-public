@@ -620,12 +620,6 @@ export default function useEventCustomizations({
     setEventCustomizationStatus("");
   };
 
-  const openEventCustomizationEditor = () => {
-    setEventCustomizationEditorOpen(true);
-    setEventAddOpen(false);
-    resetEventAddDraft();
-  };
-
   const toggleEventCustomizationEditor = () => {
     setEventCustomizationEditorOpen((value) => !value);
     setEventAddOpen(false);
@@ -665,7 +659,6 @@ export default function useEventCustomizations({
     cancelEditingEvent,
     openNewEventForm,
     cancelAddingEvent,
-    openEventCustomizationEditor,
     toggleEventCustomizationEditor,
     closeEventCustomizationEditor,
     updateEventEditDraft,

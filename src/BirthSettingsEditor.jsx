@@ -49,7 +49,7 @@ export default function BirthSettingsEditor({
       return;
     }
 
-    setBirthDraft(String(birth));
+    setBirthDraft(String(birth ?? ""));
   };
 
   const commitBirthMonth = () => {
@@ -95,8 +95,18 @@ export default function BirthSettingsEditor({
             color: "#4b5563",
           }}
         >
-          0. 生まれた年
+          生まれた年・月
         </strong>
+
+        <span
+          style={{
+            fontFamily: font,
+            fontSize: 11,
+            color: "#7b818b",
+          }}
+        >
+          年だけでも使えます
+        </span>
 
         <button
           type="button"

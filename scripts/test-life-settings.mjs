@@ -60,6 +60,16 @@ assert.deepEqual(
   createInitialEducationSettings(
     {},
     { education: [] },
+    null,
+    0
+  ),
+  []
+);
+
+assert.deepEqual(
+  createInitialEducationSettings(
+    {},
+    { education: [] },
     1953,
     4
   ),

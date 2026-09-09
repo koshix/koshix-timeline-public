@@ -14,6 +14,12 @@ import {
   saveBrowserEventCustomizations,
 } from "./event-customizations-store.js";
 
+import {
+  clearBrowserThreadQueries,
+  loadBrowserThreadQueries,
+  saveBrowserThreadQueries,
+} from "./thread-queries-store.js";
+
 export const workspaceStore = {
   settings: settingsStore,
 
@@ -27,5 +33,11 @@ export const workspaceStore = {
     load: loadBrowserEventCustomizations,
     save: saveBrowserEventCustomizations,
     clear: clearBrowserEventCustomizations,
+  },
+
+  threadQueries: {
+    load: loadBrowserThreadQueries,
+    save: saveBrowserThreadQueries,
+    clear: clearBrowserThreadQueries,
   },
 };

@@ -91,6 +91,10 @@ const events = [
     result.matches.map((event) => event.id),
     ["a", "b"]
   );
+  assert.equal(
+    result.thread.title,
+    "半導体をたどる"
+  );
 }
 
 {

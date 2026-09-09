@@ -36,12 +36,18 @@ export default function TimelinePublicEventRow({
   const grade = gradeLabel(
     eventYear(event)
   );
+  const hasAgeProjection =
+    Number.isFinite(event.age);
 
   const shareText =
     (
-      event.age < 0
-        ? `${eventYear(event)}年(生まれる前)`
-        : `${eventYear(event)}年・${grade}のとき`
+      hasAgeProjection
+        ? (
+            event.age < 0
+              ? `${eventYear(event)}年(生まれる前)`
+              : `${eventYear(event)}年・${grade}のとき`
+          )
+        : `${eventYear(event)}年`
     )
     + `:${event.title} ${hashtag}`;
 
@@ -99,23 +105,25 @@ export default function TimelinePublicEventRow({
         >
           {eventYear(event)}
         </span>
-        <span
-          style={{
-            flexShrink: 0,
-            minWidth: 44,
-            textAlign: "center",
-            fontSize: 13,
-            fontWeight: 800,
-            ...gradeBadgeStyle(
-              stage,
-              event.age
-            ),
-            borderRadius: 6,
-            padding: "3px 8px",
-          }}
-        >
-          {grade}
-        </span>
+        {hasAgeProjection && (
+          <span
+            style={{
+              flexShrink: 0,
+              minWidth: 44,
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 800,
+              ...gradeBadgeStyle(
+                stage,
+                event.age
+              ),
+              borderRadius: 6,
+              padding: "3px 8px",
+            }}
+          >
+            {grade}
+          </span>
+        )}
         <ImportanceBadge
           level={event.importance}
         />

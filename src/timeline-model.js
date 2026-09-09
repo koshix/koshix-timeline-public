@@ -10,7 +10,10 @@ const RELATED_CATEGORY_KEYS = new Set(
     (key) => key !== "sf"
   )
 );
-import { buildLifeModel } from "./life-stages.js";
+import {
+  buildLifeModel,
+  validYear,
+} from "./life-stages.js";
 import {
   adultPeriodOf,
   validateAdultPeriods,
@@ -157,13 +160,18 @@ export function buildTimelineEventList({
         }))
     : [];
 
+  const birthYear = validYear(birth);
+
   return [
     ...selectedPublicEvents,
     ...selectedPersonalEvents,
   ]
     .map((event) => ({
       ...event,
-      age: eventYear(event) - birth,
+      age:
+        birthYear == null
+          ? null
+          : eventYear(event) - birthYear,
     }))
     .sort(
       (a, b) =>
@@ -179,14 +187,25 @@ export function buildTimelineLifeContext({
   education,
   adultPeriods,
 }) {
+  const birthYear = validYear(birth);
+  const birthConfigured =
+    birthYear != null;
+
+  // 生年未設定時も共通年表を年代順に表示できるよう、
+  // 内部投影だけは年表上限の翌年を仮の生年として使う。
+  // この値を利用者の生年として表示・保存してはならない。
+  const projectionBirth =
+    birthConfigured ? birthYear : 2101;
+
   const life = buildLifeModel({
-    birth,
-    month,
-    education,
+    birth: projectionBirth,
+    month: birthConfigured ? month : 0,
+    education:
+      birthConfigured ? education : [],
   });
 
   const validation = validateAdultPeriods(
-    adultPeriods,
+    birthConfigured ? adultPeriods : [],
     {
       adultYear: life.adultYear,
     }
@@ -199,6 +218,8 @@ export function buildTimelineLifeContext({
 
   return {
     life,
+    birthConfigured,
+    projectionBirth,
     adultPeriods: usableAdultPeriods,
     adultPeriodErrors: validation.errors,
   };
@@ -320,19 +341,10 @@ export function buildTimelineVisibility({
 
 export function buildTimelineControlTargets({
   groups,
-  birth,
 }) {
   const allStageKeys = groups.map(
     (group) => group.key
   );
-
-  const preBirthStageKeys = groups
-    .filter(
-      (group) =>
-        group.rangeTo != null &&
-        group.rangeTo < birth
-    )
-    .map((group) => group.key);
 
   const allEvents = groups.flatMap(
     (group) => group.items
@@ -340,20 +352,6 @@ export function buildTimelineControlTargets({
 
   return {
     allStageKeys,
-    preBirthStageKeys,
     allEventIds: allEvents.map(eventId),
-    birthAndLaterEventIds: allEvents
-      .filter(
-        (event) => eventYear(event) >= birth
-      )
-      .map(eventId),
   };
-}
-
-export function buildInitialTimelineClosedStageKeys({
-  birth,
-}) {
-  return preBirthPeriodsOf(birth).map(
-    (period) => period.key
-  );
 }
