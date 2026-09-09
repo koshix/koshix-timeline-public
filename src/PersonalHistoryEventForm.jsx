@@ -34,12 +34,7 @@ export default function PersonalHistoryEventForm({
       </div>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "minmax(130px, 0.8fr) minmax(220px, 2fr)",
-          gap: 8,
-        }}
+        className="personal-history-form-grid"
       >
         <input
           type="text"

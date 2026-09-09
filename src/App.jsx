@@ -683,16 +683,16 @@ export default function App() {
                 color: "#496247",
               }}
             >
-              ③年表を見る
+              ③年表の表示設定
             </button>
           </div>
         </section>
 
-        {/* 共通年表の表示設定 */}
+        {/* ③年表の表示設定 */}
         <div
           id="timeline-view"
           role="group"
-          aria-label="共通年表の表示設定"
+          aria-label="③年表の表示設定"
           style={{
             display: "flex",
             gap: 8,
@@ -722,7 +722,7 @@ export default function App() {
                 color: "#4b5563",
               }}
             >
-              共通年表の表示設定
+              ③年表の表示設定
             </span>
 
             <span

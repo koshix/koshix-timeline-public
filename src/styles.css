@@ -258,6 +258,31 @@
   --control-button-color: #647785;
 }
 
+.personal-history-form-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(130px, 0.8fr) minmax(220px, 2fr);
+  gap: 8px;
+}
+
+.personal-history-form-grid > input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 520px) {
+  .timeline-display-controls {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+  }
+
+  .personal-history-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .timeline-search-controls {
   display: flex;
   align-items: center;

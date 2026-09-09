@@ -25,7 +25,7 @@ export default function EventCustomizationControls({
           color: "#365f7d",
         }}
       >
-        年表を自分用に編集
+        ④年表を自分用に編集
       </div>
 
       <div

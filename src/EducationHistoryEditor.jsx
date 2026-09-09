@@ -210,7 +210,7 @@ function HistoryBlock({
             style={{
               display: "inline-flex",
               alignItems: "stretch",
-              flexWrap: "nowrap",
+              flexWrap: "wrap",
               gap: 0,
               border: `1.5px solid ${color}88`,
               borderRadius: 8,

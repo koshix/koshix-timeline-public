@@ -58,6 +58,7 @@ export default function TimelineSettingsSection({
           gap: 10,
           flexWrap: "wrap",
           width: "100%",
+          boxSizing: "border-box",
           background: "#fff",
           border: "none",
           borderBottom: setupOpen
