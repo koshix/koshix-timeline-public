@@ -67,7 +67,7 @@ export default function EventCustomizationActions({
               background: "#fff8f5",
             }}
           >
-            非表示
+            年表で非表示
           </button>
         </>
       )}

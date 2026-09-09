@@ -121,7 +121,7 @@ export default function EventCustomizationControls({
               : {}),
           }}
         >
-          編集
+          編集・表示に戻す
         </button>
 
         <button
