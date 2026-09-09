@@ -15,6 +15,7 @@ import {
 import {
   workspaceStore,
 } from "./workspace-store.js";
+import { downloadBlob } from "./browser-download.js";
 
 export default function useEventCustomizations({
   events = [],
@@ -84,6 +85,20 @@ export default function useEventCustomizations({
     };
   }, []);
 
+  const persistEventCustomizations = async (next) => {
+    await workspaceStore.eventCustomizations.save(next);
+    setEventCustomizations(next);
+  };
+
+  const resetEventEditDraft = () => {
+    setEditingEventId(null);
+    setEventEditDraft({
+      title: "",
+      summary: "",
+      importance: 2,
+    });
+  };
+
   const saveEditedEvent = async (event) => {
     const base = events.find((item) => item.id === event.id);
 
@@ -150,15 +165,9 @@ export default function useEventCustomizations({
     };
 
     try {
-      await workspaceStore.eventCustomizations.save(next);
-      setEventCustomizations(next);
+      await persistEventCustomizations(next);
 
-      setEditingEventId(null);
-      setEventEditDraft({
-        title: "",
-        summary: "",
-        importance: 2,
-      });
+      resetEventEditDraft();
 
       setEventCustomizationStatus(
         Object.keys(merged).length === 0
@@ -208,15 +217,9 @@ export default function useEventCustomizations({
 
       if (!ok) return;
 
-      await workspaceStore.eventCustomizations.save(parsed);
-      setEventCustomizations(parsed);
+      await persistEventCustomizations(parsed);
 
-      setEditingEventId(null);
-      setEventEditDraft({
-        title: "",
-        summary: "",
-        importance: 2,
-      });
+      resetEventEditDraft();
       setEventAddOpen(false);
       resetEventAddDraft();
       onReplaced?.();
@@ -260,17 +263,10 @@ export default function useEventCustomizations({
         }
       );
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = "koshix-timeline-customizations.tsv";
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 0);
+      downloadBlob(
+        blob,
+        "koshix-timeline-customizations.tsv"
+      );
 
       const overrideCount = Object.keys(
         eventCustomizations.overrides ?? {}
@@ -395,8 +391,7 @@ export default function useEventCustomizations({
     };
 
     try {
-      await workspaceStore.eventCustomizations.save(next);
-      setEventCustomizations(next);
+      await persistEventCustomizations(next);
       setEventAddOpen(false);
       resetEventAddDraft();
       setEventCustomizationStatus(
@@ -444,8 +439,7 @@ export default function useEventCustomizations({
     };
 
     try {
-      await workspaceStore.eventCustomizations.save(next);
-      setEventCustomizations(next);
+      await persistEventCustomizations(next);
 
       onEventRemoved?.(event);
 
@@ -488,16 +482,10 @@ export default function useEventCustomizations({
     };
 
     try {
-      await workspaceStore.eventCustomizations.save(next);
-      setEventCustomizations(next);
+      await persistEventCustomizations(next);
 
       if (editingEventId === event.id) {
-        setEditingEventId(null);
-        setEventEditDraft({
-          title: "",
-          summary: "",
-          importance: 2,
-        });
+        resetEventEditDraft();
       }
 
       onEventRemoved?.(event);
@@ -532,8 +520,7 @@ export default function useEventCustomizations({
     };
 
     try {
-      await workspaceStore.eventCustomizations.save(next);
-      setEventCustomizations(next);
+      await persistEventCustomizations(next);
       setEventCustomizationStatus(
         base
           ? `「${base.title}」を表示に戻しました`
@@ -578,12 +565,7 @@ export default function useEventCustomizations({
         hidden: [],
         additions: [],
       });
-      setEditingEventId(null);
-      setEventEditDraft({
-        title: "",
-        summary: "",
-        importance: 2,
-      });
+      resetEventEditDraft();
       setEventCustomizationStatus(
         "年表カスタマイズを消去し、正本の年表に戻しました"
       );
@@ -611,12 +593,7 @@ export default function useEventCustomizations({
   };
 
   const cancelEditingEvent = () => {
-    setEditingEventId(null);
-    setEventEditDraft({
-      title: "",
-      summary: "",
-      importance: 2,
-    });
+    resetEventEditDraft();
     setEventCustomizationStatus("");
   };
 

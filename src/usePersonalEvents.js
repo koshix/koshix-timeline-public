@@ -7,7 +7,7 @@ import {
 import {
   workspaceStore,
 } from "./workspace-store.js";
-import { loadPersonalEvents } from "./personal-events-source.js";
+import { downloadBlob } from "./browser-download.js";
 import {
   parsePersonalEventsTsv,
   serializePersonalEventsTsv,
@@ -121,17 +121,10 @@ export default function usePersonalEvents({
             "text/tab-separated-values;charset=utf-8",
         }
       );
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download =
-        "koshix-timeline-personal-history.tsv";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 0);
+      downloadBlob(
+        blob,
+        "koshix-timeline-personal-history.tsv"
+      );
 
       setPersonalFileStatus(
         `${myEvents.length}件をTSVファイルへ書き出しました`
@@ -433,33 +426,6 @@ export default function usePersonalEvents({
     );
   };
 
-  const loadServerPersonalEvents = async () => {
-    // 管理者向け。開発環境ではVite経由でローカル個人史を取得し、
-    // 公開環境では personal/ の認証を通過した場合だけ取得できる。
-    try {
-      const events = await loadPersonalEvents();
-
-      if (events === null) {
-        setPersonalFileStatus(
-          "管理者データを読み込めませんでした"
-        );
-        return;
-      }
-
-      applyServerPersonalEvents(events);
-    } catch (err) {
-      console.error(
-        "Personal events could not be loaded:",
-        err
-      );
-      setPersonalFileStatus(
-        `管理者データの読み込み失敗: ${
-          err?.message || String(err)
-        }`
-      );
-    }
-  };
-
   return {
     myEvents,
     personalEventsSource,
@@ -482,6 +448,5 @@ export default function usePersonalEvents({
     savePersonalEvent,
     deletePersonalEvent,
     applyServerPersonalEvents,
-    loadServerPersonalEvents,
   };
 }

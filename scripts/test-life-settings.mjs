@@ -240,6 +240,38 @@ assert.throws(
   /section/
 );
 
+// 修学年数には恣意的な上限を設けず、終了年2100年を境界とする。
+const longEducationText = serializeLifeSettingsTsv({
+  ...source,
+  education: [
+    {
+      start: "2050",
+      years: "51",
+      type: "university",
+    },
+  ],
+});
+
+assert.match(
+  longEducationText,
+  /education\t2050\t\t51\tuniversity\t/
+);
+
+assert.throws(
+  () =>
+    serializeLifeSettingsTsv({
+      ...source,
+      education: [
+        {
+          start: "2050",
+          years: "52",
+          type: "university",
+        },
+      ],
+    }),
+  /終了年が2100年を超えます/
+);
+
 console.log(
   "OK: 人生設定TSVの書き出し・読込・既存設定保持を検査しました"
 );

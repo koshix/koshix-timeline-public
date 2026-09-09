@@ -7,6 +7,8 @@ import {
 import {
   PERSONAL_EVENT_TSV_HEADER,
   PUBLIC_EVENT_CATEGORIES,
+  PUBLIC_EVENT_SUB_TAG_KEYS,
+  PUBLIC_EVENT_SUB_TAGS,
   PUBLIC_EVENT_TSV_HEADER,
   isValidEventDate,
   splitEventList,
@@ -22,6 +24,12 @@ assert.deepEqual(
 assert.equal(PUBLIC_EVENT_CATEGORIES.has("science"), true);
 assert.equal(PUBLIC_EVENT_CATEGORIES.has("me"), false);
 
+assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 16);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("thought"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("technology"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("space"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("audio"), false);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("sf"), false);
 
 assert.deepEqual(
   splitEventList("science| education |science"),
@@ -53,7 +61,7 @@ const publicRow = {
   title: "試験項目",
   cats: "science|education",
   primary: "science",
-  subs: "physics|school",
+  subs: "math|technology",
   region: "日本",
   importance: "3",
   icon: "atom",
@@ -80,6 +88,14 @@ assert.throws(
   /primary "me" が不正/
 );
 
+assert.throws(
+  () => validatePublicEventRow({
+    ...publicRow,
+    subs: "audio",
+  }),
+  /未知のsubsタグ "audio"/
+);
+
 const decodedPublic = decodeEventRow(
   publicRow,
   { includeCore: true }
@@ -92,7 +108,7 @@ assert.deepEqual(decodedPublic, {
   title: "試験項目",
   cats: ["science", "education"],
   primary: "science",
-  subs: ["physics", "school"],
+  subs: ["math", "technology"],
   region: "日本",
   importance: 3,
   core: true,

@@ -15,7 +15,6 @@ export {
 const YEAR_MIN = 1930;
 const YEAR_MAX = 2100;
 const YEARS_MIN = 1;
-const YEARS_MAX = 20;
 
 export function validYear(value) {
   if (value === "" || value == null) return null;
@@ -28,7 +27,7 @@ export function validYear(value) {
 export function validStudyYears(value) {
   if (value === "" || value == null) return null;
   const years = Number(value);
-  return Number.isInteger(years) && years >= YEARS_MIN && years <= YEARS_MAX
+  return Number.isInteger(years) && years >= YEARS_MIN
     ? years
     : null;
 }
@@ -94,7 +93,16 @@ function normalizeRowsForModel({
 
     if (years == null) {
       warnings.push(
-        `${label}${index + 1}行目の修学年数を${YEARS_MIN}〜${YEARS_MAX}年で指定してください。`
+        `${label}${index + 1}行目の修学年数を${YEARS_MIN}以上の整数で指定してください。`
+      );
+      return;
+    }
+
+    const end = start + years - 1;
+
+    if (end > YEAR_MAX) {
+      warnings.push(
+        `${label}${index + 1}行目の終了年が${YEAR_MAX}年を超えます。`
       );
       return;
     }
@@ -104,7 +112,7 @@ function normalizeRowsForModel({
       inputIndex: index,
       start,
       years,
-      end: start + years - 1,
+      end,
       type: types[row.type] ? row.type : fallbackType,
     });
   });
@@ -166,7 +174,7 @@ export function buildLifeModel({
       (row) =>
         educationKindOf(row?.type) === "higher"
     );
-  const graduateHistory =
+  const graduateEducationHistory =
     educationHistory.filter(
       (row) =>
         educationKindOf(row?.type) === "graduate"
@@ -242,7 +250,7 @@ export function buildLifeModel({
     warnings,
   });
   const graduateRows = normalizeRowsForModel({
-    rows: graduateHistory,
+    rows: graduateEducationHistory,
     types: GRADUATE_TYPES,
     fallbackType: "masters",
     label: "大学院の",

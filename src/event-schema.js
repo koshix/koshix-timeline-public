@@ -33,6 +33,38 @@ export const PUBLIC_EVENT_CATEGORIES = new Set(
   PUBLIC_EVENT_CATEGORY_KEYS
 );
 
+export const PUBLIC_EVENT_SUB_TAG_ROWS = [
+  [
+    ["thought", "思想"],
+    ["rights", "人権"],
+    ["war", "戦争"],
+    ["revolution", "革命"],
+    ["literature", "文学"],
+    ["music", "音楽"],
+    ["art", "美術"],
+    ["visual", "映像"],
+  ],
+  [
+    ["politics", "政治"],
+    ["economy", "経済"],
+    ["technology", "技術"],
+    ["math", "数理"],
+    ["matter", "物質"],
+    ["life", "生命"],
+    ["environment", "環境"],
+    ["space", "宇宙"],
+  ],
+];
+
+export const PUBLIC_EVENT_SUB_TAG_KEYS =
+  PUBLIC_EVENT_SUB_TAG_ROWS
+    .flat()
+    .map(([key]) => key);
+
+export const PUBLIC_EVENT_SUB_TAGS = new Set(
+  PUBLIC_EVENT_SUB_TAG_KEYS
+);
+
 // TSVとRuntime Eventは同じイベントフィールド名を使う。
 // idを除く順序は公開TSV schemaを正本とする。
 export const EVENT_FIELD_ORDER =
@@ -122,6 +154,7 @@ function validateCommonEventRow(row) {
 export function validatePublicEventRow(row) {
   const { cats, importance } =
     validateCommonEventRow(row);
+  const subs = splitEventList(row.subs);
 
   if (cats.length === 0) {
     throw new Error("cats が空です");
@@ -145,6 +178,14 @@ export function validatePublicEventRow(row) {
     throw new Error(
       `primary "${row.primary}" が cats に含まれていません`
     );
+  }
+
+  for (const sub of subs) {
+    if (!PUBLIC_EVENT_SUB_TAGS.has(sub)) {
+      throw new Error(
+        `未知のsubsタグ "${sub}"`
+      );
+    }
   }
 
   if (!["0", "1"].includes(row.core)) {

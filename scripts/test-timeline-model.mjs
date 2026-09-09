@@ -102,6 +102,162 @@ assert.equal(
   false
 );
 
+const educationCategoryEvents = [
+  {
+    id: "education-primary",
+    date: "2000",
+    title: "教育制度",
+    cats: ["education"],
+    primary: "education",
+    importance: 2,
+  },
+  {
+    id: "science-education-related",
+    date: "2001",
+    title: "科学教育",
+    cats: ["science", "education"],
+    primary: "science",
+    importance: 2,
+  },
+];
+
+const educationOnlyOff = {
+  work: true,
+  science: true,
+  computer: true,
+  culture: true,
+  society: true,
+};
+
+const educationPrimaryOnly =
+  selectPublicTimelineEvents({
+    events: educationCategoryEvents,
+    catOff: educationOnlyOff,
+    sfOnly: false,
+    importanceMin: 2,
+    search: allSearch,
+    categoryMatchMode: "primary",
+  });
+
+assert.deepEqual(
+  educationPrimaryOnly.map((event) => event.id),
+  ["education-primary"]
+);
+
+const educationRelated =
+  selectPublicTimelineEvents({
+    events: educationCategoryEvents,
+    catOff: educationOnlyOff,
+    sfOnly: false,
+    importanceMin: 2,
+    search: allSearch,
+    categoryMatchMode: "related",
+  });
+
+assert.deepEqual(
+  educationRelated.map((event) => event.id),
+  [
+    "education-primary",
+    "science-education-related",
+  ]
+);
+
+const workRelatedEvents = [
+  {
+    id: "work-related-non-sf",
+    date: "2000",
+    title: "作品関連の非SF科学",
+    cats: ["science", "work"],
+    primary: "science",
+    importance: 2,
+  },
+  {
+    id: "work-related-sf",
+    date: "2001",
+    title: "作品関連のSF科学",
+    cats: ["science", "work", "sf"],
+    primary: "science",
+    importance: 2,
+  },
+  {
+    id: "work-primary-sf",
+    date: "2002",
+    title: "SF作品",
+    cats: ["work", "sf"],
+    primary: "work",
+    importance: 2,
+  },
+];
+
+const workOnlyOff = {
+  science: true,
+  education: true,
+  computer: true,
+  culture: true,
+  society: true,
+};
+
+const workRelatedSfOnly =
+  selectPublicTimelineEvents({
+    events: workRelatedEvents,
+    catOff: workOnlyOff,
+    sfOnly: true,
+    importanceMin: 2,
+    search: allSearch,
+    categoryMatchMode: "related",
+  });
+
+assert.deepEqual(
+  workRelatedSfOnly.map((event) => event.id),
+  [
+    "work-related-sf",
+    "work-primary-sf",
+  ]
+);
+
+const workPrimarySfOnly =
+  selectPublicTimelineEvents({
+    events: workRelatedEvents,
+    catOff: workOnlyOff,
+    sfOnly: true,
+    importanceMin: 2,
+    search: allSearch,
+    categoryMatchMode: "primary",
+  });
+
+assert.deepEqual(
+  workPrimarySfOnly.map((event) => event.id),
+  ["work-primary-sf"]
+);
+
+// scienceもONなら、非SFでもscienceとの関連一致で表示する。
+// SF✓はworkカテゴリだけのサブフィルタである。
+const scienceAndWorkRelatedSfOnly =
+  selectPublicTimelineEvents({
+    events: workRelatedEvents,
+    catOff: {
+      education: true,
+      computer: true,
+      culture: true,
+      society: true,
+    },
+    sfOnly: true,
+    importanceMin: 2,
+    search: allSearch,
+    categoryMatchMode: "related",
+  });
+
+assert.deepEqual(
+  scienceAndWorkRelatedSfOnly.map(
+    (event) => event.id
+  ),
+  [
+    "work-related-non-sf",
+    "work-related-sf",
+    "work-primary-sf",
+  ]
+);
+
 const sfOnly = selectPublicTimelineEvents({
   events,
   catOff: {},
@@ -123,6 +279,81 @@ assert.equal(
 assert.equal(
   sfOnly.some((event) => event.id === "science-important"),
   true
+);
+
+const subFilterEvents = [
+  {
+    id: "math",
+    date: "2000",
+    title: "数理",
+    cats: ["science"],
+    primary: "science",
+    subs: ["math"],
+    importance: 2,
+  },
+  {
+    id: "rights",
+    date: "2001",
+    title: "人権",
+    cats: ["society"],
+    primary: "society",
+    subs: ["politics", "rights"],
+    importance: 2,
+  },
+  {
+    id: "thought",
+    date: "2002",
+    title: "思想文学",
+    cats: ["work"],
+    primary: "work",
+    subs: ["thought", "literature"],
+    importance: 2,
+  },
+  {
+    id: "sf-literature",
+    date: "2003",
+    title: "SF文学",
+    cats: ["work", "sf"],
+    primary: "work",
+    subs: ["literature"],
+    importance: 2,
+  },
+];
+
+const selectSubFilters = (
+  subFilters,
+  options = {}
+) =>
+  selectPublicTimelineEvents({
+    events: subFilterEvents,
+    catOff: {},
+    sfOnly: false,
+    subFilters,
+    importanceMin: 2,
+    search: allSearch,
+    ...options,
+  });
+
+assert.deepEqual(
+  selectSubFilters(["thought", "rights"])
+    .map((event) => event.id),
+  ["rights", "thought"]
+);
+
+assert.deepEqual(
+  selectSubFilters(
+    ["rights"],
+    { catOff: { society: true } }
+  ).map((event) => event.id),
+  []
+);
+
+assert.deepEqual(
+  selectSubFilters(
+    ["literature"],
+    { sfOnly: true }
+  ).map((event) => event.id),
+  ["sf-literature"]
 );
 
 const searched = selectPublicTimelineEvents({
@@ -506,6 +737,8 @@ assert.deepEqual(
     birth: 1990,
   }),
   [
+    "pre-16-first",
+    "pre-16-second",
     "pre-17-first",
     "pre-17-second",
     "pre-18-first",
@@ -521,7 +754,14 @@ assert.deepEqual(
   buildInitialTimelineClosedStageKeys({
     birth: 1601,
   }),
-  []
+  ["pre-16-first", "pre-16-second"]
+);
+
+assert.deepEqual(
+  buildInitialTimelineClosedStageKeys({
+    birth: 1582,
+  }),
+  ["pre-16-first", "pre-16-second"]
 );
 
 console.log(

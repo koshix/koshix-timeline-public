@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import { spawnSync } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
@@ -8,9 +7,14 @@ import {
   isValidEventDate,
 } from "../src/event-schema.js";
 
-const TSV = "public/events.tsv";
-const BUILDER = "scripts/build-events.mjs";
+import {
+  clean,
+  eventId,
+  readRows,
+  runBuilder,
+} from "./event-entry-core.mjs";
 
+const TSV = "public/events.tsv";
 const CATEGORIES = {
   sf: "SF",
   science: "数学・物理学",
@@ -27,21 +31,10 @@ const ICONS = [
   "music", "wifi", "flag",
 ];
 
-const clean = (s) => s.trim().replace(/\r?\n/g, " ");
-
 function splitKeys(s) {
   return [...new Set(
     s.split(/[|,、\s]+/).map(x => x.trim()).filter(Boolean)
   )];
-}
-
-function eventId(year, title) {
-  const s = `${year}-${title}`;
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) {
-    h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
-  }
-  return `${year}-${h.toString(36)}`;
 }
 
 function yearFromDate(date) {
@@ -53,41 +46,13 @@ function yearFromDate(date) {
   return Number(date.slice(0, 4));
 }
 
-function readTsv(text) {
-  const lines = text.replace(/\r\n/g, "\n").split("\n").filter(Boolean);
-  const header = lines[0].split("\t");
-
-  const rows = lines.slice(1).map(line => {
-    const cells = line.split("\t");
-    return Object.fromEntries(
-      header.map((h, i) => [h, cells[i] ?? ""])
-    );
-  });
-
-  return { header, rows };
-}
-
-function runBuilder() {
-  const r = spawnSync(process.execPath, [BUILDER], {
-    stdio: "inherit",
-  });
-  return r.status === 0;
-}
-
 async function main() {
   if (!fs.existsSync(TSV)) {
     throw new Error(`${TSV} が見つかりません`);
   }
 
   const original = fs.readFileSync(TSV, "utf8");
-  const { header, rows } = readTsv(original);
-
-  if (
-    header.join("\t") !==
-    PUBLIC_EVENT_TSV_HEADER.join("\t")
-  ) {
-    throw new Error("events.tsv のヘッダーが想定と違います");
-  }
+  const rows = readRows(original);
 
   console.log("\nKoshix Timeline — 新規イベント追加\n");
 

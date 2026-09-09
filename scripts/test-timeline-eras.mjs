@@ -6,8 +6,17 @@ import {
   preBirthPeriodsOf,
 } from "../src/timeline-eras.js";
 
+assert.equal(backgroundEraOf(1500), null);
 assert.equal(
-  backgroundEraOf(1601)?.key,
+  backgroundEraOf(1501)?.key,
+  "early-modern-world"
+);
+assert.equal(
+  backgroundEraOf(1581)?.key,
+  "early-modern-world"
+);
+assert.equal(
+  backgroundEraOf(1582)?.key,
   "scientific-revolution"
 );
 assert.equal(
@@ -30,7 +39,6 @@ assert.equal(
   backgroundEraOf(2026)?.key,
   "ai-postpandemic"
 );
-assert.equal(backgroundEraOf(1600), null);
 
 assert.equal(japaneseEraOf(1867), null);
 assert.equal(japaneseEraOf(1868)?.label, "明治");
@@ -50,18 +58,24 @@ assert.equal(
 );
 assert.equal(halfCenturyMarkerOf(2051), null);
 
-assert.deepEqual(preBirthPeriodsOf(1601), []);
+assert.deepEqual(preBirthPeriodsOf(1501), []);
 assert.deepEqual(preBirthPeriodsOf("invalid"), []);
 
 {
   const periods = preBirthPeriodsOf(1953);
 
-  assert.equal(periods.length, 8);
+  assert.equal(periods.length, 10);
   assert.deepEqual(periods[0], {
-    key: "pre-17-first",
-    label: "17世紀前半",
-    from: 1601,
-    to: 1650,
+    key: "pre-16-first",
+    label: "16世紀前半",
+    from: 1501,
+    to: 1550,
+  });
+  assert.deepEqual(periods[1], {
+    key: "pre-16-second",
+    label: "16世紀後半",
+    from: 1551,
+    to: 1600,
   });
   assert.deepEqual(periods.at(-1), {
     key: "pre-20-second",

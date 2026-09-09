@@ -1,6 +1,15 @@
-import { eventYear } from "./event-schema.js";
+import {
+  eventYear,
+  PUBLIC_EVENT_CATEGORY_KEYS,
+} from "./event-schema.js";
 import { eventId } from "./event-links.js";
 import { catsOf, primaryCatOf } from "./categories.js";
+
+const RELATED_CATEGORY_KEYS = new Set(
+  PUBLIC_EVENT_CATEGORY_KEYS.filter(
+    (key) => key !== "sf"
+  )
+);
 import { buildLifeModel } from "./life-stages.js";
 import {
   adultPeriodOf,
@@ -54,22 +63,45 @@ export function selectPublicTimelineEvents({
   events,
   catOff,
   sfOnly,
+  subFilters = [],
   importanceMin,
   search,
+  categoryMatchMode = "primary",
 }) {
   const categoryOn = (key) => catOff[key] !== true;
+  const activeSubFilters = new Set(subFilters);
 
   return events
     .filter((event) => {
       const primary = primaryCatOf(event);
+      const categories = catsOf(event);
+      const matchesCategory = (key) =>
+        RELATED_CATEGORY_KEYS.has(key) &&
+        categoryOn(key) &&
+        (
+          key !== "work" ||
+          !sfOnly ||
+          categories.includes("sf")
+        );
+
+      const categoryVisible =
+        categoryMatchMode === "related"
+          ? categories.some(matchesCategory)
+          : matchesCategory(primary);
+
+      const eventSubs = Array.isArray(event.subs)
+        ? event.subs
+        : [];
+
+      const subVisible =
+        activeSubFilters.size === 0 ||
+        eventSubs.some((key) =>
+          activeSubFilters.has(key)
+        );
 
       return (
-        categoryOn(primary) &&
-        (
-          primary !== "work" ||
-          !sfOnly ||
-          catsOf(event).includes("sf")
-        ) &&
+        categoryVisible &&
+        subVisible &&
         (event.importance ?? 2) >= importanceMin &&
         search.matches(event)
       );
@@ -98,16 +130,20 @@ export function buildTimelineEventList({
   birth,
   catOff,
   sfOnly,
+  subFilters = [],
   importanceMin,
   search,
+  categoryMatchMode = "primary",
 }) {
   const selectedPublicEvents =
     selectPublicTimelineEvents({
       events: publicEvents,
       catOff,
       sfOnly,
+      subFilters,
       importanceMin,
       search,
+      categoryMatchMode,
     });
 
   const selectedPersonalEvents = showPersonal

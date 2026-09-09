@@ -5,9 +5,7 @@
   "defaults": {
     "birthYear": 1965,
     "birthMonth": 0,
-    "earlyChildhoodHistory": [],
-    "higherEducationHistory": [],
-    "graduateEducationHistory": []
+    "education": []
   },
   "downloadUrl": "",
   "publicSourceUrl": "",

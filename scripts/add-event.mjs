@@ -1,24 +1,25 @@
 import fs from "node:fs";
-import { spawnSync } from "node:child_process";
-
 import {
   PUBLIC_EVENT_CATEGORIES,
   PUBLIC_EVENT_TSV_HEADER,
   isValidEventDate,
 } from "../src/event-schema.js";
 
-const TSV = "public/events.tsv";
-const BUILDER = "scripts/build-events.mjs";
+import {
+  clean,
+  eventId,
+  EVENT_BUILDER,
+  readRows,
+  runBuilder,
+} from "./event-entry-core.mjs";
 
+const TSV = "public/events.tsv";
 const ICONS = new Set([
   "book", "tv", "film", "robot", "watch", "comm",
   "computer", "chip", "globe", "satellite", "rocket",
   "hmd", "gamepad", "phone", "video", "ai", "ghost",
   "music", "wifi", "flag",
 ]);
-
-const clean = (v) =>
-  String(v ?? "").trim().replace(/\r?\n/g, " ");
 
 function list(v) {
   if (Array.isArray(v)) {
@@ -66,17 +67,6 @@ function sourceText(s) {
     : target;
 }
 
-function eventId(year, title) {
-  const s = `${year}-${title}`;
-  let h = 5381;
-
-  for (let i = 0; i < s.length; i++) {
-    h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
-  }
-
-  return `${year}-${h.toString(36)}`;
-}
-
 function checkDate(value, name, optional = false) {
   const s = clean(value);
 
@@ -93,34 +83,6 @@ function checkDate(value, name, optional = false) {
 
 function yearOf(date) {
   return Number(date.slice(0, 4));
-}
-
-function readRows(text) {
-  const lines = text
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .filter(Boolean);
-
-  const header = lines[0]?.split("\t") ?? [];
-
-  if (
-    header.join("\t") !==
-    PUBLIC_EVENT_TSV_HEADER.join("\t")
-  ) {
-    throw new Error(
-      "events.tsv のヘッダーが想定と違います"
-    );
-  }
-
-  return lines.slice(1).map((line) => {
-    const cells = line.split("\t");
-
-    return Object.fromEntries(
-      header.map(
-        (h, i) => [h, cells[i] ?? ""]
-      )
-    );
-  });
 }
 
 async function readJson() {
@@ -256,16 +218,6 @@ function normalize(data) {
   return row;
 }
 
-function runBuilder() {
-  const result = spawnSync(
-    process.execPath,
-    [BUILDER],
-    { stdio: "inherit" }
-  );
-
-  return result.status === 0;
-}
-
 function restoreFile(path, existed, original) {
   if (existed) {
     fs.writeFileSync(path, original);
@@ -279,8 +231,8 @@ async function addFromStdin() {
     throw new Error(`${TSV} が見つかりません`);
   }
 
-  if (!fs.existsSync(BUILDER)) {
-    throw new Error(`${BUILDER} が見つかりません`);
+  if (!fs.existsSync(EVENT_BUILDER)) {
+    throw new Error(`${EVENT_BUILDER} が見つかりません`);
   }
 
   const originalTsv =

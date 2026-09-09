@@ -166,7 +166,6 @@ const THREAD_LIST = THREADS.map((th) => ({
 
 const findThread = (key) => THREAD_LIST.find((t) => t.key === key) || null;
 
-// 背景に流す同時代の項目の色(暗い画面で読めるよう、カテゴリー色を明るくしたもの)
 // ---- 保存(ブラウザのみ。使えない環境では黙ってメモリ動作) ----
 const SAVED =
   (typeof window !== "undefined" &&
@@ -292,9 +291,13 @@ export default function App() {
   const {
     catOff,
     sfOnly,
+    subFilters,
+    categoryMatchMode,
+    setCategoryMatchMode,
     catOn,
     toggleCat,
     toggleSfOnly,
+    toggleSubFilter,
     setAllCats,
     importanceMin,
     setImportanceLevel,
@@ -385,6 +388,8 @@ export default function App() {
           }),
       catOff,
       sfOnly,
+      subFilters,
+      categoryMatchMode,
       importanceMin,
       closed: [...closedStages],
       setupOpen,
@@ -396,6 +401,8 @@ export default function App() {
     adultPeriods,
     catOff,
     sfOnly,
+    subFilters,
+    categoryMatchMode,
     importanceMin,
     closedStages,
     setupOpen,
@@ -456,6 +463,8 @@ export default function App() {
     publicEvents: effectiveEvents,
     catOff,
     sfOnly,
+    subFilters,
+    categoryMatchMode,
     importanceMin,
     showPersonal: showMe,
     searchText,
@@ -474,10 +483,6 @@ export default function App() {
     '"Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif';
   const mono = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
-  const threadWindowMode =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("threads") === "1";
-
   const openThreadWindow = () => {
     const url = new URL(window.location.href);
     url.search = "";
@@ -492,153 +497,6 @@ export default function App() {
 
     popup?.focus();
   };
-
-  if (threadWindowMode) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#fafaf8",
-          fontFamily: font,
-          color: "#22272e",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 680,
-            margin: "0 auto",
-            padding: "28px 18px 48px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 18,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  letterSpacing: "0.2em",
-                  color: "#8a8f98",
-                }}
-              >
-                {APP_TITLE}
-              </div>
-
-              <h1
-                style={{
-                  fontSize: 24,
-                  margin: "5px 0 0",
-                  color: "#374151",
-                }}
-              >
-                テーマの糸
-              </h1>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => window.close()}
-              style={miniBtn}
-            >
-              ×閉じる
-            </button>
-          </div>
-
-          <div
-            style={{
-              fontSize: 12.5,
-              lineHeight: 1.8,
-              color: "#6b7280",
-              marginBottom: 16,
-            }}
-          >
-            関連する出来事を一本の流れとしてたどります。
-            テーマを選ぶと、自動送りの再生画面が始まります。
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-              gap: 10,
-            }}
-          >
-            {THREAD_LIST.map((th, index) => {
-              const threadColors = [
-                ["#f7f3ee", "#ddd1c3"],
-                ["#f1f5f2", "#cddbd2"],
-                ["#f3f4f8", "#d2d5e2"],
-                ["#f7f2f5", "#dfd1da"],
-                ["#f5f5ef", "#d9d9c8"],
-                ["#f1f5f7", "#cbd8de"],
-                ["#f7f4ef", "#ddd3c5"],
-                ["#f3f2f7", "#d5d0df"],
-                ["#f2f6f3", "#cedbd2"],
-                ["#f6f2f2", "#ddcfcf"],
-              ];
-              const [background, border] =
-                threadColors[index % threadColors.length];
-
-              return (
-              <button
-                key={th.key}
-                type="button"
-                onClick={() => setThread(th)}
-                style={{
-                  fontFamily: font,
-                  textAlign: "left",
-                  cursor: "pointer",
-                  padding: "12px 14px",
-                  borderRadius: 10,
-                  border: `1px solid ${border}`,
-                  background,
-                  color: "#4b5563",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: "#4B56A6",
-                  }}
-                >
-                  ▶ {th.title}
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 5,
-                    fontSize: 11,
-                    lineHeight: 1.6,
-                    color: "#6b7280",
-                  }}
-                >
-                  {th.events.length}項目
-                </div>
-              </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {thread && (
-          <Theater
-            thread={thread}
-            gradeLabel={grouped.gradeLabel}
-            birth={birth}
-            hashtag={HASHTAG}
-            shareUrl={SHARE_URL}
-            onClose={() => setThread(null)}
-          />
-        )}
-      </div>
-    );
-  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#fafaf8", fontFamily: font, color: "#22272e" }}>
@@ -921,18 +779,42 @@ export default function App() {
               件
             </span>
 
-          <TimelineCategoryFilters
-            mainCategories={MAIN_CATS}
-            catOn={catOn}
-            toggleCat={toggleCat}
-            sfOnly={sfOnly}
-            toggleSfOnly={toggleSfOnly}
-            showMe={showMe}
-            toggleMyEvents={toggleMyEvents}
-            openThreadWindow={openThreadWindow}
-            font={font}
-          />
+            <button
+              type="button"
+              onClick={openThreadWindow}
+              className="timeline-thread-button"
+              style={{ "--timeline-font": font }}
+            >
+              テーマでたどる
+            </button>
           </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexWrap: "wrap",
+              width: "100%",
+              marginBottom: 2,
+            }}
+          >
+            <TimelineCategoryFilters
+              mainCategories={MAIN_CATS}
+              catOn={catOn}
+              toggleCat={toggleCat}
+              sfOnly={sfOnly}
+              toggleSfOnly={toggleSfOnly}
+              subFilters={subFilters}
+              toggleSubFilter={toggleSubFilter}
+              showMe={showMe}
+              toggleMyEvents={toggleMyEvents}
+              categoryMatchMode={categoryMatchMode}
+              setCategoryMatchMode={setCategoryMatchMode}
+              font={font}
+            />
+          </div>
+
           <TimelineDisplayControls
             controlTargets={grouped.controlTargets}
             setAllCats={setAllCats}
@@ -1533,18 +1415,6 @@ export default function App() {
     </div>
   );
 }
-
-const segmentBtnStyle = (selected, color, soft) => ({
-  fontFamily: "inherit",
-  fontSize: 12,
-  fontWeight: 700,
-  cursor: "pointer",
-  padding: "6px 11px",
-  borderRadius: 999,
-  border: `1.5px solid ${selected ? color : "#d5d8dd"}`,
-  background: selected ? soft : "#fff",
-  color: selected ? color : "#6b7280",
-});
 
 const btnStyle = {
   width: 34, height: 34, borderRadius: 8, border: "1px solid #d5d8dd",

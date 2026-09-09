@@ -179,7 +179,6 @@ function HistoryBlock({
             type="number"
             inputMode="numeric"
             min="1"
-            max="20"
             placeholder="年"
             value={row.years}
             onChange={(event) =>

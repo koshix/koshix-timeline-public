@@ -311,4 +311,40 @@ function model({
   assert.equal(life.adultYear, 1972);
 }
 
+// 長い修学年数も2100年以内なら扱える。
+{
+  const life = model({
+    education: [
+      {
+        start: "2050",
+        years: "51",
+        type: "university",
+      },
+    ],
+  });
+
+  assert.equal(life.stageOf(2100).label, "大学");
+  assert.equal(life.gradeLabel(2100), "大51");
+  assert.equal(life.adultYear, 2101);
+}
+
+// 終了年が2100年を超える教育歴は採用せず警告する。
+{
+  const life = model({
+    education: [
+      {
+        start: "2099",
+        years: "3",
+        type: "university",
+      },
+    ],
+  });
+
+  assert.ok(
+    life.warnings.some((warning) =>
+      warning.includes("終了年が2100年を超えます")
+    )
+  );
+}
+
 console.log("OK: 複数行の教育歴・人生段階を検査しました");

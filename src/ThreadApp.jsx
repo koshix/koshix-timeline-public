@@ -56,7 +56,7 @@ const THREAD_QUERY =
     ? new URLSearchParams(window.location.search)
     : new URLSearchParams();
 const INITIAL_DYNAMIC_QUERY = THREAD_QUERY.get("q") || "";
-const AUTO_PLAY_DYNAMIC = THREAD_QUERY.get("play") === "1";
+const OPEN_SHARED_DYNAMIC = THREAD_QUERY.get("play") === "1";
 
 const CONFIGURED_THREADS = buildConfiguredThreads(
   THREADS,
@@ -85,7 +85,7 @@ export default function ThreadApp() {
       hashtag={HASHTAG}
       shareUrl={SHARE_URL}
       initialQuery={INITIAL_DYNAMIC_QUERY}
-      autoPlayDynamic={AUTO_PLAY_DYNAMIC}
+      openSharedDynamic={OPEN_SHARED_DYNAMIC}
     />
   );
 }

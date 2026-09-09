@@ -11,7 +11,7 @@ MIT Licenseの条件に従って、ソースコードを修正・再配布でき
 
 必要な環境:
 
-- Node.js 18以降
+- Node.js 22以降
 - npm
 - Webブラウザ
 
@@ -21,8 +21,11 @@ MIT Licenseの条件に従って、ソースコードを修正・再配布でき
 git clone https://github.com/koshix/koshix-timeline-public.git
 cd koshix-timeline-public
 npm install
+npm run check
 npm run dev
 ```
+
+`npm run check` でコード・データ・unit testを確認してから開発サーバーを起動します。
 
 開発サーバーはローカルでの開発・確認用です。インターネットへ直接公開しないでください。
 
@@ -83,7 +86,7 @@ npm run build
 npm run preview
 npm run build:events
 npm run validate:personal
-npm run test:life-stages
+npm test
 npm run add:event:interactive
 npm run build:starter
 ```

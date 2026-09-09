@@ -114,11 +114,16 @@ const normalizeEducationRows = (rows) => {
 
     if (
       !Number.isInteger(years) ||
-      years < 1 ||
-      years > 50
+      years < 1
     ) {
       throw new Error(
-        `教育歴の${index + 1}行目の在年数を1〜50年で指定してください。`
+        `教育歴の${index + 1}行目の在年数を1以上の整数で指定してください。`
+      );
+    }
+
+    if (start + years - 1 > YEAR_MAX) {
+      throw new Error(
+        `教育歴の${index + 1}行目の終了年が${YEAR_MAX}年を超えます。`
       );
     }
 

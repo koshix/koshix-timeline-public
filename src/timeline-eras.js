@@ -1,7 +1,13 @@
 export const BACKGROUND_ERAS = [
   {
+    key: "early-modern-world",
+    from: 1501,
+    to: 1581,
+    label: "大航海・宗教改革と近世世界の形成",
+  },
+  {
     key: "scientific-revolution",
-    from: 1601,
+    from: 1582,
     to: 1687,
     label: "科学革命と近代世界の形成",
   },
@@ -72,7 +78,7 @@ export const backgroundEraOf = (year) =>
     (era) => year >= era.from && year <= era.to
   ) ?? null;
 
-export const TIMELINE_START_YEAR = 1601;
+export const TIMELINE_START_YEAR = 1501;
 
 export const preBirthPeriodsOf = (birthYear) => {
   const endYear = Number(birthYear) - 1;
@@ -88,8 +94,11 @@ export const preBirthPeriodsOf = (birthYear) => {
   const lastCentury =
     Math.floor((endYear - 1) / 100) + 1;
 
+  const firstCentury =
+    Math.floor((TIMELINE_START_YEAR - 1) / 100) + 1;
+
   for (
-    let century = 17;
+    let century = firstCentury;
     century <= lastCentury;
     century += 1
   ) {

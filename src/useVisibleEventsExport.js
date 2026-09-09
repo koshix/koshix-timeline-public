@@ -3,6 +3,7 @@ import {
   buildVisiblePersonalExport,
   buildVisiblePublicExport,
 } from "./visible-events-export";
+import { downloadBlob } from "./browser-download.js";
 
 function cleanCell(value) {
   return String(value ?? "")
@@ -37,17 +38,7 @@ function downloadUtf16Tsv(filename, header, rows) {
     { type: "text/plain;charset=utf-16le" }
   );
 
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = filename;
-
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadBlob(blob, filename, 1000);
 }
 
 export default function useVisibleEventsExport({

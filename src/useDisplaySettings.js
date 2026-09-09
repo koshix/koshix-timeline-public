@@ -13,6 +13,22 @@ export default function useDisplaySettings({
   const [sfOnly, setSfOnly] = useState(
     saved.sfOnly ?? false
   );
+  // 分類ボタンを主分類だけで判定するか、副分類も含めて判定するか。
+  const [categoryMatchMode, setCategoryMatchMode] =
+    useState(
+      saved.categoryMatchMode === "related"
+        ? "related"
+        : "primary"
+    );
+
+  // subsを使った主分類横断フィルタ。
+  // 空配列なら絞り込みなし、複数選択時はOR。
+  const [subFilters, setSubFilters] = useState(
+    Array.isArray(saved.subFilters)
+      ? saved.subFilters
+      : []
+  );
+
   const catOn = (key) =>
     catOff[key] !== true;
 
@@ -30,6 +46,14 @@ export default function useDisplaySettings({
     }));
   };
 
+  const toggleSubFilter = (key) => {
+    setSubFilters((previous) =>
+      previous.includes(key)
+        ? previous.filter((item) => item !== key)
+        : [...previous, key]
+    );
+  };
+
   const setAllCats = (on) => {
     setCatOff(
       on
@@ -43,6 +67,7 @@ export default function useDisplaySettings({
     );
     if (on) {
       setSfOnly(false);
+      setSubFilters([]);
     }
   };
 
@@ -97,9 +122,13 @@ export default function useDisplaySettings({
   return {
     catOff,
     sfOnly,
+    subFilters,
+    categoryMatchMode,
+    setCategoryMatchMode,
     catOn,
     toggleCat,
     toggleSfOnly,
+    toggleSubFilter,
     setAllCats,
     importanceMin,
     setImportanceLevel,

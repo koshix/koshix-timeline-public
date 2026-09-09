@@ -40,7 +40,7 @@ export default function ThreadWindow({
   hashtag,
   shareUrl,
   initialQuery = "",
-  autoPlayDynamic = false,
+  openSharedDynamic = false,
 }) {
   const initialDynamicResult = useMemo(
     () =>
@@ -54,7 +54,7 @@ export default function ThreadWindow({
   );
 
   const [thread, setThread] = useState(
-    autoPlayDynamic
+    openSharedDynamic
       ? initialDynamicResult?.thread ?? null
       : null
   );
@@ -93,7 +93,7 @@ export default function ThreadWindow({
     >
       <div
         style={{
-          maxWidth: 680,
+          maxWidth: 760,
           margin: "0 auto",
           padding: "28px 18px 48px",
         }}
@@ -124,7 +124,7 @@ export default function ThreadWindow({
                 color: "#374151",
               }}
             >
-              テーマの糸
+              テーマでたどる
             </h1>
           </div>
 
@@ -361,17 +361,10 @@ export default function ThreadWindow({
               color: "#4b5563",
             }}
           >
-            おすすめの糸
+            おすすめテーマ
           </h2>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(230px, 1fr))",
-              gap: 10,
-            }}
-          >
+          <div className="thread-grid">
             {configuredThreads.map((item, index) => {
               const [background, border] =
                 THREAD_COLORS[index % THREAD_COLORS.length];

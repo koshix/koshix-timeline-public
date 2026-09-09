@@ -12,6 +12,7 @@ import {
   educationForKind,
   normalizeEducation,
 } from "./education-history";
+import { downloadBlob } from "./browser-download.js";
 import { workspaceStore } from "./workspace-store.js";
 
 const normalizeAdultPeriods = (periods) =>
@@ -165,20 +166,9 @@ export default function useLifeSettings({
         }
       );
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download =
-        "koshix-timeline-life-settings.tsv";
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(
-        () => URL.revokeObjectURL(url),
-        0
+      downloadBlob(
+        blob,
+        "koshix-timeline-life-settings.tsv"
       );
 
       setLifeSettingsStatus(
