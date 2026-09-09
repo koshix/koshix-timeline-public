@@ -106,7 +106,7 @@ export default function EventCustomizationControls({
               : {}),
           }}
         >
-          {eventCustomizationEditorOpen ? "編集を閉じる" : "編集する"}
+          {eventCustomizationEditorOpen ? "×編集を閉じる" : "編集する"}
         </button>
 
         <button

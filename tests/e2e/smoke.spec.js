@@ -145,7 +145,7 @@ test("synthetic personal history survives reload", async ({ page }) => {
 
   const section = page.locator("#personal-history");
   await section
-    .getByRole("button", { name: "編集", exact: true })
+    .getByRole("button", { name: "編集する", exact: true })
     .click();
   await section
     .getByRole("button", { name: "＋追加", exact: true })
@@ -166,7 +166,7 @@ test("synthetic personal history survives reload", async ({ page }) => {
 
   await expect(section).toContainText("このブラウザ（1件）");
   await section
-    .getByRole("button", { name: "編集", exact: true })
+    .getByRole("button", { name: "編集する", exact: true })
     .click();
   await expect(section.getByText(title, { exact: true })).toBeVisible();
 });

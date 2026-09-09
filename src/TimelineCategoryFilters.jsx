@@ -143,7 +143,7 @@ export default function TimelineCategoryFilters({
             : "横断タグを開く"
         }
       >
-        {subFiltersOpen ? "▼ タグを閉じる" : "▶ タグで絞る"}
+        {subFiltersOpen ? "×タグを閉じる" : "▶ タグで絞る"}
       </button>
 
       {subFiltersOpen &&

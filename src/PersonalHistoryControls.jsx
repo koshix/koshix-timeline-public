@@ -36,7 +36,7 @@ export default function PersonalHistoryControls({
         }}
       >
         自分史はこのブラウザ内に保存されます。
-        「編集」で追加・編集・削除し、年表表示は上の「自分」で切り替えます。
+        「編集する」で追加・編集・削除し、年表表示は上の「自分」で切り替えます。
         必要ならTSVファイルでバックアップできます。
       </div>
 
@@ -128,7 +128,7 @@ export default function PersonalHistoryControls({
               : {}),
           }}
         >
-          編集
+          {personalEditorOpen ? "×編集を閉じる" : "編集する"}
         </button>
 
         <button
