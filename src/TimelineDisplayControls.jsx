@@ -56,7 +56,7 @@ export default function TimelineDisplayControls({
             className="timeline-control-button"
             data-strong="true"
           >
-            全ON
+            すべて表示
           </button>
 
           <span
@@ -69,17 +69,17 @@ export default function TimelineDisplayControls({
             onClick={() => setAllCats(false)}
             className="timeline-control-button timeline-control-button--muted"
           >
-            全OFF
+            すべて隠す
           </button>
         </span>
       </div>
 
       <div
         role="group"
-        aria-label="表示"
+        aria-label="重要度による表示"
         className="timeline-control-group timeline-control-group--importance"
       >
-        <span className="timeline-control-label">表示</span>
+        <span className="timeline-control-label">重要度</span>
 
         <span className="timeline-control-segments">
           {[3, 2, 1].map((level, index) => (
@@ -97,10 +97,10 @@ export default function TimelineDisplayControls({
                 className="timeline-control-button"
               >
                 {level === 3
-                  ? "重要"
+                  ? "重要のみ"
                   : level === 2
-                    ? "標準"
-                    : "全部"}
+                    ? "標準以上"
+                    : "すべて"}
               </button>
             </span>
           ))}

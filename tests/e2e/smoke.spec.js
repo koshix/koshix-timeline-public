@@ -179,7 +179,7 @@ test("synthetic timeline addition survives reload", async ({ page }) => {
 
   const section = page.locator("#timeline-customization");
   await section
-    .getByRole("button", { name: "編集・表示に戻す", exact: true })
+    .getByRole("button", { name: "編集する", exact: true })
     .click();
   await section
     .getByRole("button", { name: "＋追加", exact: true })

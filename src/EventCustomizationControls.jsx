@@ -25,7 +25,7 @@ export default function EventCustomizationControls({
           color: "#365f7d",
         }}
       >
-        共通年表の編集
+        年表を自分用に編集
       </div>
 
       <div
@@ -36,7 +36,7 @@ export default function EventCustomizationControls({
           marginTop: 4,
         }}
       >
-        元の年表は変更せず、あなたの変更内容だけをこのブラウザに保存します。必要ならTSVファイルでバックアップできます。
+        元の年表は変わりません。あなたが追加・修正・非表示にした内容だけを、このブラウザに保存します。必要ならTSVファイルでバックアップできます。
       </div>
 
       <div
@@ -55,7 +55,7 @@ export default function EventCustomizationControls({
             color: "#365f7d",
           }}
         >
-          ●現在の年表：
+          ●自分用の変更：
           非表示 {hiddenCount}件
           {" / "}
           修正 {overrideCount}件
@@ -106,7 +106,7 @@ export default function EventCustomizationControls({
               : {}),
           }}
         >
-          編集・表示に戻す
+          {eventCustomizationEditorOpen ? "編集を閉じる" : "編集する"}
         </button>
 
         <button

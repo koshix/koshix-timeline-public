@@ -112,7 +112,7 @@ export default function TimelineCategoryFilters({
           className="timeline-category-mode-button"
           title="主分類だけで絞り込む"
         >
-          主分類
+          主分類のみ
         </button>
         <button
           type="button"
@@ -125,7 +125,7 @@ export default function TimelineCategoryFilters({
           className="timeline-category-mode-button"
           title="副分類も含めて関連項目を表示する"
         >
-          関連含
+          関連分野も
         </button>
       </span>
 
@@ -143,7 +143,7 @@ export default function TimelineCategoryFilters({
             : "横断タグを開く"
         }
       >
-        {subFiltersOpen ? "▼ 詳細" : "▶ 詳細"}
+        {subFiltersOpen ? "▼ タグを閉じる" : "▶ タグで絞る"}
       </button>
 
       {subFiltersOpen &&
