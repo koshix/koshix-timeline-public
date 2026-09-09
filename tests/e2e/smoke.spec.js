@@ -31,6 +31,36 @@ test("app loads and exposes the main controls", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("historical birth year can be entered directly", async ({ page }) => {
+  await openApp(page);
+
+  const settings = page.locator("#timeline-settings");
+  const toggle = settings.locator(":scope > button");
+
+  if (
+    (await toggle.getAttribute("aria-expanded"))
+    !== "true"
+  ) {
+    await toggle.click();
+  }
+
+  const birthYear = page.getByLabel(
+    "誕生年",
+    { exact: true }
+  );
+
+  await birthYear.fill("1750");
+  await birthYear.blur();
+
+  await expect(
+    birthYear
+  ).toHaveValue("1750");
+
+  await expect(
+    toggle
+  ).toContainText("1750年");
+});
+
 test("search can reduce the visible timeline to zero matches", async ({ page }) => {
   await openApp(page);
 

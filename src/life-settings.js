@@ -18,7 +18,7 @@ const HEADER = [
   "value",
 ];
 
-const YEAR_MIN = 1930;
+const YEAR_MIN = 1501;
 const YEAR_MAX = 2100;
 
 const cleanCell = (value) =>

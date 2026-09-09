@@ -272,6 +272,48 @@ assert.throws(
   /終了年が2100年を超えます/
 );
 
+// 年表開始年以後なら、歴史シミュレーション用の古い生年も扱える。
+const historicalSimulationText =
+  serializeLifeSettingsTsv({
+    birth: 1750,
+    month: 4,
+    education: [
+      {
+        start: "1755",
+        years: "2",
+        type: "kindergarten",
+      },
+      {
+        start: "1769",
+        years: "4",
+        type: "university",
+      },
+    ],
+    adultPeriods: [
+      {
+        start: "1773",
+        end: "",
+        label: "仮想成人期",
+      },
+    ],
+  });
+
+assert.equal(
+  parseLifeSettingsTsv(
+    historicalSimulationText
+  ).birth,
+  1750
+);
+
+assert.throws(
+  () =>
+    serializeLifeSettingsTsv({
+      ...source,
+      birth: 1500,
+    }),
+  /1501〜2100/
+);
+
 console.log(
   "OK: 人生設定TSVの書き出し・読込・既存設定保持を検査しました"
 );

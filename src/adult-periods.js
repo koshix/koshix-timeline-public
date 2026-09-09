@@ -1,4 +1,4 @@
-const YEAR_MIN = 1930;
+const YEAR_MIN = 1501;
 const YEAR_MAX = 2100;
 
 const cleanLabel = (value) =>
@@ -35,12 +35,12 @@ export function validateAdultPeriods(
     const label = cleanLabel(row.label);
 
     if (!Number.isFinite(start)) {
-      errors.push(`${line}行目: 開始年を1930〜2100年で指定してください。`);
+      errors.push(`${line}行目: 開始年を${YEAR_MIN}〜${YEAR_MAX}年で指定してください。`);
       return;
     }
 
     if (end !== null && !Number.isFinite(end)) {
-      errors.push(`${line}行目: 終了年を1930〜2100年で指定するか、空欄にしてください。`);
+      errors.push(`${line}行目: 終了年を${YEAR_MIN}〜${YEAR_MAX}年で指定するか、空欄にしてください。`);
       return;
     }
 

@@ -48,6 +48,13 @@ const inputStyle = {
   boxSizing: "border-box",
 };
 
+const yearInputStyle = {
+  ...inputStyle,
+  fontSize: 15,
+  fontWeight: 800,
+  color: "#22272e",
+};
+
 const smallButtonStyle = {
   fontFamily: font,
   fontSize: 11,
@@ -154,7 +161,7 @@ function HistoryBlock({
           <input
             type="number"
             inputMode="numeric"
-            min="1930"
+            min="1501"
             max="2100"
             placeholder="西暦"
             value={row.start}
@@ -162,7 +169,7 @@ function HistoryBlock({
               updateRow(index, "start", event.target.value)
             }
             aria-label={`${title}${index + 1}行目の入学年`}
-            style={inputStyle}
+            style={yearInputStyle}
           />
 
           <span
@@ -186,7 +193,7 @@ function HistoryBlock({
             }
             aria-label={`${title}${index + 1}行目の修学年数`}
             style={{
-              ...inputStyle,
+              ...yearInputStyle,
               width: 58,
             }}
           />

@@ -114,7 +114,7 @@ export default function AdultPeriodsEditor({
               <input
                 type="number"
                 inputMode="numeric"
-                min="1930"
+                min="1501"
                 max="2100"
                 value={period.start}
                 onChange={(e) =>
@@ -148,7 +148,7 @@ export default function AdultPeriodsEditor({
               <input
                 type="number"
                 inputMode="numeric"
-                min="1930"
+                min="1501"
                 max="2100"
                 value={period.end}
                 onChange={(e) =>

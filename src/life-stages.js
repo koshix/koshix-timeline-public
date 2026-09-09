@@ -12,7 +12,7 @@ export {
   HIGHER_ED_TYPES,
 };
 
-const YEAR_MIN = 1930;
+const YEAR_MIN = 1501;
 const YEAR_MAX = 2100;
 const YEARS_MIN = 1;
 

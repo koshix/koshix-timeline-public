@@ -20,9 +20,9 @@ export default function TimelineSettingsSection({
   adultYear,
   adultPeriodErrors,
   warnings,
-  adjustBirthYear,
   setBirthYear,
   setBirthMonth,
+  resetBirthSettings,
   education,
   educationEditorRevision,
   updateEducation,
@@ -36,7 +36,6 @@ export default function TimelineSettingsSection({
   exportLifeSettingsFile,
   font,
   mono,
-  btnStyle,
   miniBtn,
 }) {
   return (
@@ -132,14 +131,13 @@ export default function TimelineSettingsSection({
           <BirthSettingsEditor
             birth={birth}
             month={month}
-            adjustBirthYear={
-              adjustBirthYear
-            }
             setBirthYear={setBirthYear}
             setBirthMonth={setBirthMonth}
+            resetBirthSettings={
+              resetBirthSettings
+            }
             font={font}
             mono={mono}
-            btnStyle={btnStyle}
           />
 
           <div

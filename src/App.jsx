@@ -184,9 +184,9 @@ export default function App() {
   const {
     birth,
     month,
-    adjustBirthYear,
     setBirthYear,
     setBirthMonth,
+    resetBirthSettings,
     education,
     updateEducation,
     firstHigherYear,
@@ -1175,9 +1175,11 @@ export default function App() {
             grouped.adultPeriodErrors
           }
           warnings={grouped.warnings}
-          adjustBirthYear={adjustBirthYear}
           setBirthYear={setBirthYear}
           setBirthMonth={setBirthMonth}
+          resetBirthSettings={
+            resetBirthSettings
+          }
           education={education}
           educationEditorRevision={
             educationEditorRevision
@@ -1207,7 +1209,6 @@ export default function App() {
           }
           font={font}
           mono={mono}
-          btnStyle={btnStyle}
           miniBtn={miniBtn}
         />
 

@@ -1,101 +1,216 @@
+import { useEffect, useState } from "react";
+
+const YEAR_MIN = 1501;
+const YEAR_MAX = 2100;
+
+const resetButtonStyle = {
+  fontFamily: "inherit",
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: "pointer",
+  padding: "5px 9px",
+  borderRadius: 999,
+  border: "1px solid #d5d8dd",
+  background: "#fff",
+  color: "#6b7280",
+};
+
 export default function BirthSettingsEditor({
   birth,
   month,
-  adjustBirthYear,
   setBirthYear,
   setBirthMonth,
+  resetBirthSettings,
   font,
   mono,
-  btnStyle,
 }) {
+  const [birthDraft, setBirthDraft] =
+    useState(String(birth ?? ""));
+  const [monthDraft, setMonthDraft] =
+    useState(month ? String(month) : "");
+
+  useEffect(() => {
+    setBirthDraft(String(birth ?? ""));
+  }, [birth]);
+
+  useEffect(() => {
+    setMonthDraft(month ? String(month) : "");
+  }, [month]);
+
+  const commitBirthYear = () => {
+    const year = Number(birthDraft);
+
+    if (
+      Number.isInteger(year) &&
+      year >= YEAR_MIN &&
+      year <= YEAR_MAX
+    ) {
+      setBirthYear(year);
+      return;
+    }
+
+    setBirthDraft(String(birth));
+  };
+
+  const commitBirthMonth = () => {
+    if (monthDraft.trim() === "") {
+      setBirthMonth(0);
+      return;
+    }
+
+    const nextMonth = Number(monthDraft);
+
+    if (
+      Number.isInteger(nextMonth) &&
+      nextMonth >= 1 &&
+      nextMonth <= 12
+    ) {
+      setBirthMonth(nextMonth);
+      return;
+    }
+
+    setMonthDraft(month ? String(month) : "");
+  };
+
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        flexWrap: "wrap",
-        padding: "14px 16px",
+        padding: "10px 16px",
         borderBottom: "1px solid #eceef1",
       }}
     >
-      <label
+      <div
         style={{
-          fontSize: 13,
-          fontWeight: 700,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap",
+          marginBottom: 7,
         }}
       >
-        生まれた年
-      </label>
+        <strong
+          style={{
+            fontFamily: font,
+            fontSize: 13,
+            color: "#4b5563",
+          }}
+        >
+          0. 生まれた年
+        </strong>
 
-      <button
-        onClick={() => adjustBirthYear(-1)}
-        style={btnStyle}
-        aria-label="1年戻す"
-      >
-        −
-      </button>
+        <button
+          type="button"
+          onClick={resetBirthSettings}
+          style={{
+            ...resetButtonStyle,
+            marginLeft: "auto",
+          }}
+        >
+          未設定に戻す
+        </button>
+      </div>
 
-      <span
+      <div
         style={{
-          fontFamily: mono,
-          fontSize: 24,
-          fontWeight: 700,
-          minWidth: 76,
-          textAlign: "center",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          flexWrap: "wrap",
+          padding: "5px 0",
         }}
       >
-        {birth}
-      </span>
+        <span
+          style={{
+            fontFamily: font,
+            fontSize: 11.5,
+            color: "#68707a",
+          }}
+        >
+          誕生年
+        </span>
 
-      <button
-        onClick={() => adjustBirthYear(1)}
-        style={btnStyle}
-        aria-label="1年進める"
-      >
-        ＋
-      </button>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={YEAR_MIN}
+          max={YEAR_MAX}
+          placeholder="西暦"
+          value={birthDraft}
+          onChange={(event) =>
+            setBirthDraft(event.target.value)
+          }
+          onBlur={commitBirthYear}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+          }}
+          aria-label="誕生年"
+          style={{
+            fontFamily: mono,
+            fontSize: 15,
+            fontWeight: 800,
+            color: "#22272e",
+            width: 92,
+            padding: "6px 7px",
+            borderRadius: 7,
+            border: "1px solid #cfd3d8",
+            boxSizing: "border-box",
+          }}
+        />
 
-      <select
-        value={month}
-        onChange={(e) => setBirthMonth(e.target.value)}
-        style={{
-          fontFamily: font,
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: "pointer",
-          padding: "7px 8px",
-          borderRadius: 8,
-          border: "1px solid #d5d8dd",
-          background: "#fff",
-          color: "#22272e",
-        }}
-        aria-label="生まれた月"
-      >
-        <option value={0}>月(任意)</option>
-        {Array.from(
-          { length: 12 },
-          (_, i) => i + 1
-        ).map((m) => (
-          <option key={m} value={m}>
-            {m}月
-          </option>
-        ))}
-      </select>
+        <span
+          style={{
+            fontFamily: font,
+            fontSize: 11.5,
+            color: "#68707a",
+            marginLeft: 4,
+          }}
+        >
+          誕生月
+        </span>
 
-      <input
-        type="range"
-        min={1930}
-        max={2010}
-        value={birth}
-        onChange={(e) => setBirthYear(e.target.value)}
-        style={{
-          flex: 1,
-          minWidth: 140,
-          accentColor: "#c2452d",
-        }}
-        aria-label="生まれた年スライダー"
-      />
+        <input
+          type="number"
+          inputMode="numeric"
+          min="1"
+          max="12"
+          placeholder="月"
+          value={monthDraft}
+          onChange={(event) =>
+            setMonthDraft(event.target.value)
+          }
+          onBlur={commitBirthMonth}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+          }}
+          aria-label="誕生月"
+          style={{
+            fontFamily: mono,
+            fontSize: 15,
+            fontWeight: 800,
+            color: "#22272e",
+            width: 62,
+            padding: "6px 7px",
+            borderRadius: 7,
+            border: "1px solid #cfd3d8",
+            boxSizing: "border-box",
+          }}
+        />
+
+        <span
+          style={{
+            fontFamily: font,
+            fontSize: 12,
+            fontWeight: 700,
+            color: "#4b5563",
+          }}
+        >
+          月
+        </span>
+      </div>
     </div>
   );
 }

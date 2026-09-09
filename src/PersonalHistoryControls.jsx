@@ -80,24 +80,7 @@ export default function PersonalHistoryControls({
               : "未読み込み"}
         </span>
 
-        <button
-          onClick={clearPersonalEventsFile}
-          disabled={!browserSource}
-          style={{
-            ...miniBtn,
-            background: "#fff3f3",
-            border: "1px solid #e4bcbc",
-            color: "#8a4f4f",
-            ...(!browserSource
-              ? {
-                  opacity: 0.45,
-                  cursor: "not-allowed",
-                }
-              : {}),
-          }}
-        >
-          自分史を消去
-        </button>
+
 
         <button
           onClick={() =>
@@ -158,6 +141,25 @@ export default function PersonalHistoryControls({
           }}
         >
           ファイルに保存
+        </button>
+
+        <button
+          onClick={clearPersonalEventsFile}
+          disabled={!browserSource}
+          style={{
+            ...miniBtn,
+            background: "#fff3f3",
+            border: "1px solid #e4bcbc",
+            color: "#8a4f4f",
+            ...(!browserSource
+              ? {
+                  opacity: 0.45,
+                  cursor: "not-allowed",
+                }
+              : {}),
+          }}
+        >
+          自分史を消去
         </button>
 
 

@@ -63,22 +63,7 @@ export default function EventCustomizationControls({
           追加 {additionCount}件
         </span>
 
-        <button
-          type="button"
-          onClick={clearEventCustomizations}
-          disabled={!hasChanges}
-          style={{
-            ...miniBtn,
-            background: "#fff3f3",
-            border: "1px solid #e4bcbc",
-            color: "#8a4f4f",
-            ...(!hasChanges
-              ? { opacity: 0.45, cursor: "not-allowed" }
-              : {}),
-          }}
-        >
-          年表の変更を消去
-        </button>
+
 
         <input
           ref={eventCustomizationFileInputRef}
@@ -135,6 +120,23 @@ export default function EventCustomizationControls({
           }}
         >
           ファイルに保存
+        </button>
+
+        <button
+          type="button"
+          onClick={clearEventCustomizations}
+          disabled={!hasChanges}
+          style={{
+            ...miniBtn,
+            background: "#fff3f3",
+            border: "1px solid #e4bcbc",
+            color: "#8a4f4f",
+            ...(!hasChanges
+              ? { opacity: 0.45, cursor: "not-allowed" }
+              : {}),
+          }}
+        >
+          年表の変更を消去
         </button>
       </div>
 

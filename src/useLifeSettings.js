@@ -64,21 +64,34 @@ export default function useLifeSettings({
     );
   };
 
-  const adjustBirthYear = (delta) => {
-    setBirth((current) =>
-      Math.max(
-        1930,
-        Math.min(2010, current + delta)
-      )
-    );
-  };
-
   const setBirthYear = (value) => {
-    setBirth(Number(value));
+    const year = Number(value);
+
+    if (
+      Number.isInteger(year) &&
+      year >= 1501 &&
+      year <= 2100
+    ) {
+      setBirth(year);
+    }
   };
 
   const setBirthMonth = (value) => {
-    setMonth(Number(value));
+    const nextMonth = Number(value);
+
+    if (
+      Number.isInteger(nextMonth) &&
+      nextMonth >= 0 &&
+      nextMonth <= 12
+    ) {
+      setMonth(nextMonth);
+    }
+  };
+
+  const resetBirthSettings = () => {
+    setBirth(initialBirth);
+    setMonth(0);
+    setLifeSettingsStatus("");
   };
 
   const firstHigherEducation =
@@ -255,9 +268,9 @@ export default function useLifeSettings({
   return {
     birth,
     month,
-    adjustBirthYear,
     setBirthYear,
     setBirthMonth,
+    resetBirthSettings,
     education,
     updateEducation,
     firstHigherYear,
