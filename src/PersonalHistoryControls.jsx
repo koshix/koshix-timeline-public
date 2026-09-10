@@ -7,6 +7,7 @@ export default function PersonalHistoryControls({
   exportPersonalEventsFile,
   togglePersonalEditor,
   clearPersonalEventsFile,
+  copyServerPersonalEventsToBrowser,
   titleColor,
   miniBtn,
 }) {
@@ -103,6 +104,22 @@ export default function PersonalHistoryControls({
         >
           ファイルから読込
         </button>
+
+        {serverSource && (
+          <button
+            type="button"
+            onClick={copyServerPersonalEventsToBrowser}
+            style={{
+              ...miniBtn,
+              fontWeight: 800,
+              background: "#fff8ec",
+              border: "1px solid #d8b278",
+              color: "#7c551d",
+            }}
+          >
+            編集用に取り込む
+          </button>
+        )}
 
         <button
           onClick={togglePersonalEditor}

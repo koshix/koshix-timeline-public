@@ -1,8 +1,26 @@
 import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 
-const PERSONAL_EVENTS_TSV =
-  "id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote\n";
+const PERSONAL_EVENTS_TSV = [
+  "id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote",
+  [
+    "admin-e2e-1",
+    "2001-02-03",
+    "",
+    "E2E管理者個人史",
+    "me",
+    "me",
+    "",
+    "",
+    "2",
+    "flag",
+    "管理者データから取り込む架空の個人史です",
+    "",
+    "",
+    "",
+  ].join("\t"),
+  "",
+].join("\n");
 
 const LIFE_SETTINGS_TSV = [
   "section\tstart\tend\tyears\ttype\tlabel\tvalue",
@@ -61,6 +79,54 @@ test("administrator life settings update the editor and exported TSV", async ({
       exact: true,
     })
     .click();
+
+  const personal = page.locator("#personal-history");
+
+  const editorToggle = personal.getByRole(
+    "button",
+    {
+      name: "▶ 編集する",
+      exact: true,
+    }
+  );
+
+  await expect(personal).toContainText(
+    "管理者データ（1件）"
+  );
+  await expect(editorToggle).toBeDisabled();
+
+  page.once("dialog", (dialog) => {
+    dialog.accept();
+  });
+
+  await personal
+    .getByRole("button", {
+      name: "編集用に取り込む",
+      exact: true,
+    })
+    .click();
+
+  await expect(personal).toContainText(
+    "このブラウザ（1件）"
+  );
+  const openEditorToggle = personal
+    .getByRole(
+      "button",
+      {
+        name: "▼ 編集する",
+        exact: true,
+      }
+    )
+    .first();
+
+  await expect(openEditorToggle).toBeEnabled();
+
+  await expect(
+    personal.getByText(
+      "E2E管理者個人史",
+      { exact: true }
+    )
+  ).toBeVisible();
 
   const settings = page.locator("#timeline-settings");
 

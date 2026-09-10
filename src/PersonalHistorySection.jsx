@@ -23,6 +23,7 @@ export default function PersonalHistorySection({
   clearPersonalEventsFile,
   savePersonalEvent,
   deletePersonalEvent,
+  copyServerPersonalEventsToBrowser,
   onViewTimeline,
   font,
   miniBtn,
@@ -62,6 +63,9 @@ export default function PersonalHistorySection({
         }
         clearPersonalEventsFile={
           clearPersonalEventsFile
+        }
+        copyServerPersonalEventsToBrowser={
+          copyServerPersonalEventsToBrowser
         }
         titleColor={CAT.me.bg}
         miniBtn={miniBtn}
@@ -117,7 +121,7 @@ export default function PersonalHistorySection({
             marginTop: 8,
           }}
         >
-          管理者データを表示中はブラウザ側の追加・編集を行いません。
+          管理者データは読み取り専用です。編集する場合は「編集用に取り込む」でこのブラウザに複製します。
         </div>
       )}
 

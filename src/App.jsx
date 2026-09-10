@@ -286,6 +286,7 @@ export default function App() {
     clearPersonalEventsFile,
     savePersonalEvent,
     deletePersonalEvent,
+    copyServerPersonalEventsToBrowser,
     applyServerPersonalEvents,
   } = usePersonalEvents({
     onFirstAdded: () => {
@@ -1150,6 +1151,9 @@ export default function App() {
           }
           deletePersonalEvent={
             deletePersonalEvent
+          }
+          copyServerPersonalEventsToBrowser={
+            copyServerPersonalEventsToBrowser
           }
           onViewTimeline={scrollToTimeline}
           font={font}

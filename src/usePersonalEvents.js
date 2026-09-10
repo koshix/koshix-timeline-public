@@ -424,6 +424,44 @@ export default function usePersonalEvents({
     }
   };
 
+  const copyServerPersonalEventsToBrowser = async () => {
+    if (personalEventsSource !== "server") return;
+
+    const ok = window.confirm(
+      `管理者データ ${myEvents.length}件を編集用としてこのブラウザに保存します。` +
+        "このブラウザに保存済みの自分史がある場合は置き換えられます。続けますか？"
+    );
+
+    if (!ok) return;
+
+    try {
+      const events = parsePersonalEventsTsv(
+        serializePersonalEventsTsv(myEvents)
+      );
+
+      await workspaceStore.personalEvents.save(events);
+
+      setMyEvents(events);
+      setPersonalEventsSource("browser");
+      setEditingPersonalId(null);
+      setPersonalAddOpen(false);
+      setPersonalEditorOpen(true);
+      setPersonalFileStatus(
+        `管理者データ ${events.length}件を編集用としてこのブラウザに保存しました`
+      );
+    } catch (err) {
+      console.error(
+        "Administrator personal history could not be copied:",
+        err
+      );
+      setPersonalFileStatus(
+        `編集用への取り込み失敗: ${
+          err?.message || String(err)
+        }`
+      );
+    }
+  };
+
   const applyServerPersonalEvents = (events) => {
     setMyEvents(events);
     setPersonalEventsSource("server");
@@ -456,6 +494,7 @@ export default function usePersonalEvents({
     clearPersonalEventsFile,
     savePersonalEvent,
     deletePersonalEvent,
+    copyServerPersonalEventsToBrowser,
     applyServerPersonalEvents,
   };
 }
