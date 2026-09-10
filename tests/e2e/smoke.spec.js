@@ -157,7 +157,7 @@ test("synthetic personal history survives reload", async ({ page }) => {
 
   const section = page.locator("#personal-history");
   await section
-    .getByRole("button", { name: "編集する", exact: true })
+    .getByRole("button", { name: "▶ 編集する", exact: true })
     .click();
   await section
     .getByRole("button", { name: "＋追加", exact: true })
@@ -178,7 +178,7 @@ test("synthetic personal history survives reload", async ({ page }) => {
 
   await expect(section).toContainText("このブラウザ（1件）");
   await section
-    .getByRole("button", { name: "編集する", exact: true })
+    .getByRole("button", { name: "▶ 編集する", exact: true })
     .click();
   await expect(section.getByText(title, { exact: true })).toBeVisible();
 });
@@ -191,7 +191,7 @@ test("synthetic timeline addition survives reload", async ({ page }) => {
 
   const section = page.locator("#timeline-customization");
   await section
-    .getByRole("button", { name: "編集する", exact: true })
+    .getByRole("button", { name: "▶ 編集する", exact: true })
     .click();
   await section
     .getByRole("button", { name: "＋追加", exact: true })
@@ -240,7 +240,7 @@ test("iPhone SE2 width has no page-level horizontal overflow", async ({ page }) 
 
   const personal = page.locator("#personal-history");
   await personal
-    .getByRole("button", { name: "編集する", exact: true })
+    .getByRole("button", { name: "▶ 編集する", exact: true })
     .click();
   await expectNoPageHorizontalOverflow(page);
 

@@ -150,7 +150,7 @@ assert.throws(
       "unknown",
       []
     ),
-  /分類/
+  /種類/
 );
 
 assert.deepEqual(Object.keys(EARLY_CHILDHOOD_TYPES), [

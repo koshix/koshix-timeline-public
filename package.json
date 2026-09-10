@@ -1,7 +1,7 @@
 {
   "name": "koshix-timeline",
   "private": true,
-  "version": "2.9.5",
+  "version": "2.9.6",
   "type": "module",
   "scripts": {
     "build:events": "node scripts/build-events.mjs",
@@ -11,7 +11,7 @@
     "lint": "eslint src scripts vite.config.js playwright.config.js tests/e2e",
     "add:event": "node scripts/add-event.mjs",
     "validate:personal": "node scripts/validate-personal-events.mjs",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build && playwright test",
     "add:event:interactive": "node scripts/add-event-interactive.mjs",
     "build:starter": "npm run build && node scripts/build-starter.mjs",
     "verify:public-release": "node scripts/test-privacy-boundary.mjs && node scripts/verify-public-release.mjs",

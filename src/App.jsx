@@ -847,7 +847,7 @@ export default function App() {
               marginTop: 2,
             }}
           >
-            <span>アイコン色＝主分類、色ドット＝副分類</span>
+            <span>アイコン色＝主分野、色ドット＝関連分野</span>
             <span
               style={{
                 display: "inline-flex",

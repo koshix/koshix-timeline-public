@@ -44,10 +44,10 @@ export default function TimelineDisplayControls({
     >
       <div
         role="group"
-        aria-label="分類の一括表示切替"
+        aria-label="分野の一括表示切替"
         className="timeline-control-group timeline-control-group--categories"
       >
-        <span className="timeline-control-label">分類</span>
+        <span className="timeline-control-label">分野</span>
 
         <span className="timeline-control-segments">
           <button
@@ -109,10 +109,10 @@ export default function TimelineDisplayControls({
 
       <div
         role="group"
-        aria-label="期間の一括開閉"
+        aria-label="期間枠の一括開閉"
         className="timeline-control-group timeline-control-group--periods"
       >
-        <span className="timeline-control-label">期間</span>
+        <span className="timeline-control-label">期間枠</span>
 
         <span className="timeline-control-segments">
           <button
@@ -120,8 +120,8 @@ export default function TimelineDisplayControls({
             onClick={toggleAllStages}
             aria-label={
               allStagesOpen
-                ? "全期間を閉じる"
-                : "全期間を開く"
+                ? "全期間枠を閉じる"
+                : "全期間枠を開く"
             }
             className={`timeline-control-button${
               allStagesOpen
@@ -137,10 +137,10 @@ export default function TimelineDisplayControls({
 
       <div
         role="group"
-        aria-label="解説の一括開閉"
+        aria-label="解説枠の一括開閉"
         className="timeline-control-group timeline-control-group--explanations"
       >
-        <span className="timeline-control-label">解説</span>
+        <span className="timeline-control-label">解説枠</span>
 
         <span className="timeline-control-segments">
           <button
@@ -148,8 +148,8 @@ export default function TimelineDisplayControls({
             onClick={toggleAllEvents}
             aria-label={
               allEventsOpen
-                ? "全解説を閉じる"
-                : "全解説を開く"
+                ? "全解説枠を閉じる"
+                : "全解説枠を開く"
             }
             className={`timeline-control-button${
               allEventsOpen

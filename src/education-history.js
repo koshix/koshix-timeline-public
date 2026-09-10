@@ -122,7 +122,7 @@ export const replaceEducationForKind = (
 ) => {
   if (!EDUCATION_KINDS.includes(kind)) {
     throw new Error(
-      `教育歴の分類 "${kind}" は不正です。`
+      `教育歴の種類 "${kind}" は不正です。`
     );
   }
 

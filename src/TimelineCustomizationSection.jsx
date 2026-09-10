@@ -150,7 +150,7 @@ export default function TimelineCustomizationSection({
                 marginLeft: 6,
               }}
             >
-              ×閉じる
+              ▼ 編集する
             </button>
           </div>
         </div>

@@ -103,8 +103,8 @@ export default function TimelineSettingsSection({
           }}
         >
           {setupOpen
-            ? "×設定を閉じる"
-            : "変更する ▶"}
+            ? "▼ 変更する"
+            : "▶ 変更する"}
         </span>
       </button>
 

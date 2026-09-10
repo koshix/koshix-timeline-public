@@ -97,7 +97,7 @@ export default function TimelineCategoryFilters({
 
       <span
         role="group"
-        aria-label="分類の一致範囲"
+        aria-label="分野の一致範囲"
         className="timeline-category-mode"
         style={{ "--timeline-font": font }}
       >
@@ -110,9 +110,9 @@ export default function TimelineCategoryFilters({
             categoryMatchMode === "primary"
           }
           className="timeline-category-mode-button"
-          title="主分類だけで絞り込む"
+          title="主分野だけで絞り込む"
         >
-          主分類のみ
+          主分野のみ
         </button>
         <button
           type="button"
@@ -123,7 +123,7 @@ export default function TimelineCategoryFilters({
             categoryMatchMode === "related"
           }
           className="timeline-category-mode-button"
-          title="副分類も含めて関連項目を表示する"
+          title="関連分野も含めて項目を表示する"
         >
           関連分野も
         </button>
@@ -143,7 +143,7 @@ export default function TimelineCategoryFilters({
             : "横断タグを開く"
         }
       >
-        {subFiltersOpen ? "×タグを閉じる" : "▶ タグで絞る"}
+        {subFiltersOpen ? "▼ タグで絞る" : "▶ タグで絞る"}
       </button>
 
       {subFiltersOpen &&

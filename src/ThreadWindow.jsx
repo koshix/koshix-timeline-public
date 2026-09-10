@@ -246,7 +246,7 @@ export default function ThreadWindow({
             onClick={() => window.close()}
             style={miniBtn}
           >
-            ×閉じる
+            × 閉じる
           </button>
         </div>
 

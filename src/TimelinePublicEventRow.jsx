@@ -172,7 +172,7 @@ export default function TimelinePublicEventRow({
               flexShrink: 0,
               paddingTop: 7,
             }}
-            aria-label={`副分類: ${secondaryCats
+            aria-label={`関連分野: ${secondaryCats
               .map(
                 (key) =>
                   CAT[key]?.label

@@ -66,7 +66,7 @@ export default function PersonalHistoryEditorList({
             marginLeft: 6,
           }}
         >
-          ×閉じる
+          ▼ 編集する
         </button>
       </div>
 

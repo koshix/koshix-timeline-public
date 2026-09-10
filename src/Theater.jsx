@@ -111,7 +111,7 @@ export default function Theater({
             </div>
           </div>
           <button onClick={onClose} aria-label="閉じる" style={{ ...ctlBtn(), padding: "6px 10px" }}>
-            ×閉じる
+            × 閉じる
           </button>
         </div>
         <div style={{ marginTop: 8, height: 3, background: "#d7dce2", borderRadius: 2 }}>

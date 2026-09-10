@@ -128,7 +128,7 @@ export default function PersonalHistoryControls({
               : {}),
           }}
         >
-          {personalEditorOpen ? "×編集を閉じる" : "編集する"}
+          {personalEditorOpen ? "▼ 編集する" : "▶ 編集する"}
         </button>
 
         <button
