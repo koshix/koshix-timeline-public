@@ -7,6 +7,7 @@ import {
 
 function model({
   early = [],
+  secondary = [],
   higher = [],
   graduate = [],
   education = null,
@@ -18,6 +19,7 @@ function model({
     education:
       education ?? [
         ...early,
+        ...secondary,
         ...higher,
         ...graduate,
       ],
@@ -96,7 +98,7 @@ function model({
   ]);
 }
 
-// 基本の学齢区分。幼保歴が空なら小学校入学前まで幼児期。
+// 基本の年齢区分。任意教育歴がなければ16〜18歳は青年期。
 {
   const life = model();
 
@@ -105,7 +107,35 @@ function model({
   assert.equal(life.stageOf(1959).label, "幼児期");
   assert.equal(life.stageOf(1960).label, "小学校");
   assert.equal(life.stageOf(1966).label, "中学校");
+  assert.equal(life.stageOf(1969).label, "青年期");
+}
+
+// 高校を設定した場合だけ、その期間を高校として表示する。
+{
+  const life = model({
+    secondary: [
+      { start: "1969", years: "3", type: "highSchool" },
+    ],
+  });
+
   assert.equal(life.stageOf(1969).label, "高校");
+  assert.equal(life.gradeLabel(1969), "高1");
+  assert.equal(life.gradeLabel(1971), "高3");
+  assert.equal(life.adultYear, 1972);
+}
+
+// 高校を途中で終えても、標準の青年期終了前に成人期にはしない。
+{
+  const life = model({
+    secondary: [
+      { start: "1969", years: "2", type: "highSchool" },
+    ],
+  });
+
+  assert.equal(life.stageOf(1969).label, "高校");
+  assert.equal(life.stageOf(1970).label, "高校");
+  assert.equal(life.stageOf(1971).label, "青年期");
+  assert.equal(life.adultYear, 1972);
 }
 
 // 幼稚園を設定した場合は、その期間を幼稚園として表示する。
@@ -175,8 +205,10 @@ function model({
 // 高専から大学への編入を2行で表す。
 {
   const life = model({
-    higher: [
+    secondary: [
       { start: "1969", years: "5", type: "kosen" },
+    ],
+    higher: [
       { start: "1974", years: "2", type: "university" },
     ],
   });

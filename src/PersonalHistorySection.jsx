@@ -4,6 +4,8 @@ import PersonalHistoryEventForm from "./PersonalHistoryEventForm";
 import PersonalHistoryEditorList from "./PersonalHistoryEditorList";
 
 export default function PersonalHistorySection({
+  personalHistoryOpen,
+  togglePersonalHistory,
   myEvents,
   personalEventsSource,
   personalFileStatus,
@@ -41,6 +43,63 @@ export default function PersonalHistorySection({
         marginBottom: 14,
       }}
     >
+      <button
+        type="button"
+        onClick={togglePersonalHistory}
+        aria-expanded={personalHistoryOpen}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          width: "100%",
+          boxSizing: "border-box",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          textAlign: "left",
+          fontFamily: font,
+          color: "#22272e",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 800,
+            color: CAT.me.bg,
+          }}
+        >
+          ②自分史の編集（任意）
+        </span>
+        <span style={{ flex: 1 }} />
+        <span
+          style={{
+            fontSize: 11,
+            color: "#8a8f98",
+          }}
+        >
+          {personalHistoryOpen ? "▼ 閉じる" : "▶ 開く"}
+        </span>
+      </button>
+
+      {personalHistoryOpen && (
+        <>
+          <div
+            style={{
+              margin: "12px 0 10px",
+              padding: "9px 11px",
+              border: "1px solid #cfd8e3",
+              borderRadius: 9,
+              background: "#f7f9fc",
+              fontSize: 11.5,
+              lineHeight: 1.7,
+              color: "#59616c",
+            }}
+          >
+            <strong>個人情報の扱い：</strong>
+            ここで入力した内容は、この端末のこのブラウザ内だけに保存されます。
+            公開年表の元データには書き込まれません。
+          </div>
       <PersonalHistoryControls
         eventCount={myEvents.length}
         personalEventsSource={
@@ -67,7 +126,6 @@ export default function PersonalHistorySection({
         copyServerPersonalEventsToBrowser={
           copyServerPersonalEventsToBrowser
         }
-        titleColor={CAT.me.bg}
         miniBtn={miniBtn}
       />
 
@@ -143,7 +201,7 @@ export default function PersonalHistorySection({
             color: "#4b5563",
           }}
         >
-          年表で見る ↑
+          ③年表で見る ↓
         </button>
       </div>
 
@@ -159,6 +217,8 @@ export default function PersonalHistorySection({
         >
           {personalFileStatus}
         </div>
+      )}
+        </>
       )}
     </div>
   );

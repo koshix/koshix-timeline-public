@@ -14,6 +14,13 @@ export async function loadPersonalEvents() {
     return null;
   }
 
+  const contentType =
+    res.headers.get("content-type") ?? "";
+
+  if (contentType.toLowerCase().includes("text/html")) {
+    return null;
+  }
+
   const text = await res.text();
   const events = parsePersonalEventsTsv(text);
 

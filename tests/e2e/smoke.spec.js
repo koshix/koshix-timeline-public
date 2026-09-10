@@ -79,6 +79,13 @@ test("search can reduce the visible timeline to zero matches", async ({ page }) 
   const search = page.locator("#timeline-search");
   const eventRows = page.locator('li[id^="ev-"]');
 
+  await page
+    .getByRole("button", {
+      name: "全期間枠を開く",
+      exact: true,
+    })
+    .click();
+
   await expect(eventRows.first()).toBeVisible();
   expect(await eventRows.count()).toBeGreaterThan(0);
 
@@ -156,6 +163,15 @@ test("synthetic personal history survives reload", async ({ page }) => {
   await openApp(page);
 
   const section = page.locator("#personal-history");
+  const sectionToggle = section.locator(":scope > button");
+
+  if (
+    (await sectionToggle.getAttribute("aria-expanded"))
+    !== "true"
+  ) {
+    await sectionToggle.click();
+  }
+
   await section
     .getByRole("button", { name: "▶ 編集する", exact: true })
     .click();
@@ -239,13 +255,22 @@ test("iPhone SE2 width has no page-level horizontal overflow", async ({ page }) 
   await expectNoPageHorizontalOverflow(page);
 
   const personal = page.locator("#personal-history");
+  const personalToggle = personal.locator(":scope > button");
+
+  if (
+    (await personalToggle.getAttribute("aria-expanded"))
+    !== "true"
+  ) {
+    await personalToggle.click();
+  }
+
   await personal
     .getByRole("button", { name: "▶ 編集する", exact: true })
     .click();
   await expectNoPageHorizontalOverflow(page);
 
   await page
-    .getByRole("button", { name: "▶ タグで絞る", exact: true })
+    .getByRole("button", { name: "▶ 絞り込み", exact: true })
     .click();
   await expectNoPageHorizontalOverflow(page);
 });

@@ -29,7 +29,7 @@ export default function TimelineSettingsSection({
   lifeSettingsFileInputRef,
   importLifeSettingsFile,
   exportLifeSettingsFile,
-  onViewTimeline,
+  onViewPersonalHistory,
   font,
   mono,
   miniBtn,
@@ -56,7 +56,7 @@ export default function TimelineSettingsSection({
           display: "flex",
           alignItems: "center",
           gap: 10,
-          flexWrap: "wrap",
+          flexWrap: "nowrap",
           width: "100%",
           boxSizing: "border-box",
           background: "#fff",
@@ -74,7 +74,8 @@ export default function TimelineSettingsSection({
       >
         <span
           style={{
-            flexBasis: "100%",
+            flexShrink: 0,
+            whiteSpace: "nowrap",
             fontSize: 14,
             fontWeight: 800,
           }}
@@ -84,6 +85,10 @@ export default function TimelineSettingsSection({
 
         <span
           style={{
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
             fontSize: 11.5,
             lineHeight: 1.7,
             color: "#6b7280",
@@ -91,7 +96,7 @@ export default function TimelineSettingsSection({
         >
           {birthConfigured
             ? `${birth}年${month ? `${month}月` : ""}生まれ`
-            : "生年未設定・まず生まれた年を入力してください"}
+            : "生まれた年を入力してください"}
         </span>
 
         <span style={{ flex: 1 }} />
@@ -103,13 +108,29 @@ export default function TimelineSettingsSection({
           }}
         >
           {setupOpen
-            ? "▼ 変更する"
-            : "▶ 変更する"}
+            ? "▼ 閉じる"
+            : "▶ 開く"}
         </span>
       </button>
 
       {setupOpen && (
         <>
+          <div
+            style={{
+              margin: "12px 16px 10px",
+              padding: "9px 11px",
+              border: "1px solid #cfd8e3",
+              borderRadius: 9,
+              background: "#f7f9fc",
+              fontSize: 11.5,
+              lineHeight: 1.7,
+              color: "#59616c",
+            }}
+          >
+            <strong>個人情報の扱い：</strong>
+            ここで入力した内容は、この端末のこのブラウザ内だけに保存されます。
+            公開年表の元データには書き込まれません。
+          </div>
           <BirthSettingsEditor
             birth={birth}
             month={month}
@@ -235,7 +256,7 @@ export default function TimelineSettingsSection({
           >
             <button
               type="button"
-              onClick={onViewTimeline}
+              onClick={onViewPersonalHistory}
               style={{
                 ...miniBtn,
                 fontWeight: 800,
@@ -244,7 +265,7 @@ export default function TimelineSettingsSection({
                 color: "#4b5563",
               }}
             >
-              年表で見る ↑
+              ②自分史へ ↓
             </button>
           </div>
         </>

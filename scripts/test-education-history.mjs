@@ -4,6 +4,7 @@ import {
   EDUCATION_TYPES,
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
+  SECONDARY_ED_TYPES,
   defaultYearsFor,
   educationForKind,
   educationKindOf,
@@ -14,13 +15,23 @@ import {
 
 assert.equal(
   Object.keys(EDUCATION_TYPES).length,
-  10
+  11
 );
 
 assert.equal(
   educationKindOf("kindergarten"),
   "early"
 );
+assert.equal(
+  educationKindOf("highSchool"),
+  "secondary"
+);
+
+assert.equal(
+  educationKindOf("kosen"),
+  "secondary"
+);
+
 assert.equal(
   educationKindOf("university"),
   "higher"
@@ -106,8 +117,8 @@ const replacedEducation =
     [
       {
         start: "1971",
-        years: "5",
-        type: "kosen",
+        years: "2",
+        type: "vocational",
       },
       {
         start: "1976",
@@ -127,8 +138,8 @@ assert.deepEqual(
     },
     {
       start: "1971",
-      years: "5",
-      type: "kosen",
+      years: "2",
+      type: "vocational",
     },
     {
       start: "1976",
@@ -159,8 +170,12 @@ assert.deepEqual(Object.keys(EARLY_CHILDHOOD_TYPES), [
   "kindergarten",
 ]);
 
-assert.deepEqual(Object.keys(HIGHER_ED_TYPES), [
+assert.deepEqual(Object.keys(SECONDARY_ED_TYPES), [
+  "highSchool",
   "kosen",
+]);
+
+assert.deepEqual(Object.keys(HIGHER_ED_TYPES), [
   "vocational",
   "juniorCollege",
   "university",

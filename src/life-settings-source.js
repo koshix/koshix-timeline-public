@@ -15,6 +15,13 @@ export async function loadLifeSettings() {
     return null;
   }
 
+  const contentType =
+    response.headers.get("content-type") ?? "";
+
+  if (contentType.toLowerCase().includes("text/html")) {
+    return null;
+  }
+
   const text = await response.text();
   const settings =
     parseLifeSettingsTsv(text);

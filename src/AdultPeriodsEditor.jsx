@@ -46,7 +46,7 @@ export default function AdultPeriodsEditor({
             color: "#4b5563",
           }}
         >
-          4. 成人期
+          5. 成人期
         </div>
 
         <button
@@ -261,7 +261,7 @@ export default function AdultPeriodsEditor({
           color: "#8a8f98",
         }}
       >
-        大学等・大学院の設定から成人期の開始年を自動計算します。
+        高校など・大学など・大学院の設定から成人期の開始年を自動計算します。
         成人期は必要に応じて自由に期間を分割できます。
       </div>
     </div>

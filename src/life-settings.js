@@ -1,6 +1,5 @@
 import {
   EDUCATION_TYPES,
-  educationForKind,
   normalizeEducation,
 } from "./education-history.js";
 import { validateAdultPeriods } from "./adult-periods.js";
@@ -34,55 +33,16 @@ const isObject = (value) =>
 
 export function createInitialEducationSettings(
   saved = {},
-  defaults = {},
-  birth,
-  month
+  defaults = {}
 ) {
-  const birthYear = Number(birth);
-  const birthConfigured =
-    birth != null &&
-    birth !== "" &&
-    Number.isInteger(birthYear) &&
-    birthYear >= YEAR_MIN &&
-    birthYear <= YEAR_MAX;
-
-  const cohortBirth = birthConfigured
-    ? (
-        month >= 1 && month <= 3
-          ? birthYear - 1
-          : birthYear
-      )
-    : null;
-
   const savedEducation =
     Array.isArray(saved.education)
       ? saved.education
       : null;
 
-  let education =
-    savedEducation !== null
-      ? normalizeEducation(savedEducation)
-      : normalizeEducation(defaults.education);
-
-  if (
-    birthConfigured &&
-    savedEducation === null &&
-    educationForKind(
-      education,
-      "early"
-    ).length === 0
-  ) {
-    education = [
-      {
-        start: String(cohortBirth + 5),
-        years: "2",
-        type: "kindergarten",
-      },
-      ...education,
-    ];
-  }
-
-  return education;
+  return savedEducation !== null
+    ? normalizeEducation(savedEducation)
+    : normalizeEducation(defaults.education);
 }
 
 const parseYear = (value, label) => {

@@ -2,6 +2,7 @@ import {
   EARLY_CHILDHOOD_TYPES,
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
+  SECONDARY_ED_TYPES,
   educationKindOf,
   normalizeEducationHistory,
 } from "./education-history.js";
@@ -10,6 +11,7 @@ export {
   EARLY_CHILDHOOD_TYPES,
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
+  SECONDARY_ED_TYPES,
 };
 
 const YEAR_MIN = 1501;
@@ -120,6 +122,25 @@ function normalizeRowsForModel({
   return complete;
 }
 
+function addSecondaryStage(stages, entry, sequence) {
+  const config =
+    SECONDARY_ED_TYPES[entry.type] ??
+    SECONDARY_ED_TYPES.highSchool;
+
+  addStage(
+    stages,
+    stage(
+      `secondary-${sequence}`,
+      config.stageLabel,
+      entry.start,
+      entry.end,
+      entry.type === "kosen" ? "#0f6f8a" : "#1e5fa8",
+      entry.type === "kosen" ? "#e3f1f5" : "#e7f0fb",
+      { gradePrefix: config.gradePrefix }
+    )
+  );
+}
+
 function addHigherStage(stages, entry, sequence) {
   const config = HIGHER_ED_TYPES[entry.type] ?? HIGHER_ED_TYPES.university;
   addStage(
@@ -129,8 +150,8 @@ function addHigherStage(stages, entry, sequence) {
       config.stageLabel,
       entry.start,
       entry.end,
-      entry.type === "kosen" ? "#0f6f8a" : "#6b3fa0",
-      entry.type === "kosen" ? "#e3f1f5" : "#f1e9fa",
+      "#6b3fa0",
+      "#f1e9fa",
       { gradePrefix: config.gradePrefix }
     )
   );
@@ -169,6 +190,12 @@ export function buildLifeModel({
       (row) =>
         educationKindOf(row?.type) === "early"
     );
+  const secondaryHistory =
+    educationHistory.filter(
+      (row) =>
+        educationKindOf(row?.type) === "secondary"
+    );
+
   const higherHistory =
     educationHistory.filter(
       (row) =>
@@ -241,11 +268,20 @@ export function buildLifeModel({
     }
   }
 
+  const secondaryRows = normalizeRowsForModel({
+    rows: secondaryHistory,
+    types: SECONDARY_ED_TYPES,
+    fallbackType: "highSchool",
+    label: "高校などの",
+    kind: "secondary",
+    warnings,
+  });
+
   const higherRows = normalizeRowsForModel({
     rows: higherHistory,
     types: HIGHER_ED_TYPES,
     fallbackType: "university",
-    label: "大学等の",
+    label: "大学などの",
     kind: "higher",
     warnings,
   });
@@ -258,8 +294,21 @@ export function buildLifeModel({
     warnings,
   });
 
-  const educationRows = [...higherRows, ...graduateRows].sort(
-    (a, b) => a.start - b.start || (a.kind === "higher" ? -1 : 1)
+  const educationKindOrder = {
+    secondary: 0,
+    higher: 1,
+    graduate: 2,
+  };
+
+  const educationRows = [
+    ...secondaryRows,
+    ...higherRows,
+    ...graduateRows,
+  ].sort(
+    (a, b) =>
+      a.start - b.start ||
+      educationKindOrder[a.kind] -
+        educationKindOrder[b.kind]
   );
 
   for (let i = 1; i < educationRows.length; i += 1) {
@@ -351,7 +400,7 @@ export function buildLifeModel({
   stages.push(
     stage("elem", "小学校", cohortBirth + 7, cohortBirth + 12, "#c2452d", "#fdeae5"),
     stage("jhs", "中学校", cohortBirth + 13, cohortBirth + 15, "#1f7a4d", "#e6f5ec"),
-    stage("hs", "高校", cohortBirth + 16, cohortBirth + 18, "#1e5fa8", "#e7f0fb")
+    stage("youth", "青年期", cohortBirth + 16, cohortBirth + 18, "#1e5fa8", "#e7f0fb")
   );
 
   educationRows.forEach((entry, sequence) => {
@@ -363,23 +412,53 @@ export function buildLifeModel({
       entry.start - 1,
       entry.kind === "graduate"
         ? "大学院に入学する前"
-        : "大学等に入学する前"
+        : entry.kind === "higher"
+          ? "大学などに入学する前"
+          : "高校などに入学する前"
     );
 
     if (entry.kind === "graduate") {
       addGraduateStages(stages, entry, sequence);
-    } else {
+    } else if (entry.kind === "higher") {
       addHigherStage(stages, entry, sequence);
+    } else {
+      addSecondaryStage(stages, entry, sequence);
     }
   });
 
+  const standardAdultYear = cohortBirth + 19;
   const adultYear = educationRows.length > 0
-    ? Math.max(...educationRows.map((entry) => entry.end)) + 1
-    : cohortBirth + 19;
+    ? Math.max(
+        standardAdultYear,
+        Math.max(...educationRows.map((entry) => entry.end)) + 1
+      )
+    : standardAdultYear;
 
   stages = truncateBefore(stages, adultYear);
   const educationEnd = stages.at(-1)?.to ?? birth - 1;
-  addGap(stages, educationEnd + 1, adultYear - 1, "次の段階に進む前");
+  const postEducationStart = educationEnd + 1;
+
+  if (postEducationStart < standardAdultYear) {
+    addStage(
+      stages,
+      stage(
+        "youth-after-education",
+        "青年期",
+        postEducationStart,
+        standardAdultYear - 1,
+        "#1e5fa8",
+        "#e7f0fb"
+      )
+    );
+  }
+
+  addGap(
+    stages,
+    Math.max(postEducationStart, standardAdultYear),
+    adultYear - 1,
+    "次の段階に進む前"
+  );
+
   addStage(
     stages,
     stage(
@@ -412,7 +491,6 @@ export function buildLifeModel({
     const item = stageOf(year);
     if (item.key === "elem") return `小${year - item.from + 1}`;
     if (item.key === "jhs") return `中${year - item.from + 1}`;
-    if (item.key === "hs") return `高${year - item.from + 1}`;
     if (item.gradePrefix) {
       return `${item.gradePrefix}${year - item.from + 1}`;
     }

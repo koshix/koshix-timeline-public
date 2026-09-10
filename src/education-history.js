@@ -17,8 +17,15 @@ export const EDUCATION_TYPES = {
     stageLabel: "幼稚園",
     defaultYears: 2,
   },
+  highSchool: {
+    kind: "secondary",
+    label: "高校",
+    stageLabel: "高校",
+    gradePrefix: "高",
+    defaultYears: 3,
+  },
   kosen: {
-    kind: "higher",
+    kind: "secondary",
     label: "高専",
     stageLabel: "高専",
     gradePrefix: "高専",
@@ -78,6 +85,9 @@ const educationTypesForKind = (kind) =>
 export const EARLY_CHILDHOOD_TYPES =
   educationTypesForKind("early");
 
+export const SECONDARY_ED_TYPES =
+  educationTypesForKind("secondary");
+
 export const HIGHER_ED_TYPES =
   educationTypesForKind("higher");
 
@@ -111,6 +121,7 @@ export const educationForKind = (
 
 const EDUCATION_KINDS = [
   "early",
+  "secondary",
   "higher",
   "graduate",
 ];

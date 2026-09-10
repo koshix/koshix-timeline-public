@@ -8,7 +8,6 @@ export default function PersonalHistoryControls({
   togglePersonalEditor,
   clearPersonalEventsFile,
   copyServerPersonalEventsToBrowser,
-  titleColor,
   miniBtn,
 }) {
   const browserSource =
@@ -18,15 +17,6 @@ export default function PersonalHistoryControls({
 
   return (
     <>
-      <div
-        style={{
-          fontSize: 14,
-          fontWeight: 800,
-          color: titleColor,
-        }}
-      >
-        ②自分史の編集
-      </div>
 
       <div
         style={{
@@ -36,7 +26,7 @@ export default function PersonalHistoryControls({
           marginTop: 4,
         }}
       >
-        自分史はこのブラウザ内に保存されます。
+        自分史はこの端末のこのブラウザ内だけに保存されます。
         「編集する」で追加・編集・削除し、年表表示は上の「自分」で切り替えます。
         必要ならTSVファイルでバックアップできます。
       </div>

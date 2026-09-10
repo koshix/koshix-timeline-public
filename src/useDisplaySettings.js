@@ -79,7 +79,7 @@ export default function useDisplaySettings({
   };
 
   // 畳んでいる期間(帯)のキー。
-  // 保存済みの開閉状態がなければ全期間を開いた状態で始める。
+  // 新仕様の初回は、期間キー確定後にApp側で全期間を閉じる。
   const [closedStages, setClosedStages] = useState(
     () =>
       new Set(
@@ -105,9 +105,9 @@ export default function useDisplaySettings({
     setClosedStages(new Set(keys));
   };
 
-  // 生年や進学・就職年の入力欄。一度入れたら畳んでおける(初回訪問時だけ開いた状態)
+  // 生年や進学・就職年の入力欄。必要なときだけ開く。
   const [setupOpen, setSetupOpen] = useState(
-    saved.setupOpen ?? !saved.birth
+    saved.setupOpen ?? false
   );
   const openSetup = () => {
     setSetupOpen(true);
@@ -115,6 +115,26 @@ export default function useDisplaySettings({
 
   const toggleSetup = () => {
     setSetupOpen((previous) => !previous);
+  };
+
+  const closeSetup = () => {
+    setSetupOpen(false);
+  };
+
+  // 自分史の編集欄も、必要なときだけ開く。
+  const [personalHistoryOpen, setPersonalHistoryOpen] =
+    useState(saved.personalHistoryOpen ?? false);
+
+  const openPersonalHistory = () => {
+    setPersonalHistoryOpen(true);
+  };
+
+  const closePersonalHistory = () => {
+    setPersonalHistoryOpen(false);
+  };
+
+  const togglePersonalHistory = () => {
+    setPersonalHistoryOpen((previous) => !previous);
   };
 
   return {
@@ -137,5 +157,10 @@ export default function useDisplaySettings({
     setupOpen,
     openSetup,
     toggleSetup,
+    closeSetup,
+    personalHistoryOpen,
+    openPersonalHistory,
+    closePersonalHistory,
+    togglePersonalHistory,
   };
 }

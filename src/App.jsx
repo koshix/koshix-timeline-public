@@ -1,5 +1,5 @@
 import { eventYear } from "./event-schema.js";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { loadEvents } from "./events-source";
 import { loadConfig } from "./config-source";
 import { applyEventCustomizations } from "./event-customizations";
@@ -168,6 +168,7 @@ const SAVED =
   (typeof window !== "undefined" &&
     workspaceStore.settings.load()) ||
   {};
+const SHOW_BEGINNER_GUIDE = SAVED.beginnerGuideSeen !== true;
 const INITIAL_BIRTH =
   SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? null;
 const INITIAL_MONTH = SAVED.month ?? PROFILE_DEFAULTS.birthMonth ?? 0;
@@ -265,6 +266,13 @@ export default function App() {
       });
   };
 
+  const scrollToPersonalHistory = () => {
+    document.getElementById("personal-history")?.scrollIntoView({
+      behavior: "auto",
+      block: "start",
+    });
+  };
+
   const {
     myEvents,
     personalEventsSource,
@@ -318,12 +326,27 @@ export default function App() {
     expandAllStages,
     collapseStages,
     setupOpen,
-    openSetup,
     toggleSetup,
+    closeSetup,
+    personalHistoryOpen,
+    openPersonalHistory,
+    closePersonalHistory,
+    togglePersonalHistory,
   } = useDisplaySettings({
     saved: SAVED,
     mainCategories: MAIN_CATS,
   });
+
+  const viewPersonalHistoryFromSetup = () => {
+    closeSetup();
+    openPersonalHistory();
+    setTimeout(scrollToPersonalHistory, 0);
+  };
+
+  const viewTimelineFromPersonalHistory = () => {
+    closePersonalHistory();
+    setTimeout(scrollToTimeline, 0);
+  };
 
   // 閲覧中のテーマ(nullなら年表を表示)
   const [thread, setThread] = useState(null);
@@ -399,7 +422,10 @@ export default function App() {
       categoryMatchMode,
       importanceMin,
       closed: [...closedStages],
+      periodFramesInitialized: true,
       setupOpen,
+      personalHistoryOpen,
+      beginnerGuideSeen: true,
     });
   }, [
     birth,
@@ -413,6 +439,7 @@ export default function App() {
     importanceMin,
     closedStages,
     setupOpen,
+    personalHistoryOpen,
     lifeSettingsSource,
   ]);
 
@@ -477,6 +504,80 @@ export default function App() {
     searchText,
     closedStages,
   });
+
+  const [earlyHistoryOpen, setEarlyHistoryOpen] =
+    useState(false);
+
+  const earlyHistoryGroupKeys = new Set([
+    "pre-16-first",
+    "pre-16-second",
+    "pre-17-first",
+    "pre-17-second",
+    "pre-18-first",
+    "pre-18-second",
+    "pre-19-first",
+    "pre-19-second",
+  ]);
+
+  const earlyHistoryCount = grouped.groups
+    .filter((group) =>
+      earlyHistoryGroupKeys.has(group.key)
+    )
+    .reduce(
+      (total, group) => total + group.items.length,
+      0
+    );
+
+  const previousStageKeysRef = useRef(null);
+
+  useEffect(() => {
+    const currentKeys =
+      grouped.controlTargets.allStageKeys;
+    const previousKeys =
+      previousStageKeysRef.current;
+
+    // 新仕様の初回だけ、期間枠はすべて閉じた状態で始める。
+    if (previousKeys === null) {
+      previousStageKeysRef.current = currentKeys;
+
+      if (
+        SAVED.periodFramesInitialized !== true &&
+        currentKeys.length > 0
+      ) {
+        collapseStages(currentKeys);
+      }
+
+      return;
+    }
+
+    // 全期間を閉じている最中に教育歴などで期間キーが変わった場合、
+    // 新しく生まれた期間枠にも「閉」を引き継ぐ。
+    const allPreviousStagesClosed =
+      previousKeys.length > 0 &&
+      previousKeys.every((key) =>
+        closedStages.has(key)
+      );
+
+    const hasNewOpenStage =
+      currentKeys.some(
+        (key) =>
+          !previousKeys.includes(key) &&
+          !closedStages.has(key)
+      );
+
+    previousStageKeysRef.current = currentKeys;
+
+    if (
+      allPreviousStagesClosed &&
+      hasNewOpenStage
+    ) {
+      collapseStages(currentKeys);
+    }
+  }, [
+    grouped.controlTargets.allStageKeys,
+    closedStages,
+    collapseStages,
+  ]);
 
   const {
     downloadMenuOpen,
@@ -559,11 +660,15 @@ export default function App() {
               />
             </div>
           </div>
+          <div style={{ fontSize: 12.5, color: "#59616c", marginTop: 8, lineHeight: 1.7 }}>
+            あなたの人生を、世界や日本の出来事の年表に重ねて見るアプリです。
+          </div>
           <div style={{ fontSize: 11.5, color: "#8a8f98", marginTop: 8, fontFamily: mono }}>
             全{effectiveStats.count}項目・解説{effectiveStats.chars.toLocaleString()}字
           </div>
         </header>
 
+        {SHOW_BEGINNER_GUIDE && (
         <section
           aria-label="はじめて使う方へ"
           style={{
@@ -592,103 +697,131 @@ export default function App() {
               marginTop: 3,
             }}
           >
-            まず生年を設定し、次に自分史を1件追加して、年表の中で見てみてください。
-            設定や自分史は、このブラウザ内に保存されます。
+            まず①で生年を設定してください。必要なら②で自分史を追加すると、世界や日本の出来事と自分の人生を重ねて見られます。
+            設定や自分史は、この端末のこのブラウザ内だけに保存されます。
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              marginTop: 10,
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                openSetup();
-                setTimeout(() => {
-                  document
-                    .getElementById("timeline-settings")
-                    ?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                }, 0);
-              }}
-              style={{
-                flex: "1 1 190px",
-                fontFamily: font,
-                fontSize: 12,
-                fontWeight: 800,
-                lineHeight: 1.5,
-                textAlign: "left",
-                cursor: "pointer",
-                padding: "9px 12px",
-                borderRadius: 9,
-                border: "1px solid #c9b999",
-                background: "#ffffff",
-                color: "#5f5142",
-              }}
-            >
-              ①あなたの設定
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                openPersonalEventEntry();
-                setTimeout(() => {
-                  document
-                    .getElementById("personal-history")
-                    ?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                }, 0);
-              }}
-              style={{
-                flex: "1 1 190px",
-                fontFamily: font,
-                fontSize: 12,
-                fontWeight: 800,
-                lineHeight: 1.5,
-                textAlign: "left",
-                cursor: "pointer",
-                padding: "9px 12px",
-                borderRadius: 9,
-                border: "1px solid #cfbfdf",
-                background: "#ffffff",
-                color: "#5f4a72",
-              }}
-            >
-              ②自分史の編集
-            </button>
-
-            <button
-              type="button"
-              onClick={scrollToTimeline}
-              style={{
-                flex: "1 1 190px",
-                fontFamily: font,
-                fontSize: 12,
-                fontWeight: 800,
-                lineHeight: 1.5,
-                textAlign: "left",
-                cursor: "pointer",
-                padding: "9px 12px",
-                borderRadius: 9,
-                border: "1px solid #b8c8b4",
-                background: "#ffffff",
-                color: "#496247",
-              }}
-            >
-              ③年表の表示設定
-            </button>
-          </div>
         </section>
+        )}
+        <TimelineSettingsSection
+          setupOpen={setupOpen}
+          toggleSetup={toggleSetup}
+          birth={birth}
+          month={month}
+          firstHigherYear={firstHigherYear}
+          firstHigherType={firstHigherType}
+          firstGraduateYear={
+            firstGraduateYear
+          }
+          firstGraduateType={
+            firstGraduateType
+          }
+          adultPeriods={adultPeriods}
+          adultYear={grouped.adultYear}
+          adultPeriodErrors={
+            grouped.adultPeriodErrors
+          }
+          warnings={grouped.warnings}
+          setBirthYear={setBirthYear}
+          setBirthMonth={setBirthMonth}
+          resetBirthSettings={
+            resetBirthSettings
+          }
+          education={education}
+          educationEditorRevision={
+            educationEditorRevision
+          }
+          updateEducation={updateEducation}
+          resetAdultPeriods={
+            resetAdultPeriods
+          }
+          updateAdultPeriod={
+            updateAdultPeriod
+          }
+          addAdultPeriod={addAdultPeriod}
+          removeAdultPeriod={
+            removeAdultPeriod
+          }
+          lifeSettingsStatus={
+            lifeSettingsStatus
+          }
+          lifeSettingsFileInputRef={
+            lifeSettingsFileInputRef
+          }
+          importLifeSettingsFile={
+            importLifeSettingsFile
+          }
+          exportLifeSettingsFile={
+            exportLifeSettingsFile
+          }
+          onViewPersonalHistory={viewPersonalHistoryFromSetup}
+          font={font}
+          mono={mono}
+          miniBtn={miniBtn}
+        />
 
+
+        <PersonalHistorySection
+          personalHistoryOpen={personalHistoryOpen}
+          togglePersonalHistory={togglePersonalHistory}
+          myEvents={myEvents}
+          personalEventsSource={
+            personalEventsSource
+          }
+          personalFileStatus={
+            personalFileStatus
+          }
+          personalAddOpen={personalAddOpen}
+          personalEditorOpen={
+            personalEditorOpen
+          }
+          editingPersonalId={
+            editingPersonalId
+          }
+          personalDraft={personalDraft}
+          personalFileInputRef={
+            personalFileInputRef
+          }
+          importPersonalEventsFile={
+            importPersonalEventsFile
+          }
+          exportPersonalEventsFile={
+            exportPersonalEventsFile
+          }
+          togglePersonalEditor={
+            togglePersonalEditor
+          }
+          closePersonalEditor={
+            closePersonalEditor
+          }
+          updatePersonalDraft={
+            updatePersonalDraft
+          }
+          openNewPersonalEventForm={
+            openNewPersonalEventForm
+          }
+          closePersonalEventForm={
+            closePersonalEventForm
+          }
+          startEditingPersonalEvent={
+            startEditingPersonalEvent
+          }
+          clearPersonalEventsFile={
+            clearPersonalEventsFile
+          }
+          savePersonalEvent={
+            savePersonalEvent
+          }
+          deletePersonalEvent={
+            deletePersonalEvent
+          }
+          copyServerPersonalEventsToBrowser={
+            copyServerPersonalEventsToBrowser
+          }
+          onViewTimeline={viewTimelineFromPersonalHistory}
+          font={font}
+          miniBtn={miniBtn}
+        />
         {/* ③年表の表示設定 */}
         <div
           id="timeline-view"
@@ -916,9 +1049,86 @@ export default function App() {
 
         </div>
 
+        {/* 16〜19世紀の背景史をまとめる大枠 */}
+        {earlyHistoryCount > 0 && (
+          <section style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              onClick={() =>
+                setEarlyHistoryOpen((open) => !open)
+              }
+              aria-expanded={earlyHistoryOpen}
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 10,
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "9px 14px",
+                border: "1px solid #e0e3e7",
+                borderLeft: "4px solid #b8bec6",
+                borderRadius: 8,
+                background: "#f7f8f9",
+                color: "#7b838c",
+                cursor: "pointer",
+                textAlign: "left",
+                fontFamily: font,
+              }}
+            >
+              <strong
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#7b838c",
+                }}
+              >
+                16〜19世紀
+              </strong>
+
+              <span
+                style={{
+                  fontFamily: mono,
+                  fontSize: 11.5,
+                  color: "#8a9199",
+                }}
+              >
+                1501–1900
+              </span>
+
+              <span style={{ flex: 1 }} />
+
+              <span
+                style={{
+                  fontFamily: mono,
+                  fontSize: 11,
+                  color: "#9aa0a8",
+                }}
+              >
+                {earlyHistoryCount}件
+              </span>
+
+              <span
+                aria-hidden="true"
+                style={{
+                  fontSize: 10.5,
+                  color: "#9299a1",
+                }}
+              >
+                {earlyHistoryOpen ? "▼" : "▶"}
+              </span>
+            </button>
+          </section>
+        )}
+
         {/* 個人史グループ */}
         {grouped.groups.map((g, gi) => {
         const stageClosed = g.closed;
+        const isEarlyHistory =
+          earlyHistoryGroupKeys.has(g.key);
+
+        if (isEarlyHistory && !earlyHistoryOpen) {
+          return null;
+        }
         return (
           <section key={gi} style={{ marginBottom: 22 }}>
             <button
@@ -1100,122 +1310,6 @@ export default function App() {
           miniBtn={miniBtn}
         />
 
-        <PersonalHistorySection
-          myEvents={myEvents}
-          personalEventsSource={
-            personalEventsSource
-          }
-          personalFileStatus={
-            personalFileStatus
-          }
-          personalAddOpen={personalAddOpen}
-          personalEditorOpen={
-            personalEditorOpen
-          }
-          editingPersonalId={
-            editingPersonalId
-          }
-          personalDraft={personalDraft}
-          personalFileInputRef={
-            personalFileInputRef
-          }
-          importPersonalEventsFile={
-            importPersonalEventsFile
-          }
-          exportPersonalEventsFile={
-            exportPersonalEventsFile
-          }
-          togglePersonalEditor={
-            togglePersonalEditor
-          }
-          closePersonalEditor={
-            closePersonalEditor
-          }
-          updatePersonalDraft={
-            updatePersonalDraft
-          }
-          openNewPersonalEventForm={
-            openNewPersonalEventForm
-          }
-          closePersonalEventForm={
-            closePersonalEventForm
-          }
-          startEditingPersonalEvent={
-            startEditingPersonalEvent
-          }
-          clearPersonalEventsFile={
-            clearPersonalEventsFile
-          }
-          savePersonalEvent={
-            savePersonalEvent
-          }
-          deletePersonalEvent={
-            deletePersonalEvent
-          }
-          copyServerPersonalEventsToBrowser={
-            copyServerPersonalEventsToBrowser
-          }
-          onViewTimeline={scrollToTimeline}
-          font={font}
-          miniBtn={miniBtn}
-        />
-
-        <TimelineSettingsSection
-          setupOpen={setupOpen}
-          toggleSetup={toggleSetup}
-          birth={birth}
-          month={month}
-          firstHigherYear={firstHigherYear}
-          firstHigherType={firstHigherType}
-          firstGraduateYear={
-            firstGraduateYear
-          }
-          firstGraduateType={
-            firstGraduateType
-          }
-          adultPeriods={adultPeriods}
-          adultYear={grouped.adultYear}
-          adultPeriodErrors={
-            grouped.adultPeriodErrors
-          }
-          warnings={grouped.warnings}
-          setBirthYear={setBirthYear}
-          setBirthMonth={setBirthMonth}
-          resetBirthSettings={
-            resetBirthSettings
-          }
-          education={education}
-          educationEditorRevision={
-            educationEditorRevision
-          }
-          updateEducation={updateEducation}
-          resetAdultPeriods={
-            resetAdultPeriods
-          }
-          updateAdultPeriod={
-            updateAdultPeriod
-          }
-          addAdultPeriod={addAdultPeriod}
-          removeAdultPeriod={
-            removeAdultPeriod
-          }
-          lifeSettingsStatus={
-            lifeSettingsStatus
-          }
-          lifeSettingsFileInputRef={
-            lifeSettingsFileInputRef
-          }
-          importLifeSettingsFile={
-            importLifeSettingsFile
-          }
-          exportLifeSettingsFile={
-            exportLifeSettingsFile
-          }
-          onViewTimeline={scrollToTimeline}
-          font={font}
-          mono={mono}
-          miniBtn={miniBtn}
-        />
 
         <footer
           style={{
@@ -1251,7 +1345,7 @@ export default function App() {
 
           <div style={{ marginTop: 8 }}>
             公開された歴史的出来事を、生年・学齢期・人生段階に重ねて表示するインタラクティブ年表です。
-            学齢は誕生年と誕生月から概算し、大学等・大学院の設定から人生段階と成人期の開始年を自動計算します。成人期は必要に応じて任意に分割できます。
+            小中学校の学齢は誕生年と誕生月から概算し、高校など・大学など・大学院は設定した教育歴を反映します。成人期は必要に応じて任意に分割できます。
           </div>
 
           <details

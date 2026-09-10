@@ -221,7 +221,7 @@ export default function useLifeSettings({
 
       const ok = window.confirm(
         `「${file.name}」から人生設定を読み込み、` +
-        "現在の生年・幼保歴・大学等・大学院・成人期分割を置き換えますか？"
+        "現在の生年・教育歴・成人期分割を置き換えますか？"
       );
 
       if (!ok) return;

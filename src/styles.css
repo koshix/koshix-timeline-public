@@ -95,7 +95,7 @@
 }
 
 .timeline-subfilter-toggle {
-  margin-left: 8px;
+  margin-left: 2px;
   padding: 3px 2px;
   border: 0;
   background: transparent;
@@ -156,8 +156,8 @@
 .timeline-control-group {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px;
+  gap: 2px;
+  padding: 2px;
   border: 1px solid var(--control-group-border);
   border-radius: var(--kt-radius-md);
   background: var(--control-group-bg);
@@ -165,8 +165,8 @@
 }
 
 .timeline-control-label {
-  padding: 0 3px;
-  font-size: 11.5px;
+  padding: 0 2px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--control-label-color);
 }
@@ -188,7 +188,7 @@
 }
 
 .timeline-control-button {
-  padding: 4px 9px;
+  padding: 4px 7px;
   border: 0;
   background: var(--control-button-bg, #ffffff);
   color: var(--control-button-color);

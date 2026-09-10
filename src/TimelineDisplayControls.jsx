@@ -11,9 +11,10 @@ export default function TimelineDisplayControls({
   closeAllEvents,
   font,
 }) {
-  const allStagesOpen =
+  const allStagesClosed =
+    controlTargets.allStageKeys.length > 0 &&
     controlTargets.allStageKeys.every(
-      (key) => !closedStages.has(key)
+      (key) => closedStages.has(key)
     );
 
   const allEventsOpen =
@@ -21,10 +22,10 @@ export default function TimelineDisplayControls({
     controlTargets.allEventIds.every(isEventOpen);
 
   const toggleAllStages = () => {
-    if (allStagesOpen) {
-      collapseStages(controlTargets.allStageKeys);
-    } else {
+    if (allStagesClosed) {
       expandAllStages();
+    } else {
+      collapseStages(controlTargets.allStageKeys);
     }
   };
 
@@ -40,11 +41,21 @@ export default function TimelineDisplayControls({
     <div
       aria-label="年表表示操作"
       className="timeline-display-controls"
-      style={{ "--timeline-font": font }}
+      style={{
+        "--timeline-font": font,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap",
+        width: "100%",
+      }}
     >
       <div
-        role="group"
-        aria-label="分野の一括表示切替"
+        style={{ display: "contents" }}
+      >
+        <div
+          role="group"
+          aria-label="分野の一括表示切替"
         className="timeline-control-group timeline-control-group--categories"
       >
         <span className="timeline-control-label">分野</span>
@@ -56,7 +67,7 @@ export default function TimelineDisplayControls({
             className="timeline-control-button"
             data-strong="true"
           >
-            すべて表示
+            全て表示
           </button>
 
           <span
@@ -69,7 +80,7 @@ export default function TimelineDisplayControls({
             onClick={() => setAllCats(false)}
             className="timeline-control-button timeline-control-button--muted"
           >
-            すべて隠す
+            全て隠す
           </button>
         </span>
       </div>
@@ -100,16 +111,21 @@ export default function TimelineDisplayControls({
                   ? "重要のみ"
                   : level === 2
                     ? "標準以上"
-                    : "すべて"}
+                    : "全て"}
               </button>
             </span>
           ))}
         </span>
       </div>
 
+      </div>
+
       <div
-        role="group"
-        aria-label="期間枠の一括開閉"
+        style={{ display: "contents" }}
+      >
+        <div
+          role="group"
+          aria-label="期間枠の一括開閉"
         className="timeline-control-group timeline-control-group--periods"
       >
         <span className="timeline-control-label">期間枠</span>
@@ -119,18 +135,16 @@ export default function TimelineDisplayControls({
             type="button"
             onClick={toggleAllStages}
             aria-label={
-              allStagesOpen
-                ? "全期間枠を閉じる"
-                : "全期間枠を開く"
+              allStagesClosed
+                ? "全期間枠を開く"
+                : "全期間枠を閉じる"
             }
-            className={`timeline-control-button${
-              allStagesOpen
-                ? " timeline-control-button--closed"
-                : ""
-            }`}
-            data-strong={allStagesOpen ? undefined : "true"}
+            className="timeline-control-button"
+            data-strong="true"
           >
-            {allStagesOpen ? "閉" : "開"}
+            {allStagesClosed
+              ? "全て開く"
+              : "全て閉じる"}
           </button>
         </span>
       </div>
@@ -151,16 +165,15 @@ export default function TimelineDisplayControls({
                 ? "全解説枠を閉じる"
                 : "全解説枠を開く"
             }
-            className={`timeline-control-button${
-              allEventsOpen
-                ? " timeline-control-button--closed"
-                : ""
-            }`}
-            data-strong={allEventsOpen ? undefined : "true"}
+            className="timeline-control-button"
+            data-strong="true"
           >
-            {allEventsOpen ? "閉" : "開"}
+            {allEventsOpen
+              ? "全て閉じる"
+              : "全て開く"}
           </button>
         </span>
+      </div>
       </div>
     </div>
   );

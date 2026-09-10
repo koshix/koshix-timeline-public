@@ -73,13 +73,7 @@ assert.deepEqual(
     1953,
     4
   ),
-  [
-    {
-      start: "1958",
-      years: "2",
-      type: "kindergarten",
-    },
-  ]
+  []
 );
 
 assert.deepEqual(
@@ -116,11 +110,6 @@ assert.deepEqual(
     4
   ),
   [
-    {
-      start: "1958",
-      years: "2",
-      type: "kindergarten",
-    },
     {
       start: "1972",
       years: "4",

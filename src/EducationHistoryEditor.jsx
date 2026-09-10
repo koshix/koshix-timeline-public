@@ -3,6 +3,7 @@ import {
   EARLY_CHILDHOOD_TYPES,
   GRADUATE_TYPES,
   HIGHER_ED_TYPES,
+  SECONDARY_ED_TYPES,
   educationForKind,
   normalizeEducationHistory,
   replaceEducationForKind,
@@ -16,6 +17,12 @@ const blankEarly = () => ({
   start: "",
   years: "",
   type: "kindergarten",
+});
+
+const blankSecondary = () => ({
+  start: "",
+  years: "",
+  type: "highSchool",
 });
 
 const blankHigher = () => ({
@@ -35,8 +42,8 @@ const initialRows = (rows, blankFactory) =>
     ? rows.map((row) => ({ ...row }))
     : [blankFactory()];
 
-const compactRows = (rows, types, fallbackType) =>
-  normalizeEducationHistory(rows, types, fallbackType);
+const compactRows = (rows, types) =>
+  normalizeEducationHistory(rows, types, "");
 
 const inputStyle = {
   fontFamily: mono,
@@ -168,7 +175,9 @@ function HistoryBlock({
             onChange={(event) =>
               updateRow(index, "start", event.target.value)
             }
-            aria-label={`${title}${index + 1}行目の入学年`}
+            aria-label={`${title}${index + 1}行目の${
+              kind === "early" ? "入った年" : "入学年"
+            }`}
             style={yearInputStyle}
           />
 
@@ -191,7 +200,9 @@ function HistoryBlock({
             onChange={(event) =>
               updateRow(index, "years", event.target.value)
             }
-            aria-label={`${title}${index + 1}行目の修学年数`}
+            aria-label={`${title}${index + 1}行目の${
+              kind === "early" ? "在年数" : "修学年数"
+            }`}
             style={{
               ...yearInputStyle,
               width: 58,
@@ -203,9 +214,11 @@ function HistoryBlock({
             aria-label={
               kind === "early"
                 ? "幼保の種類"
-                : kind === "higher"
-                  ? "大学等の種類"
-                  : "大学院課程"
+                : kind === "secondary"
+                  ? "高校などの種類"
+                  : kind === "higher"
+                    ? "大学などの種類"
+                    : "大学院課程"
             }
             style={{
               display: "inline-flex",
@@ -293,6 +306,13 @@ export default function EducationHistoryEditor({
       blankEarly
     )
   );
+  const [secondaryRows, setSecondaryRows] = useState(() =>
+    initialRows(
+      educationForKind(education, "secondary"),
+      blankSecondary
+    )
+  );
+
   const [higherRows, setHigherRows] = useState(() =>
     initialRows(
       educationForKind(education, "higher"),
@@ -316,8 +336,23 @@ export default function EducationHistoryEditor({
           ? []
           : compactRows(
               next,
-              EARLY_CHILDHOOD_TYPES,
-              "kindergarten"
+              EARLY_CHILDHOOD_TYPES
+            )
+      )
+    );
+  };
+
+  const changeSecondaryRows = (next, reset = false) => {
+    setSecondaryRows(next);
+    onEducationChange(
+      replaceEducationForKind(
+        education,
+        "secondary",
+        reset
+          ? []
+          : compactRows(
+              next,
+              SECONDARY_ED_TYPES
             )
       )
     );
@@ -333,8 +368,7 @@ export default function EducationHistoryEditor({
           ? []
           : compactRows(
               next,
-              HIGHER_ED_TYPES,
-              "university"
+              HIGHER_ED_TYPES
             )
       )
     );
@@ -350,8 +384,7 @@ export default function EducationHistoryEditor({
           ? []
           : compactRows(
               next,
-              GRADUATE_TYPES,
-              "masters"
+              GRADUATE_TYPES
             )
       )
     );
@@ -361,7 +394,7 @@ export default function EducationHistoryEditor({
     <>
       <HistoryBlock
         number={1}
-        title="幼稚園・保育所"
+        title="幼稚園・保育所（任意）"
         kind="early"
         rows={earlyRows}
         onRowsChange={changeEarlyRows}
@@ -373,7 +406,19 @@ export default function EducationHistoryEditor({
 
       <HistoryBlock
         number={2}
-        title="大学等"
+        title="高校など（任意）"
+        kind="secondary"
+        rows={secondaryRows}
+        onRowsChange={changeSecondaryRows}
+        types={SECONDARY_ED_TYPES}
+        blankFactory={blankSecondary}
+        color="#1e5fa8"
+        soft="#e7f0fb"
+      />
+
+      <HistoryBlock
+        number={3}
+        title="大学など（任意）"
         kind="higher"
         rows={higherRows}
         onRowsChange={changeHigherRows}
@@ -384,8 +429,8 @@ export default function EducationHistoryEditor({
       />
 
       <HistoryBlock
-        number={3}
-        title="大学院"
+        number={4}
+        title="大学院（任意）"
         kind="graduate"
         rows={graduateRows}
         onRowsChange={changeGraduateRows}
@@ -405,9 +450,9 @@ export default function EducationHistoryEditor({
           color: "#8a8f98",
         }}
       >
-        必要なだけ行を追加できます。保育所から幼稚園への移行、
-        高専から大学への編入、修士から博士への進学などをここで設定し、
-        これで表せない成人後の経歴は下の「4. 成人期」で分割できます。
+        必要なだけ行を追加できます。中退や編入も実際の修学年数で設定できます。
+        高専から大学への編入、修士から博士への進学なども複数行で表せます。
+        これで表せない成人後の経歴は下の「5. 成人期」で分割できます。
       </div>
     </>
   );

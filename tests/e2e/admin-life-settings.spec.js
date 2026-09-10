@@ -81,6 +81,14 @@ test("administrator life settings update the editor and exported TSV", async ({
     .click();
 
   const personal = page.locator("#personal-history");
+  const personalToggle = personal.locator(":scope > button");
+
+  if (
+    (await personalToggle.getAttribute("aria-expanded"))
+    !== "true"
+  ) {
+    await personalToggle.click();
+  }
 
   const editorToggle = personal.getByRole(
     "button",
@@ -159,37 +167,37 @@ test("administrator life settings update the editor and exported TSV", async ({
 
   await expect(
     page.getByLabel(
-      "幼稚園・保育所1行目の入学年"
+      "幼稚園・保育所（任意）1行目の入った年"
     )
   ).toHaveValue("1993");
 
   await expect(
     page.getByLabel(
-      "幼稚園・保育所1行目の修学年数"
+      "幼稚園・保育所（任意）1行目の在年数"
     )
   ).toHaveValue("2");
 
   await expect(
     page.getByLabel(
-      "大学等1行目の入学年"
+      "大学など（任意）1行目の入学年"
     )
   ).toHaveValue("2007");
 
   await expect(
     page.getByLabel(
-      "大学等1行目の修学年数"
+      "大学など（任意）1行目の修学年数"
     )
   ).toHaveValue("4");
 
   await expect(
     page.getByLabel(
-      "大学院1行目の入学年"
+      "大学院（任意）1行目の入学年"
     )
   ).toHaveValue("2011");
 
   await expect(
     page.getByLabel(
-      "大学院2行目の入学年"
+      "大学院（任意）2行目の入学年"
     )
   ).toHaveValue("2013");
 
