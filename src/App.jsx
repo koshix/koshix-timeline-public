@@ -924,7 +924,7 @@ export default function App() {
               onClick={() => toggleStage(g.key)}
               aria-expanded={!stageClosed}
               style={{
-                display: "flex", alignItems: "baseline", gap: 10, width: "100%",
+                display: "flex", alignItems: "baseline", gap: 10, width: "100%", boxSizing: "border-box",
                 borderTop: "none", borderRight: "none", borderBottom: "none",
                 borderLeftWidth: 6, borderLeftStyle: "solid", borderLeftColor: g.stage.color,
                 background: g.stage.bg, borderRadius: 8,

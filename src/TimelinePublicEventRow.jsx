@@ -85,6 +85,7 @@ export default function TimelinePublicEventRow({
           gap: 10,
           padding: "8px 4px",
           width: "100%",
+          boxSizing: "border-box",
           textAlign: "left",
           background: "none",
           border: "none",

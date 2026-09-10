@@ -19,6 +19,18 @@ async function openApp(page) {
   ).toBeVisible();
 }
 
+async function expectNoPageHorizontalOverflow(page) {
+  const widths = await page.evaluate(() => ({
+    viewport: globalThis.document.documentElement.clientWidth,
+    document: Math.max(
+      globalThis.document.documentElement.scrollWidth,
+      globalThis.document.body.scrollWidth
+    ),
+  }));
+
+  expect(widths.document).toBeLessThanOrEqual(widths.viewport);
+}
+
 test("app loads and exposes the main controls", async ({ page }) => {
   await openApp(page);
 
@@ -209,4 +221,31 @@ test("synthetic timeline addition survives reload", async ({ page }) => {
   await search.fill(title);
   await expect(eventRows).toHaveCount(1);
   await expect(page.getByText(title, { exact: true })).toBeVisible();
+});
+
+test("iPhone SE2 width has no page-level horizontal overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await openApp(page);
+
+  await expectNoPageHorizontalOverflow(page);
+
+  const settings = page.locator("#timeline-settings");
+  const settingsToggle = settings.locator(":scope > button");
+  if ((await settingsToggle.getAttribute("aria-expanded")) !== "true") {
+    await settingsToggle.click();
+  }
+
+  await settings.locator("summary").click();
+  await expectNoPageHorizontalOverflow(page);
+
+  const personal = page.locator("#personal-history");
+  await personal
+    .getByRole("button", { name: "編集する", exact: true })
+    .click();
+  await expectNoPageHorizontalOverflow(page);
+
+  await page
+    .getByRole("button", { name: "▶ タグで絞る", exact: true })
+    .click();
+  await expectNoPageHorizontalOverflow(page);
 });

@@ -205,6 +205,7 @@ export default function TimelineSettingsSection({
                 role="alert"
                 style={{
                   width: "100%",
+                  boxSizing: "border-box",
                   padding: "8px 10px",
                   borderRadius: 8,
                   background: "#fff3f1",
