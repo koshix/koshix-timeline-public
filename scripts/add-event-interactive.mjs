@@ -240,7 +240,6 @@ sources を1件ずつ入力します。空Enterで終了。
       sources: sources.join("|"),
       search,
       note,
-      core: "0",
     };
 
     console.log("\n追加内容:");
@@ -257,7 +256,6 @@ sources を1件ずつ入力します。空Enterで終了。
     console.log(`  sources    ${row.sources || "(空)"}`);
     console.log(`  search     ${row.search || "(空)"}`);
     console.log(`  note       ${row.note || "(空)"}`);
-    console.log(`  core       ${row.core}`);
 
     const answer = clean(
       await rl.question(

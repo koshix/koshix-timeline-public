@@ -47,10 +47,8 @@ ZIPを展開し、その中のファイル一式をWebサーバーへ配置し�
 公開年表の正本です。タブ区切りのUTF-8テキストとして編集します。
 
 ```text
-id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote\tcore
+id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote
 ```
-
-`core` は旧選定状態を残すメタデータです。旧選定対象は `1`、それ以外は `0` とし、現在は固定件数を維持する必要はありません。
 
 詳しい登録規約は `DATA-GUIDE.md` を参照してください。
 

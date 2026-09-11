@@ -2,6 +2,7 @@ import { eventYear } from "./event-schema.js";
 import { eventId } from "./event-links";
 import { CAT } from "./categories";
 import Icon from "./Icon";
+import { resolvePublicEventIcon } from "./event-icon.js";
 import EventReferenceLinks from "./EventReferenceLinks";
 import EventCustomizationActions from "./EventCustomizationActions";
 import EventCustomizationEditForm from "./EventCustomizationEditForm";
@@ -129,7 +130,7 @@ export default function TimelinePublicEventRow({
           level={event.importance}
         />
         <Icon
-          name={event.icon}
+          name={resolvePublicEventIcon(event)}
           color={CAT[event.primary].bg}
         />
         <span

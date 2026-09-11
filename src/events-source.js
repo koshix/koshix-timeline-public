@@ -64,9 +64,7 @@ export function parseEventsTsv(text) {
     ids.add(row.id);
 
     events.push(
-      decodeEventRow(row, {
-        includeCore: true,
-      })
+      decodeEventRow(row)
     );
   }
 

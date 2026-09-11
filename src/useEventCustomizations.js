@@ -375,7 +375,6 @@ export default function useEventCustomizations({
       cats: [category],
       primary: category,
       importance,
-      core: false,
       icon: iconByCategory[category],
       summary: summary,
     };

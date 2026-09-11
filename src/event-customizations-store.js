@@ -14,7 +14,56 @@ const CUSTOMIZATIONS_KEY = "event-customizations";
 
 export const EVENT_CUSTOMIZATIONS_STORAGE_FORMAT =
   "koshix-timeline-event-customizations";
-export const EVENT_CUSTOMIZATIONS_STORAGE_VERSION = 3;
+export const EVENT_CUSTOMIZATIONS_STORAGE_VERSION = 4;
+
+function withoutLegacyCore(value) {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return value;
+  }
+
+  const next = { ...value };
+  delete next.core;
+  return next;
+}
+
+function migrateEventCustomizationsV3ToV4(data) {
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data)
+  ) {
+    return data;
+  }
+
+  const next = { ...data };
+
+  if (
+    data.overrides &&
+    typeof data.overrides === "object" &&
+    !Array.isArray(data.overrides)
+  ) {
+    next.overrides = Object.fromEntries(
+      Object.entries(data.overrides).map(
+        ([id, changes]) => [
+          id,
+          withoutLegacyCore(changes),
+        ]
+      )
+    );
+  }
+
+  if (Array.isArray(data.additions)) {
+    next.additions = data.additions.map(
+      withoutLegacyCore
+    );
+  }
+
+  return next;
+}
 
 function validateCustomizations(value) {
   if (
@@ -74,6 +123,9 @@ export function decodeEventCustomizationsStorageValue(value) {
   return decodeVersionedRecord(value, {
     format: EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
     currentVersion: EVENT_CUSTOMIZATIONS_STORAGE_VERSION,
+    migrations: {
+      3: migrateEventCustomizationsV3ToV4,
+    },
     validateData: validateCustomizations,
     context: "年表カスタマイズ保存データ",
   });

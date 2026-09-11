@@ -18,7 +18,7 @@ import {
 
 assert.deepEqual(
   PERSONAL_EVENT_TSV_HEADER,
-  PUBLIC_EVENT_TSV_HEADER.slice(0, -1)
+  PUBLIC_EVENT_TSV_HEADER
 );
 
 assert.equal(PUBLIC_EVENT_CATEGORIES.has("science"), true);
@@ -69,7 +69,6 @@ const publicRow = {
   sources: "https://example.com::Example",
   search: "検索語",
   note: "注記",
-  core: "1",
 };
 
 assert.deepEqual(
@@ -97,8 +96,7 @@ assert.throws(
 );
 
 const decodedPublic = decodeEventRow(
-  publicRow,
-  { includeCore: true }
+  publicRow
 );
 
 assert.deepEqual(decodedPublic, {
@@ -111,7 +109,6 @@ assert.deepEqual(decodedPublic, {
   subs: ["math", "technology"],
   region: "日本",
   importance: 3,
-  core: true,
   icon: "atom",
   summary: "要約",
   sources: ["https://example.com::Example"],
@@ -121,8 +118,7 @@ assert.deepEqual(decodedPublic, {
 
 assert.deepEqual(
   encodeEventRow(
-    decodedPublic,
-    { includeCore: true }
+    decodedPublic
   ),
   publicRow
 );
@@ -132,7 +128,6 @@ const personalRow = {
   primary: "me",
   cats: "me|education",
 };
-delete personalRow.core;
 
 assert.deepEqual(
   validatePersonalEventRow(personalRow),
@@ -167,14 +162,6 @@ assert.deepEqual(
   decodedPersonal.cats,
   ["me", "education"]
 );
-assert.equal(
-  Object.prototype.hasOwnProperty.call(
-    decodedPersonal,
-    "core"
-  ),
-  false
-);
-
 console.log(
   "OK: event schema / codec のヘッダー・日付・検証・フィールド対応・公開/個人史変換を検査しました"
 );

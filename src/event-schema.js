@@ -13,11 +13,11 @@ export const PUBLIC_EVENT_TSV_HEADER = [
   "sources",
   "search",
   "note",
-  "core",
 ];
 
-export const PERSONAL_EVENT_TSV_HEADER =
-  PUBLIC_EVENT_TSV_HEADER.slice(0, -1);
+export const PERSONAL_EVENT_TSV_HEADER = [
+  ...PUBLIC_EVENT_TSV_HEADER,
+];
 
 export const PUBLIC_EVENT_CATEGORY_KEYS = [
   "sf",
@@ -186,12 +186,6 @@ export function validatePublicEventRow(row) {
         `未知のsubsタグ "${sub}"`
       );
     }
-  }
-
-  if (!["0", "1"].includes(row.core)) {
-    throw new Error(
-      "core は 0 または 1 にしてください"
-    );
   }
 
   if (!row.icon) {

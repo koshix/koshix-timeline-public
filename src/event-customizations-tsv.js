@@ -109,11 +109,6 @@ function validateAddition(event, id) {
     );
   }
 
-  if (typeof event.core !== "boolean") {
-    throw new Error(
-      `追加項目 "${id}": core は true / false で指定してください`
-    );
-  }
 }
 
 export function parseEventCustomizationsTsv(text) {

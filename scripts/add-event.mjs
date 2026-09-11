@@ -167,14 +167,6 @@ function normalize(data) {
     );
   }
 
-  const core = clean(data.core || "0");
-
-  if (!["0", "1"].includes(core)) {
-    throw new Error(
-      "core は 0 または 1 のいずれかです"
-    );
-  }
-
   const icon = clean(data.icon || "book");
 
   if (!ICONS.has(icon)) {
@@ -204,7 +196,6 @@ function normalize(data) {
     sources: sourceList(data.sources).join("|"),
     search: clean(data.search),
     note: clean(data.note),
-    core,
   };
 
   for (const [key, value] of Object.entries(row)) {

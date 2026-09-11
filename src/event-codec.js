@@ -17,7 +17,6 @@ export function decodeEventRow(
   row,
   {
     forcePrimary = null,
-    includeCore = false,
     defaultIcon = "",
   } = {}
 ) {
@@ -37,9 +36,6 @@ export function decodeEventRow(
       : {}),
     ...(row.region ? { region: row.region } : {}),
     importance: Number(row.importance),
-    ...(includeCore
-      ? { core: row.core === "1" }
-      : {}),
     icon: row.icon || defaultIcon,
     summary: row.summary,
     ...(row.sources
@@ -54,7 +50,6 @@ export function encodeEventRow(
   event,
   {
     forcePrimary = null,
-    includeCore = false,
     defaultIcon = "",
   } = {}
 ) {
@@ -83,8 +78,5 @@ export function encodeEventRow(
     sources: listCell(event.sources),
     search: String(event.search ?? ""),
     note: String(event.note ?? ""),
-    ...(includeCore
-      ? { core: event.core ? "1" : "0" }
-      : {}),
   };
 }
