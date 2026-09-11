@@ -244,84 +244,20 @@ const currentCustomizations =
 assert.equal(currentCustomizations.migrated, false);
 assert.deepEqual(currentCustomizations.data, customizations);
 
-const legacyV3Customizations = {
-  overrides: {
-    "event-1": {
-      title: "変更後",
-      core: true,
-    },
-  },
-  hidden: ["event-2"],
-  additions: [
-    {
-      id: "custom-legacy",
-      date: "2026",
-      title: "旧保存形式の追加項目",
-      cats: ["science"],
-      primary: "science",
-      importance: 2,
-      core: false,
-      icon: "chip",
-      summary: "core除去移行テスト",
-    },
-  ],
-};
-
-const migratedCustomizations =
-  decodeEventCustomizationsStorageValue({
-    format: EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
-    schemaVersion: 3,
-    data: legacyV3Customizations,
-  });
-
-assert.equal(
-  migratedCustomizations.migrated,
-  true
-);
-
-assert.deepEqual(
-  migratedCustomizations.data,
-  {
-    overrides: {
-      "event-1": {
-        title: "変更後",
-      },
-    },
-    hidden: ["event-2"],
-    additions: [
-      {
-        id: "custom-legacy",
-        date: "2026",
-        title: "旧保存形式の追加項目",
-        cats: ["science"],
-        primary: "science",
-        importance: 2,
-        icon: "chip",
-        summary: "core除去移行テスト",
-      },
-    ],
-  }
-);
-
-assert.throws(
-  () =>
-    decodeEventCustomizationsStorageValue({
-      format: EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
-      schemaVersion: 1,
-      data: customizations,
-    }),
-  /version 1 からの移行処理がありません/
-);
-
-assert.throws(
-  () =>
-    decodeEventCustomizationsStorageValue({
-      format: EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
-      schemaVersion: 2,
-      data: customizations,
-    }),
-  /version 2 からの移行処理がありません/
-);
+// 一般公開前の旧カスタマイズversion 1 / 2 / 3は移行せず、明示的に破棄する。
+for (const schemaVersion of [1, 2, 3]) {
+  assert.throws(
+    () =>
+      decodeEventCustomizationsStorageValue({
+        format: EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
+        schemaVersion,
+        data: customizations,
+      }),
+    new RegExp(
+      `version ${schemaVersion} からの移行処理がありません`
+    )
+  );
+}
 
 assert.throws(
   () =>

@@ -1,4 +1,4 @@
-export const PUBLIC_EVENT_TSV_HEADER = [
+export const EVENT_TSV_HEADER = [
   "id",
   "date",
   "end_date",
@@ -15,9 +15,10 @@ export const PUBLIC_EVENT_TSV_HEADER = [
   "note",
 ];
 
-export const PERSONAL_EVENT_TSV_HEADER = [
-  ...PUBLIC_EVENT_TSV_HEADER,
-];
+export const PUBLIC_EVENT_TSV_HEADER =
+  EVENT_TSV_HEADER;
+export const PERSONAL_EVENT_TSV_HEADER =
+  EVENT_TSV_HEADER;
 
 export const PUBLIC_EVENT_CATEGORY_KEYS = [
   "sf",

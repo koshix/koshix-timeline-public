@@ -16,6 +16,11 @@
   min-height: 100vh;
 }
 
+:where(button, input, select, textarea, a, summary):focus-visible {
+  outline: 3px solid #4b56a6;
+  outline-offset: 2px;
+}
+
 .timeline-category-pill {
   padding: 6px 14px;
   border: 1.5px solid var(--category-border);

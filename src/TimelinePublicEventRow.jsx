@@ -6,6 +6,7 @@ import { resolvePublicEventIcon } from "./event-icon.js";
 import EventReferenceLinks from "./EventReferenceLinks";
 import EventCustomizationActions from "./EventCustomizationActions";
 import EventCustomizationEditForm from "./EventCustomizationEditForm";
+import TimelineEventRowShell from "./TimelineEventRowShell";
 
 export default function TimelinePublicEventRow({
   event,
@@ -68,162 +69,105 @@ export default function TimelinePublicEventRow({
   const isEditing =
     editingEventId === id;
 
-  return (
-    <li
-      id={`ev-${id}`}
-      style={{
-        borderBottom:
-          "1px solid #ececea",
-      }}
-    >
-      {eraHeadings}
-      <button
-        onClick={() => toggleEvent(id)}
-        aria-expanded={isOpen}
+  const headerContent = (
+    <>
+      <ImportanceBadge
+        level={event.importance}
+      />
+      <Icon
+        name={resolvePublicEventIcon(event)}
+        color={CAT[event.primary].bg}
+      />
+      <span
         style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 10,
-          padding: "8px 4px",
-          width: "100%",
-          boxSizing: "border-box",
-          textAlign: "left",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          fontFamily: font,
-          color: "#22272e",
+          fontSize: 14,
+          lineHeight: 1.55,
+          flex: 1,
+          minWidth: 0,
         }}
       >
-        <span
-          style={{
-            fontFamily: mono,
-            fontSize: 13,
-            color: "#8a8f98",
-            width: 44,
-            flexShrink: 0,
-            paddingTop: 3,
-          }}
-        >
-          {eventYear(event)}
-        </span>
-        {hasAgeProjection && (
+        {event.cats?.includes("sf") && (
           <span
+            title="SF作品"
+            aria-label="SF作品"
             style={{
-              flexShrink: 0,
-              minWidth: 44,
-              textAlign: "center",
-              fontSize: 13,
+              display: "inline-block",
+              marginRight: 6,
+              padding: "1px 5px",
+              borderRadius: 5,
+              fontSize: 10.5,
+              lineHeight: 1.4,
               fontWeight: 800,
-              ...gradeBadgeStyle(
-                stage,
-                event.age
-              ),
-              borderRadius: 6,
-              padding: "3px 8px",
+              fontStyle: "italic",
+              color: CAT.work.fg,
+              background: CAT.work.bg,
+              verticalAlign: 1,
             }}
           >
-            {grade}
+            SF
           </span>
         )}
-        <ImportanceBadge
-          level={event.importance}
-        />
-        <Icon
-          name={resolvePublicEventIcon(event)}
-          color={CAT[event.primary].bg}
-        />
+        {event.title}
+      </span>
+
+      {secondaryCats.length > 0 && (
         <span
           style={{
-            fontSize: 14,
-            lineHeight: 1.55,
-            flex: 1,
-          }}
-        >
-          {event.cats?.includes("sf") && (
-            <span
-              title="SF作品"
-              aria-label="SF作品"
-              style={{
-                display: "inline-block",
-                marginRight: 6,
-                padding: "1px 5px",
-                borderRadius: 5,
-                fontSize: 10.5,
-                lineHeight: 1.4,
-                fontWeight: 800,
-                letterSpacing: 0.2,
-                color: CAT.sf.fg,
-                background: CAT.sf.bg,
-                verticalAlign: 1,
-              }}
-            >
-              ＊SF
-            </span>
-          )}
-          {event.title}
-        </span>
-
-        {secondaryCats.length > 0 && (
-          <span
-            style={{
-              display: "inline-flex",
-              gap: 3,
-              alignItems: "center",
-              flexShrink: 0,
-              paddingTop: 7,
-            }}
-            aria-label={`関連分野: ${secondaryCats
-              .map(
-                (key) =>
-                  CAT[key]?.label
-              )
-              .filter(Boolean)
-              .join("・")}`}
-          >
-            {secondaryCats.map(
-              (key) => (
-                <span
-                  key={key}
-                  title={
-                    CAT[key]?.label
-                    || key
-                  }
-                  style={{
-                    display:
-                      "inline-block",
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background:
-                      CAT[key]?.bg
-                      || "#999",
-                  }}
-                />
-              )
-            )}
-          </span>
-        )}
-
-        <span
-          style={{
-            fontSize: 11,
-            color: "#b0b4bb",
-            paddingTop: 4,
+            display: "inline-flex",
+            gap: 3,
+            alignItems: "center",
             flexShrink: 0,
-            transform:
-              isOpen
-                ? "rotate(90deg)"
-                : "none",
-            transition:
-              "transform 0.15s",
+            paddingTop: 7,
           }}
-          aria-hidden="true"
+          aria-label={`関連分野: ${secondaryCats
+            .map(
+              (key) =>
+                CAT[key]?.label
+            )
+            .filter(Boolean)
+            .join("・")}`}
         >
-          ▶
+          {secondaryCats.map(
+            (key) => (
+              <span
+                key={key}
+                title={
+                  CAT[key]?.label
+                  || key
+                }
+                style={{
+                  display:
+                    "inline-block",
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background:
+                    CAT[key]?.bg
+                    || "#999",
+                }}
+              />
+            )
+          )}
         </span>
-      </button>
+      )}
+    </>
+  );
 
+  return (
+    <TimelineEventRowShell
+      id={id}
+      event={event}
+      eraHeadings={eraHeadings}
+      stage={stage}
+      font={font}
+      mono={mono}
+      gradeLabel={gradeLabel}
+      isOpen={isOpen}
+      toggleEvent={toggleEvent}
+      gradeBadgeStyle={gradeBadgeStyle}
+      buttonColor="#22272e"
+      headerContent={headerContent}
+    >
       {isOpen && event.summary && (
         <div
           style={{
@@ -334,6 +278,6 @@ export default function TimelinePublicEventRow({
           )}
         </div>
       )}
-    </li>
+    </TimelineEventRowShell>
   );
 }

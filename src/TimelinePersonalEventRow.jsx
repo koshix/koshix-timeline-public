@@ -1,7 +1,7 @@
-import { eventYear } from "./event-schema.js";
 import { eventId } from "./event-links";
 import { CAT } from "./categories";
 import Icon from "./Icon";
+import TimelineEventRowShell from "./TimelineEventRowShell";
 
 export default function TimelinePersonalEventRow({
   event,
@@ -21,100 +21,43 @@ export default function TimelinePersonalEventRow({
 }) {
   const id = eventId(event);
   const isOpen = isEventOpen(id);
-  const hasAgeProjection =
-    Number.isFinite(event.age);
 
-  return (
-    <li
-      id={`ev-${id}`}
-      style={{
-        borderBottom: "1px solid #ececea",
-        background: "#f2faf6",
-      }}
-    >
-      {eraHeadings}
-      <button
-        onClick={() => toggleEvent(id)}
-        aria-expanded={isOpen}
+  const headerContent = (
+    <>
+      <Icon
+        name={event.icon ?? "flag"}
+        color={CAT.me.bg}
+      />
+      <span
         style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 10,
-          padding: "8px 4px",
-          width: "100%",
-          boxSizing: "border-box",
-          textAlign: "left",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          fontFamily: font,
+          fontSize: 14,
+          lineHeight: 1.55,
+          flex: 1,
+          minWidth: 0,
+          fontWeight: 700,
+          color: CAT.me.bg,
         }}
       >
-        <span
-          style={{
-            fontFamily: mono,
-            fontSize: 13,
-            color: "#8a8f98",
-            width: 44,
-            flexShrink: 0,
-            paddingTop: 3,
-          }}
-        >
-          {eventYear(event)}
-        </span>
-        {hasAgeProjection && (
-          <span
-            style={{
-              flexShrink: 0,
-              minWidth: 44,
-              textAlign: "center",
-              fontSize: 13,
-              fontWeight: 800,
-              ...gradeBadgeStyle(
-                stage,
-                event.age
-              ),
-              borderRadius: 6,
-              padding: "3px 8px",
-            }}
-          >
-            {gradeLabel(eventYear(event))}
-          </span>
-        )}
-        <Icon
-          name={event.icon ?? "flag"}
-          color={CAT.me.bg}
-        />
-        <span
-          style={{
-            fontSize: 14,
-            lineHeight: 1.55,
-            flex: 1,
-            fontWeight: 700,
-            color: CAT.me.bg,
-          }}
-        >
-          {event.title}
-        </span>
-        <span
-          style={{
-            fontSize: 11,
-            color: "#b0b4bb",
-            paddingTop: 4,
-            flexShrink: 0,
-            transform:
-              isOpen
-                ? "rotate(90deg)"
-                : "none",
-            transition:
-              "transform 0.15s",
-          }}
-          aria-hidden="true"
-        >
-          ▶
-        </span>
-      </button>
+        {event.title}
+      </span>
+    </>
+  );
 
+  return (
+    <TimelineEventRowShell
+      id={id}
+      event={event}
+      eraHeadings={eraHeadings}
+      stage={stage}
+      font={font}
+      mono={mono}
+      gradeLabel={gradeLabel}
+      isOpen={isOpen}
+      toggleEvent={toggleEvent}
+      gradeBadgeStyle={gradeBadgeStyle}
+      background="#f2faf6"
+      headerContent={headerContent}
+    >
       {isOpen &&
         personalEventsSource === "browser" && (
           <div
@@ -206,6 +149,6 @@ export default function TimelinePersonalEventRow({
           )}
         </div>
       )}
-    </li>
+    </TimelineEventRowShell>
   );
 }

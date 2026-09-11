@@ -395,7 +395,7 @@ export default function App() {
       setAdministratorDataStatus(
         `管理者データの読み込み失敗: ${
           err?.message || String(err)
-        }`
+        }。未認証の場合は先に「管理者認証」を開いてください。`
       );
     }
   };
@@ -1376,6 +1376,18 @@ export default function App() {
                 marginTop: 6,
               }}
             >
+              <a
+                href={`${import.meta.env.BASE_URL}personal/auth.html`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  ...miniBtn,
+                  textDecoration: "none",
+                }}
+              >
+                管理者認証
+              </a>
+
               <button
                 type="button"
                 onClick={loadAdministratorData}

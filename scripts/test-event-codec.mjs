@@ -5,6 +5,7 @@ import {
   encodeEventRow,
 } from "../src/event-codec.js";
 import {
+  EVENT_TSV_HEADER,
   PERSONAL_EVENT_TSV_HEADER,
   PUBLIC_EVENT_CATEGORIES,
   PUBLIC_EVENT_SUB_TAG_KEYS,
@@ -16,9 +17,13 @@ import {
   validatePublicEventRow,
 } from "../src/event-schema.js";
 
-assert.deepEqual(
+assert.strictEqual(
+  PUBLIC_EVENT_TSV_HEADER,
+  EVENT_TSV_HEADER
+);
+assert.strictEqual(
   PERSONAL_EVENT_TSV_HEADER,
-  PUBLIC_EVENT_TSV_HEADER
+  EVENT_TSV_HEADER
 );
 
 assert.equal(PUBLIC_EVENT_CATEGORIES.has("science"), true);

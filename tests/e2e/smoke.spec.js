@@ -156,7 +156,7 @@ test("versioned display settings survive reload", async ({ page }) => {
   ).toHaveAttribute("aria-pressed", "false");
 });
 
-test("synthetic personal history survives reload", async ({ page }) => {
+test("synthetic personal history survives reload and protected file operations", async ({ page }) => {
   const title = "E2E架空個人史";
   const summary = "E2Eテスト専用の架空個人史データです";
 
@@ -188,7 +188,40 @@ test("synthetic personal history survives reload", async ({ page }) => {
     .click();
 
   await expect(section).toContainText("このブラウザ（1件）");
-  await expect(section.getByText(title, { exact: true })).toBeVisible();
+
+  // TSV保存→同じファイルを再読込。
+  const downloadPromise = page.waitForEvent("download");
+  await section
+    .getByRole("button", { name: "ファイルに保存", exact: true })
+    .click();
+
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+
+  const fileInput = section.locator('input[type="file"]');
+  await fileInput.setInputFiles(downloadPath);
+
+  await expect(section).toContainText("このブラウザ（1件）");
+
+  // 不正TSVは既存データを壊さない。
+  await fileInput.setInputFiles({
+    name: "invalid.tsv",
+    mimeType: "text/tab-separated-values",
+    buffer: Buffer.from("invalid\theader\n"),
+  });
+
+  await expect(section).toContainText("読み込み失敗");
+  await expect(section).toContainText("このブラウザ（1件）");
+
+  // 消去キャンセルでも既存データを保持。
+  page.once("dialog", (dialog) => dialog.dismiss());
+
+  await section
+    .getByRole("button", { name: "自分史を消去", exact: true })
+    .click();
+
+  await expect(section).toContainText("このブラウザ（1件）");
 
   await page.reload();
 
@@ -239,15 +272,74 @@ test("synthetic timeline addition survives reload", async ({ page }) => {
   await expect(page.getByText(title, { exact: true })).toBeVisible();
 });
 
-test("iPhone SE2 width has no page-level horizontal overflow", async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 667 });
+test("small and landscape viewports avoid overflow and expose keyboard focus", async ({ page }) => {
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 667, height: 375 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await openApp(page);
+    await expectNoPageHorizontalOverflow(page);
+
+    const search = page.locator("#timeline-search");
+    await search.fill("AI");
+    await expectNoPageHorizontalOverflow(page);
+    await search.fill("");
+
+    await page.goto("/?threads=1");
+
+    await expect(
+      page.getByRole("heading", {
+        name: "テーマでたどる",
+        exact: true,
+      })
+    ).toBeVisible();
+
+    await expectNoPageHorizontalOverflow(page);
+  }
+
+  await page.setViewportSize({ width: 320, height: 568 });
   await openApp(page);
 
-  await expectNoPageHorizontalOverflow(page);
+  const search = page.locator("#timeline-search");
+
+  let reachedSearch = false;
+
+  for (let i = 0; i < 40; i += 1) {
+    await page.keyboard.press("Tab");
+
+    if (
+      await search.evaluate(
+        (element) =>
+          globalThis.document.activeElement === element
+      )
+    ) {
+      reachedSearch = true;
+      break;
+    }
+  }
+
+  expect(reachedSearch).toBe(true);
+
+  const outlineStyle = await search.evaluate(
+    (element) =>
+      globalThis.getComputedStyle(element).outlineStyle
+  );
+
+  expect(outlineStyle).not.toBe("none");
+
+  await page.keyboard.type("AI");
+  await expect(search).toHaveValue("AI");
+  await search.fill("");
 
   const settings = page.locator("#timeline-settings");
   const settingsToggle = settings.locator(":scope > button");
-  if ((await settingsToggle.getAttribute("aria-expanded")) !== "true") {
+
+  if (
+    (await settingsToggle.getAttribute("aria-expanded"))
+    !== "true"
+  ) {
     await settingsToggle.click();
   }
 
@@ -265,12 +357,47 @@ test("iPhone SE2 width has no page-level horizontal overflow", async ({ page }) 
   }
 
   await personal
-    .getByRole("button", { name: "▶ 編集する", exact: true })
+    .getByRole("button", {
+      name: "▶ 編集する",
+      exact: true,
+    })
     .click();
+
   await expectNoPageHorizontalOverflow(page);
 
   await page
-    .getByRole("button", { name: "▶ 絞り込み", exact: true })
+    .getByRole("button", {
+      name: "▶ 絞り込み",
+      exact: true,
+    })
     .click();
+
+  await expectNoPageHorizontalOverflow(page);
+
+  const periodToggle = page.getByRole("button", {
+    name: /全期間枠を(開く|閉じる)/,
+  });
+
+  if (
+    (await periodToggle.getAttribute("aria-label"))
+    === "全期間枠を開く"
+  ) {
+    await periodToggle.click();
+  }
+
+  await search.fill("Macintosh");
+
+  const eventButton =
+    page.locator('li[id^="ev-"] > button').first();
+
+  await expect(eventButton).toBeVisible();
+  await eventButton.click();
+
+  await expect(
+    page.getByRole("link", {
+      name: "Wikipediaで探す",
+    }).first()
+  ).toBeVisible();
+
   await expectNoPageHorizontalOverflow(page);
 });

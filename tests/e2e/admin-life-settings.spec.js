@@ -22,6 +22,11 @@ const PERSONAL_EVENTS_TSV = [
   "",
 ].join("\n");
 
+const BROWSER_PERSONAL_EVENTS_TSV =
+  PERSONAL_EVENTS_TSV
+    .replace("admin-e2e-1", "browser-e2e-1")
+    .replace("E2E管理者個人史", "E2E既存ブラウザ個人史");
+
 const LIFE_SETTINGS_TSV = [
   "section\tstart\tend\tyears\ttype\tlabel\tvalue",
   "profile\t\t\t\t\tformat\tkoshix-timeline-life-settings",
@@ -68,18 +73,6 @@ test("administrator life settings update the editor and exported TSV", async ({
     })
   ).toBeVisible();
 
-  await page
-    .locator("summary")
-    .filter({ hasText: "管理者向け" })
-    .click();
-
-  await page
-    .getByRole("button", {
-      name: "管理者データ読込",
-      exact: true,
-    })
-    .click();
-
   const personal = page.locator("#personal-history");
   const personalToggle = personal.locator(":scope > button");
 
@@ -89,6 +82,45 @@ test("administrator life settings update the editor and exported TSV", async ({
   ) {
     await personalToggle.click();
   }
+
+  // 管理者データ読込前のブラウザ個人史を1件保存。
+  await personal
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: "browser-personal-history.tsv",
+      mimeType: "text/tab-separated-values",
+      buffer: Buffer.from(BROWSER_PERSONAL_EVENTS_TSV),
+    });
+
+  await expect(personal).toContainText(
+    "このブラウザ（1件）"
+  );
+
+  await page
+    .locator("summary")
+    .filter({ hasText: "管理者向け" })
+    .click();
+
+  const administratorAuth = page.getByRole("link", {
+    name: "管理者認証",
+    exact: true,
+  });
+
+  await expect(administratorAuth).toHaveAttribute(
+    "href",
+    /personal\/auth\.html$/
+  );
+  await expect(administratorAuth).toHaveAttribute(
+    "target",
+    "_blank"
+  );
+
+  await page
+    .getByRole("button", {
+      name: "管理者データ読込",
+      exact: true,
+    })
+    .click();
 
   const editorToggle = personal.getByRole(
     "button",
@@ -102,6 +134,58 @@ test("administrator life settings update the editor and exported TSV", async ({
     "管理者データ（1件）"
   );
   await expect(editorToggle).toBeDisabled();
+
+  // 取込をキャンセルしても、保存済みブラウザ個人史は残る。
+  page.once("dialog", (dialog) => {
+    dialog.dismiss();
+  });
+
+  await personal
+    .getByRole("button", {
+      name: "編集用に取り込む",
+      exact: true,
+    })
+    .click();
+
+  await page.reload();
+
+  if (
+    (await personalToggle.getAttribute("aria-expanded"))
+    !== "true"
+  ) {
+    await personalToggle.click();
+  }
+
+  await expect(personal).toContainText(
+    "このブラウザ（1件）"
+  );
+
+  await personal
+    .getByRole("button", {
+      name: "▶ 編集する",
+      exact: true,
+    })
+    .click();
+
+  await expect(
+    personal.getByText(
+      "E2E既存ブラウザ個人史",
+      { exact: true }
+    )
+  ).toBeVisible();
+
+  // 元の管理者取込テストも続ける。
+  await page
+    .locator("summary")
+    .filter({ hasText: "管理者向け" })
+    .click();
+
+  await page
+    .getByRole("button", {
+      name: "管理者データ読込",
+      exact: true,
+    })
+    .click();
 
   page.once("dialog", (dialog) => {
     dialog.accept();
