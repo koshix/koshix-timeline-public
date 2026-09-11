@@ -43,7 +43,25 @@ const LIFE_SETTINGS_TSV = [
 
 test("administrator life settings update the editor and exported TSV", async ({
   page,
+  context,
 }) => {
+  await context.route(
+    "**/personal/auth.html",
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/html; charset=utf-8",
+        body: `<!doctype html>
+<script>
+window.opener?.postMessage(
+  { type: "koshix-admin-authenticated" },
+  window.location.origin
+);
+window.close();
+</script>`,
+      })
+  );
+
   await page.route(
     "**/personal/personal-events.tsv",
     (route) =>
@@ -101,19 +119,12 @@ test("administrator life settings update the editor and exported TSV", async ({
     .filter({ hasText: "管理者向け" })
     .click();
 
-  const administratorAuth = page.getByRole("link", {
-    name: "管理者認証",
-    exact: true,
-  });
-
-  await expect(administratorAuth).toHaveAttribute(
-    "href",
-    /personal\/auth\.html$/
-  );
-  await expect(administratorAuth).toHaveAttribute(
-    "target",
-    "_blank"
-  );
+  await expect(
+    page.getByRole("link", {
+      name: "管理者認証",
+      exact: true,
+    })
+  ).toHaveCount(0);
 
   await page
     .getByRole("button", {

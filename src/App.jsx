@@ -395,9 +395,67 @@ export default function App() {
       setAdministratorDataStatus(
         `管理者データの読み込み失敗: ${
           err?.message || String(err)
-        }。未認証の場合は先に「管理者認証」を開いてください。`
+        }`
       );
     }
+  };
+
+  const authenticateAndLoadAdministratorData = () => {
+    setAdministratorDataStatus(
+      "管理者認証を確認しています…"
+    );
+
+    let timeoutId = null;
+
+    const cleanup = () => {
+      window.removeEventListener(
+        "message",
+        handleAuthenticated
+      );
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+
+    const handleAuthenticated = (event) => {
+      if (
+        event.origin !== window.location.origin ||
+        event.data?.type !==
+          "koshix-admin-authenticated"
+      ) {
+        return;
+      }
+
+      cleanup();
+      loadAdministratorData();
+    };
+
+    window.addEventListener(
+      "message",
+      handleAuthenticated
+    );
+
+    const authWindow = window.open(
+      `${import.meta.env.BASE_URL}personal/auth.html`,
+      "koshix-timeline-admin-auth",
+      "popup=yes,width=520,height=360,resizable=yes,scrollbars=yes"
+    );
+
+    if (!authWindow) {
+      cleanup();
+      setAdministratorDataStatus(
+        "管理者認証画面を開けませんでした。ポップアップを許可して、もう一度お試しください。"
+      );
+      return;
+    }
+
+    timeoutId = window.setTimeout(() => {
+      cleanup();
+      setAdministratorDataStatus(
+        "管理者認証が完了しませんでした。もう一度お試しください。"
+      );
+    }, 120000);
   };
 
   useEffect(() => {
@@ -1376,21 +1434,11 @@ export default function App() {
                 marginTop: 6,
               }}
             >
-              <a
-                href={`${import.meta.env.BASE_URL}personal/auth.html`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  ...miniBtn,
-                  textDecoration: "none",
-                }}
-              >
-                管理者認証
-              </a>
-
               <button
                 type="button"
-                onClick={loadAdministratorData}
+                onClick={
+                  authenticateAndLoadAdministratorData
+                }
                 style={{
                   ...miniBtn,
                   ...(personalEventsSource === "server" &&

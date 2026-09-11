@@ -1,7 +1,7 @@
 {
   "name": "koshix-timeline",
   "private": true,
-  "version": "2.9.11",
+  "version": "2.9.12",
   "type": "module",
   "scripts": {
     "build:events": "node scripts/build-events.mjs",
