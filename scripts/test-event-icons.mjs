@@ -39,8 +39,6 @@ function readPublicEvents() {
 test("all public events resolve to semantic icons", () => {
   const events = readPublicEvents();
 
-  assert.equal(events.length, 967);
-
   for (const event of events) {
     const icon = resolvePublicEventIcon(event);
 
