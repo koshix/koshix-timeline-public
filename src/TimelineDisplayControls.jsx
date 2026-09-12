@@ -1,6 +1,8 @@
 export default function TimelineDisplayControls({
   controlTargets,
   setAllCats,
+  allCatsOn,
+  allCatsOff,
   importanceMin,
   setImportanceLevel,
   closedStages,
@@ -75,6 +77,7 @@ export default function TimelineDisplayControls({
           <button
             type="button"
             onClick={() => setAllCats(true)}
+            aria-pressed={allCatsOn}
             className="timeline-control-button"
             data-strong="true"
           >
@@ -89,6 +92,7 @@ export default function TimelineDisplayControls({
           <button
             type="button"
             onClick={() => setAllCats(false)}
+            aria-pressed={allCatsOff}
             className="timeline-control-button timeline-control-button--muted"
           >
             全て隠す

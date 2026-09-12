@@ -41,6 +41,34 @@ test("app loads and exposes the main controls", async ({ page }) => {
       exact: true,
     }).first()
   ).toBeVisible();
+
+  const showAllCategories = page.getByRole("button", {
+    name: "全て表示",
+    exact: true,
+  });
+  const hideAllCategories = page.getByRole("button", {
+    name: "全て隠す",
+    exact: true,
+  });
+
+  await expect(showAllCategories)
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(hideAllCategories)
+    .toHaveAttribute("aria-pressed", "false");
+
+  await hideAllCategories.click();
+
+  await expect(showAllCategories)
+    .toHaveAttribute("aria-pressed", "false");
+  await expect(hideAllCategories)
+    .toHaveAttribute("aria-pressed", "true");
+
+  await showAllCategories.click();
+
+  await expect(showAllCategories)
+    .toHaveAttribute("aria-pressed", "true");
+  await expect(hideAllCategories)
+    .toHaveAttribute("aria-pressed", "false");
 });
 
 test("historical birth year can be entered directly", async ({ page }) => {

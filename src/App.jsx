@@ -1051,6 +1051,8 @@ export default function App() {
           <TimelineDisplayControls
             controlTargets={grouped.controlTargets}
             setAllCats={setAllCats}
+            allCatsOn={MAIN_CATS.every(catOn)}
+            allCatsOff={MAIN_CATS.every((key) => !catOn(key))}
             importanceMin={importanceMin}
             setImportanceLevel={setImportanceLevel}
             closedStages={closedStages}
