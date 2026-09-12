@@ -162,7 +162,7 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 2px;
+  padding: 2px 4px;
   border: 1px solid var(--control-group-border);
   border-radius: var(--kt-radius-md);
   background: var(--control-group-bg);
@@ -297,7 +297,7 @@
   min-height: 38px;
   box-sizing: border-box;
   margin-top: 3px;
-  padding: 3px 9px;
+  padding: 3px 6px;
   overflow-x: auto;
   border: 1px solid #dfe3e8;
   border-radius: var(--kt-radius-lg);
@@ -315,13 +315,19 @@
   flex: 0 0 225px;
   min-width: 220px;
   max-width: 225px;
-  padding: 5px 9px;
-  border: 1px solid #cfd5dc;
+  padding: 3px 9px;
+  border: 2px solid #8d97a4;
+  box-sizing: border-box;
   border-radius: var(--kt-radius-sm);
   background: var(--kt-color-surface);
   color: var(--kt-color-text);
   font-family: var(--timeline-font, inherit);
   font-size: 12px;
+}
+
+.timeline-search-input:focus-visible {
+  outline: 1px solid #b7bec7;
+  outline-offset: 1px;
 }
 
 .timeline-search-input--error {

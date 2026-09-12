@@ -891,7 +891,7 @@ export default function App() {
             marginBottom: 24,
             flexWrap: "wrap",
             alignItems: "center",
-            background: "#fff",
+            background: "#f5f8fb",
             border: "1px solid #e2e4e8",
             borderRadius: 12,
             padding: "12px 14px",
@@ -911,7 +911,7 @@ export default function App() {
               style={{
                 fontSize: 14,
                 fontWeight: 800,
-                color: "#4b5563",
+                color: "#4f7089",
               }}
             >
               ③年表の表示設定

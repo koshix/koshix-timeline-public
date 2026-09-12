@@ -35,7 +35,7 @@ export default function PersonalHistorySection({
       id="personal-history"
       style={{
         scrollMarginTop: 16,
-        background: "#f7f2fb",
+        background: "#faf7fc",
         border: "1px solid #dfd2ea",
         borderRadius: 12,
         padding: "12px 16px",

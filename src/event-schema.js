@@ -169,7 +169,10 @@ export function validatePublicEventRow(row) {
     }
   }
 
-  if (!PUBLIC_EVENT_CATEGORIES.has(row.primary)) {
+  if (
+    row.primary === "sf" ||
+    !PUBLIC_EVENT_CATEGORIES.has(row.primary)
+  ) {
     throw new Error(
       `primary "${row.primary}" が不正です`
     );

@@ -95,6 +95,15 @@ assert.throws(
 assert.throws(
   () => validatePublicEventRow({
     ...publicRow,
+    cats: "work|sf",
+    primary: "sf",
+  }),
+  /primary "sf" が不正/
+);
+
+assert.throws(
+  () => validatePublicEventRow({
+    ...publicRow,
     subs: "audio",
   }),
   /未知のsubsタグ "audio"/
