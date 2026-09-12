@@ -8,6 +8,7 @@ const BUILTIN_CONFIG = {
   shareUrl: "",
   downloadUrl: "",
   publicSourceUrl: "",
+  publicDistributionEnabled: false,
   accessStats: {
     endpoint: "",
     pageUrl: "",
@@ -72,6 +73,9 @@ function normalizeConfig(raw) {
       typeof raw?.publicSourceUrl === "string"
         ? raw.publicSourceUrl.trim()
         : BUILTIN_CONFIG.publicSourceUrl,
+
+    publicDistributionEnabled:
+      raw?.publicDistributionEnabled === true,
 
     accessStats: {
       endpoint:

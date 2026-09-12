@@ -71,6 +71,57 @@ test("app loads and exposes the main controls", async ({ page }) => {
     .toHaveAttribute("aria-pressed", "false");
 });
 
+test("pre-release hides public distribution links", async ({ page }) => {
+  await openApp(page);
+
+  await expect(
+    page.getByRole("link", {
+      name: "ダウンロード版",
+      exact: true,
+    })
+  ).toHaveCount(0);
+
+  await expect(
+    page.getByRole("link", {
+      name: "公開用ソース",
+      exact: true,
+    })
+  ).toHaveCount(0);
+});
+
+test("public release shows distribution links when enabled", async ({ page }) => {
+  await page.route("**/config.json", async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+
+    await route.fulfill({
+      response,
+      json: {
+        ...config,
+        downloadUrl: "https://example.com/koshix-timeline-starter.zip",
+        publicSourceUrl: "https://example.com/koshix-timeline-public",
+        publicDistributionEnabled: true,
+      },
+    });
+  });
+
+  await openApp(page);
+
+  await expect(
+    page.getByRole("link", {
+      name: "ダウンロード版",
+      exact: true,
+    })
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("link", {
+      name: "公開用ソース",
+      exact: true,
+    })
+  ).toBeVisible();
+});
+
 test("historical birth year can be entered directly", async ({ page }) => {
   await openApp(page);
 

@@ -9,6 +9,7 @@
   },
   "downloadUrl": "",
   "publicSourceUrl": "",
+  "publicDistributionEnabled": false,
   "accessStats": {
     "endpoint": "",
     "pageUrl": ""

@@ -132,6 +132,8 @@ const DOWNLOAD_URL = String(CONFIG.downloadUrl || "").trim();
 const PUBLIC_SOURCE_URL = String(
   CONFIG.publicSourceUrl || ""
 ).trim();
+const PUBLIC_DISTRIBUTION_ENABLED =
+  CONFIG.publicDistributionEnabled === true;
 const ACCESS_STATS_URL = String(
   CONFIG.accessStats?.pageUrl || ""
 ).trim();
@@ -1455,6 +1457,38 @@ export default function App() {
             小中学校の学齢は誕生年と誕生月から概算し、高校など・大学など・大学院は設定した教育歴を反映します。成人期は必要に応じて任意に分割できます。
           </div>
 
+          {PUBLIC_DISTRIBUTION_ENABLED &&
+            (DOWNLOAD_URL || PUBLIC_SOURCE_URL) && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 10,
+                  marginTop: 8,
+                }}
+              >
+                {DOWNLOAD_URL && (
+                  <a
+                    href={DOWNLOAD_URL}
+                    download="koshix-timeline-starter.zip"
+                    style={{ color: "#59616c" }}
+                  >
+                    ダウンロード版
+                  </a>
+                )}
+                {PUBLIC_SOURCE_URL && (
+                  <a
+                    href={PUBLIC_SOURCE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "#59616c" }}
+                  >
+                    公開用ソース
+                  </a>
+                )}
+              </div>
+            )}
+
           <details
             style={{
               marginTop: 10,
@@ -1515,7 +1549,9 @@ export default function App() {
                 </span>
               )}
 
-              {personalEventsSource === "server" && DOWNLOAD_URL && (
+              {!PUBLIC_DISTRIBUTION_ENABLED &&
+              personalEventsSource === "server" &&
+              DOWNLOAD_URL && (
                 <a
                   href={DOWNLOAD_URL}
                   download="koshix-timeline-starter.zip"
@@ -1525,7 +1561,9 @@ export default function App() {
                 </a>
               )}
 
-              {personalEventsSource === "server" && PUBLIC_SOURCE_URL && (
+              {!PUBLIC_DISTRIBUTION_ENABLED &&
+              personalEventsSource === "server" &&
+              PUBLIC_SOURCE_URL && (
                 <a
                   href={PUBLIC_SOURCE_URL}
                   target="_blank"
