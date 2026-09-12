@@ -42,8 +42,7 @@ export default function TimelineSearchControls({
       >
         {searchError || (
           <>
-            {"&& = AND、|| = OR、( ) = 優先指定。"}
-            {" 空白・読点・カンマもANDです。"}
+            {"空白 または && → AND、|| → OR、( ) → 優先指定。"}
           </>
         )}
       </span>

@@ -163,7 +163,7 @@ export default function TimelinePublicEventRow({
         <div
           style={{
             margin:
-              "0 4px 10px 108px",
+              "0 4px 10px var(--timeline-detail-indent, 108px)",
             padding: "10px 14px",
             fontSize: 13,
             lineHeight: 1.75,

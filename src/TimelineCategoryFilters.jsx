@@ -19,7 +19,9 @@ export default function TimelineCategoryFilters({
   setCategoryMatchMode,
   font,
 }) {
-  const [subFiltersOpen, setSubFiltersOpen] = useState(false);
+  const [subFiltersOpen, setSubFiltersOpen] = useState(
+    () => subFilters.length > 0
+  );
 
   const categoryStyle = (key, on) => ({
     "--timeline-font": font,
@@ -143,7 +145,8 @@ export default function TimelineCategoryFilters({
             : "横断タグを開く"
         }
       >
-        {subFiltersOpen ? "▼ 絞り込み" : "▶ 絞り込み"}
+        {subFiltersOpen ? "▼" : "▶"} 絞り込み
+        {subFilters.length > 0 ? `（${subFilters.length}）` : ""}
       </button>
 
       {subFiltersOpen &&
@@ -156,7 +159,7 @@ export default function TimelineCategoryFilters({
             flexBasis: "100%",
             display: "grid",
             gridTemplateColumns:
-              "repeat(8, minmax(0, 1fr))",
+              "repeat(var(--timeline-subfilter-columns, 8), minmax(0, 1fr))",
             gap: 5,
             width: "100%",
             marginTop: rowIndex === 0 ? 4 : 0,

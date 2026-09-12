@@ -64,7 +64,8 @@ export default function TimelinePersonalEventRow({
             style={{
               display: "flex",
               gap: 8,
-              margin: "0 4px 8px 108px",
+              margin:
+                "0 4px 8px var(--timeline-detail-indent, 108px)",
             }}
           >
             <button
@@ -99,7 +100,8 @@ export default function TimelinePersonalEventRow({
       {isOpen && event.summary && (
         <div
           style={{
-            margin: "0 4px 10px 108px",
+            margin:
+              "0 4px 10px var(--timeline-detail-indent, 108px)",
             padding: "10px 14px",
             fontSize: 13,
             lineHeight: 1.75,

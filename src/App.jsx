@@ -352,6 +352,8 @@ export default function App() {
   const [thread, setThread] = useState(null);
   // 年表内検索は一時的な表示条件として扱い、ブラウザ保存はしない。
   const [searchText, setSearchText] = useState("");
+  const [earlyHistoryOpen, setEarlyHistoryOpen] =
+    useState(false);
   const [
     administratorDataStatus,
     setAdministratorDataStatus,
@@ -505,6 +507,21 @@ export default function App() {
     setShowMe((value) => !value);
   };
 
+  const hasActiveDisplayFilters =
+    MAIN_CATS.some((key) => catOff[key] === true) ||
+    sfOnly ||
+    subFilters.length > 0 ||
+    categoryMatchMode !== "primary" ||
+    importanceMin !== 2 ||
+    searchText.trim().length > 0;
+
+  const resetTimelineFilters = () => {
+    setAllCats(true);
+    setCategoryMatchMode("primary");
+    setImportanceLevel(2);
+    setSearchText("");
+  };
+
   // ?e=<項目ID> で共有されたリンクは、その項目を開いた状態で表示する
   // ?t=<テーマのキー> ならそのテーマを開いた状態で始める
   useEffect(() => {
@@ -518,6 +535,15 @@ export default function App() {
     if (!ev) return;
     const id = eventId(ev);
     openEvent(id);
+
+    const sharedEventYear = eventYear(ev);
+    if (
+      sharedEventYear >= 1501 &&
+      sharedEventYear <= 1900
+    ) {
+      setEarlyHistoryOpen(true);
+    }
+
     expandAllStages(); // 共有リンクで来たときは帯を畳んだままにしない
     const timer = setTimeout(() => {
       document.getElementById(`ev-${id}`)?.scrollIntoView({ block: "center" });
@@ -562,9 +588,6 @@ export default function App() {
     searchText,
     closedStages,
   });
-
-  const [earlyHistoryOpen, setEarlyHistoryOpen] =
-    useState(false);
 
   const earlyHistoryGroupKeys = new Set([
     "pre-16-first",
@@ -976,6 +999,27 @@ export default function App() {
             >
               テーマでたどる
             </button>
+
+            <button
+              type="button"
+              onClick={resetTimelineFilters}
+              disabled={!hasActiveDisplayFilters}
+              style={{
+                ...miniBtn,
+                marginLeft: "auto",
+                fontSize: 11.5,
+                fontWeight: 800,
+                border: "1px solid #9aa4b2",
+                background: "#ffffff",
+                color: "#4b5563",
+                opacity: hasActiveDisplayFilters ? 1 : 0.45,
+                cursor: hasActiveDisplayFilters
+                  ? "pointer"
+                  : "default",
+              }}
+            >
+              条件をリセット
+            </button>
           </div>
 
           <div
@@ -1012,6 +1056,9 @@ export default function App() {
             closedStages={closedStages}
             expandAllStages={expandAllStages}
             collapseStages={collapseStages}
+            earlyHistoryOpen={earlyHistoryOpen}
+            setEarlyHistoryOpen={setEarlyHistoryOpen}
+            hasEarlyHistory={earlyHistoryCount > 0}
             isEventOpen={isEventOpen}
             openOnlyEvents={openOnlyEvents}
             closeAllEvents={closeAllEvents}
@@ -1039,7 +1086,7 @@ export default function App() {
               marginTop: 2,
             }}
           >
-            <span>アイコン色＝主分野、色ドット＝関連分野</span>
+            <span>アイコン色＝主分野、＋数字＝関連分野数</span>
             <span
               style={{
                 display: "inline-flex",

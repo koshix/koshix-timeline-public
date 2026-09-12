@@ -312,9 +312,9 @@
 }
 
 .timeline-search-input {
-  flex: 0 0 225px;
-  min-width: 220px;
-  max-width: 225px;
+  flex: 0 0 300px;
+  min-width: 280px;
+  max-width: 300px;
   padding: 3px 9px;
   border: 2px solid #8d97a4;
   box-sizing: border-box;
@@ -345,4 +345,34 @@
 
 .timeline-search-help--error {
   color: #b33b2e;
+}
+
+@media (max-width: 520px) {
+  .timeline-search-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 5px 7px;
+    width: 100%;
+    overflow-x: visible;
+  }
+
+  .timeline-search-input {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    font-size: 16px;
+  }
+
+  .timeline-search-help {
+    grid-column: 1 / -1;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 520px) {
+  :root {
+    --timeline-detail-indent: 56px;
+    --timeline-subfilter-columns: 4;
+  }
 }

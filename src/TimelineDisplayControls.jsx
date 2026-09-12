@@ -6,6 +6,9 @@ export default function TimelineDisplayControls({
   closedStages,
   expandAllStages,
   collapseStages,
+  earlyHistoryOpen,
+  setEarlyHistoryOpen,
+  hasEarlyHistory,
   isEventOpen,
   openOnlyEvents,
   closeAllEvents,
@@ -17,14 +20,22 @@ export default function TimelineDisplayControls({
       (key) => closedStages.has(key)
     );
 
+  const allPeriodFramesClosed =
+    allStagesClosed &&
+    (!hasEarlyHistory || !earlyHistoryOpen);
+
   const allEventsOpen =
     controlTargets.allEventIds.length > 0 &&
     controlTargets.allEventIds.every(isEventOpen);
 
   const toggleAllStages = () => {
-    if (allStagesClosed) {
+    if (allPeriodFramesClosed) {
+      if (hasEarlyHistory) {
+        setEarlyHistoryOpen(true);
+      }
       expandAllStages();
     } else {
+      setEarlyHistoryOpen(false);
       collapseStages(controlTargets.allStageKeys);
     }
   };
@@ -135,14 +146,14 @@ export default function TimelineDisplayControls({
             type="button"
             onClick={toggleAllStages}
             aria-label={
-              allStagesClosed
+              allPeriodFramesClosed
                 ? "全期間枠を開く"
                 : "全期間枠を閉じる"
             }
             className="timeline-control-button"
             data-strong="true"
           >
-            {allStagesClosed
+            {allPeriodFramesClosed
               ? "全て開く"
               : "全て閉じる"}
           </button>
