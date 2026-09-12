@@ -93,7 +93,7 @@ export default function TimelineDisplayControls({
             type="button"
             onClick={() => setAllCats(false)}
             aria-pressed={allCatsOff}
-            className="timeline-control-button timeline-control-button--muted"
+            className="timeline-control-button"
           >
             全て隠す
           </button>

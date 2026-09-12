@@ -221,11 +221,6 @@
   --control-button-color: #42654f;
 }
 
-.timeline-control-group--categories .timeline-control-button--muted {
-  --control-button-bg: #e9f2eb;
-  --control-button-color: #657a6c;
-}
-
 .timeline-control-group--importance {
   --control-group-bg: #f5f1e8;
   --control-group-border: #e7dfcf;
