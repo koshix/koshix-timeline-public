@@ -58,7 +58,13 @@ export default function TimelinePublicEventRow({
   ).filter(
     (category) =>
       category !== event.primary
+      && category !== "sf"
   );
+
+  const secondaryCatLabels =
+    secondaryCats.map(
+      (key) => CAT[key]?.label || key
+    );
 
   const isAdded = (
     eventCustomizations.additions ?? []
@@ -112,42 +118,27 @@ export default function TimelinePublicEventRow({
 
       {secondaryCats.length > 0 && (
         <span
+          title={`関連：${secondaryCatLabels.join("・")}`}
+          aria-label={`関連分野 ${secondaryCats.length}件: ${secondaryCatLabels.join("・")}`}
           style={{
             display: "inline-flex",
-            gap: 3,
             alignItems: "center",
+            justifyContent: "center",
+            width: 22,
+            height: 22,
+            border: "1px solid #cbd1d8",
+            borderRadius: "50%",
+            background: "#f7f8f9",
+            color: "#626974",
+            fontSize: 10,
+            fontWeight: 800,
+            lineHeight: 1,
             flexShrink: 0,
-            paddingTop: 7,
+            marginTop: 2,
+            boxSizing: "border-box",
           }}
-          aria-label={`関連分野: ${secondaryCats
-            .map(
-              (key) =>
-                CAT[key]?.label
-            )
-            .filter(Boolean)
-            .join("・")}`}
         >
-          {secondaryCats.map(
-            (key) => (
-              <span
-                key={key}
-                title={
-                  CAT[key]?.label
-                  || key
-                }
-                style={{
-                  display:
-                    "inline-block",
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background:
-                    CAT[key]?.bg
-                    || "#999",
-                }}
-              />
-            )
-          )}
+          +{secondaryCats.length}
         </span>
       )}
     </>
@@ -197,6 +188,66 @@ export default function TimelinePublicEventRow({
             日付：
             {formatEventDate(event.date)}
           </div>
+
+          {secondaryCats.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 7,
+                fontSize: 11.5,
+              }}
+            >
+              <span
+                style={{
+                  color: "#4b5563",
+                  fontWeight: 800,
+                }}
+              >
+                関連分野：
+              </span>
+
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 20,
+                  height: 20,
+                  border: "1px solid #b9c0c9",
+                  borderRadius: "50%",
+                  background: "#f1f3f5",
+                  color: "#4f5660",
+                  fontSize: 9.5,
+                  fontWeight: 800,
+                  lineHeight: 1,
+                  boxSizing: "border-box",
+                  flexShrink: 0,
+                }}
+              >
+                +{secondaryCats.length}
+              </span>
+
+              <span>
+                {secondaryCats.map((key, index) => (
+                  <span key={key}>
+                    {index > 0 && (
+                      <span style={{ color: "#8a8f98" }}>・</span>
+                    )}
+                    <span
+                      style={{
+                        color: CAT[key]?.bg || "#626974",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {CAT[key]?.label || key}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            </div>
+          )}
 
           {event.summary}
 
