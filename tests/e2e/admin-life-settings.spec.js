@@ -146,19 +146,56 @@ window.close();
   );
   await expect(editorToggle).toBeDisabled();
 
-  // 取込をキャンセルしても、保存済みブラウザ個人史は残る。
+  // 管理者データは専用IndexedDBへ保存され、
+  // 再読み込み後も通常のブラウザ個人史より優先して復元される。
+  await page.reload();
+
+  if (
+    (await personalToggle.getAttribute("aria-expanded"))
+    !== "true"
+  ) {
+    await personalToggle.click();
+  }
+
+  await expect(personal).toContainText(
+    "管理者データ（1件）"
+  );
+  await expect(personal).toContainText(
+    "管理者データ 1件をブラウザ保存から読み込みました"
+  );
+
+  const settingsAfterReload =
+    page.locator("#timeline-settings");
+
+  await expect(settingsAfterReload).toContainText(
+    "1988年4月生まれ"
+  );
+
+  await page
+    .locator("summary")
+    .filter({ hasText: "管理者向け" })
+    .click();
+
+  await expect(page.getByText(
+    "管理者データ：ブラウザ保存済み",
+    { exact: true }
+  )).toBeVisible();
+
   page.once("dialog", (dialog) => {
-    dialog.dismiss();
+    dialog.accept();
   });
 
-  await personal
+  const reloadAfterClear =
+    page.waitForEvent("framenavigated");
+
+  await page
     .getByRole("button", {
-      name: "編集用に取り込む",
+      name: "管理者データをブラウザから消去",
       exact: true,
     })
     .click();
 
-  await page.reload();
+  await reloadAfterClear;
 
   if (
     (await personalToggle.getAttribute("aria-expanded"))
@@ -185,7 +222,7 @@ window.close();
     )
   ).toBeVisible();
 
-  // 元の管理者取込テストも続ける。
+  // 管理者データを再読込し、従来の編集用取込も確認する。
   await page
     .locator("summary")
     .filter({ hasText: "管理者向け" })

@@ -385,11 +385,21 @@ export default function App() {
         );
       }
 
+      await workspaceStore
+        .administratorData
+        .save({
+          personalEvents,
+          lifeSettings,
+        });
+
       applyServerPersonalEvents(
         personalEvents
       );
       applyServerLifeSettings(
         lifeSettings
+      );
+      setAdministratorDataStatus(
+        `管理者データを読み込み、ブラウザに保存しました（自分史 ${personalEvents.length}件）`
       );
     } catch (err) {
       console.error(
@@ -403,6 +413,32 @@ export default function App() {
       );
     }
   };
+
+  const clearAdministratorBrowserData =
+    async () => {
+      const ok = window.confirm(
+        "ブラウザに保存した管理者データ（あなたの設定・自分史）を消去しますか？" +
+          " 通常のブラウザ設定と編集用の自分史は消去しません。"
+      );
+
+      if (!ok) return;
+
+      try {
+        await workspaceStore
+          .administratorData
+          .clear();
+
+        window.location.reload();
+      } catch (err) {
+        console.error(
+          "Administrator browser data could not be cleared:",
+          err
+        );
+        setAdministratorDataStatus(
+          `管理者データの消去失敗: ${err?.message || String(err)}`
+        );
+      }
+    };
 
   const authenticateAndLoadAdministratorData = () => {
     setAdministratorDataStatus(
@@ -1537,6 +1573,34 @@ export default function App() {
               >
                 管理者データ読込
               </button>
+
+              <button
+                type="button"
+                onClick={
+                  clearAdministratorBrowserData
+                }
+                style={{
+                  ...miniBtn,
+                  background: "#fff3f3",
+                  border: "1px solid #e4bcbc",
+                  color: "#8a4f4f",
+                }}
+              >
+                管理者データをブラウザから消去
+              </button>
+
+              {personalEventsSource === "server" &&
+                lifeSettingsSource === "server" && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "#7c551d",
+                      fontWeight: 700,
+                    }}
+                  >
+                    管理者データ：ブラウザ保存済み
+                  </span>
+                )}
 
               {administratorDataStatus && (
                 <span

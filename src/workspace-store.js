@@ -20,6 +20,12 @@ import {
   saveBrowserThreadQueries,
 } from "./thread-queries-store.js";
 
+import {
+  clearBrowserAdministratorData,
+  loadBrowserAdministratorData,
+  saveBrowserAdministratorData,
+} from "./administrator-data-store.js";
+
 export const workspaceStore = {
   settings: settingsStore,
 
@@ -39,5 +45,11 @@ export const workspaceStore = {
     load: loadBrowserThreadQueries,
     save: saveBrowserThreadQueries,
     clear: clearBrowserThreadQueries,
+  },
+
+  administratorData: {
+    load: loadBrowserAdministratorData,
+    save: saveBrowserAdministratorData,
+    clear: clearBrowserAdministratorData,
   },
 };

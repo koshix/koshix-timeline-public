@@ -26,6 +26,12 @@ import {
   encodeThreadQueriesStorageValue,
 } from "../src/thread-queries-store.js";
 import {
+  ADMINISTRATOR_DATA_STORAGE_FORMAT,
+  ADMINISTRATOR_DATA_STORAGE_VERSION,
+  decodeAdministratorDataStorageValue,
+  encodeAdministratorDataStorageValue,
+} from "../src/administrator-data-store.js";
+import {
   createVersionedRecord,
   decodeVersionedRecord,
 } from "../src/versioned-storage.js";
@@ -96,6 +102,21 @@ assert.equal(
 
 assert.equal(
   typeof workspaceStore.threadQueries.clear,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.administratorData.load,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.administratorData.save,
+  "function"
+);
+
+assert.equal(
+  typeof workspaceStore.administratorData.clear,
   "function"
 );
 
@@ -213,6 +234,73 @@ assert.throws(
       )
     ),
   /個人史データ形式が不正/
+);
+
+const administratorData = {
+  personalEvents,
+  lifeSettings: {
+    birth: 1965,
+    month: 4,
+    education: [],
+    adultPeriods: [],
+  },
+};
+
+const encodedAdministratorData =
+  encodeAdministratorDataStorageValue(
+    administratorData
+  );
+
+assert.equal(
+  encodedAdministratorData.format,
+  ADMINISTRATOR_DATA_STORAGE_FORMAT
+);
+
+assert.equal(
+  encodedAdministratorData.schemaVersion,
+  ADMINISTRATOR_DATA_STORAGE_VERSION
+);
+
+assert.deepEqual(
+  encodedAdministratorData.data,
+  administratorData
+);
+
+const currentAdministratorData =
+  decodeAdministratorDataStorageValue(
+    encodedAdministratorData
+  );
+
+assert.equal(
+  currentAdministratorData.migrated,
+  false
+);
+
+assert.deepEqual(
+  currentAdministratorData.data,
+  administratorData
+);
+
+assert.throws(
+  () =>
+    decodeAdministratorDataStorageValue({
+      format:
+        ADMINISTRATOR_DATA_STORAGE_FORMAT,
+      schemaVersion:
+        ADMINISTRATOR_DATA_STORAGE_VERSION + 1,
+      data: administratorData,
+    }),
+  /新しい形式/
+);
+
+assert.throws(
+  () =>
+    encodeAdministratorDataStorageValue({
+      personalEvents: {},
+      lifeSettings:
+        administratorData.lifeSettings,
+    }),
+  /管理者自分史データ形式が不正/
 );
 
 const customizations = {
@@ -393,5 +481,5 @@ assert.throws(
 );
 
 console.log(
-  "OK: settings / personal events / event customizations / thread queries のversion付き保存・厳密読込・将来version拒否を検査しました"
+  "OK: settings / personal events / administrator data / event customizations / thread queries のversion付き保存・厳密読込・将来version拒否を検査しました"
 );

@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -57,6 +58,54 @@ export default function useLifeSettings({
   ] = useState(0);
 
   const lifeSettingsFileInputRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    workspaceStore.administratorData
+      .load()
+      .then((administratorData) => {
+        if (
+          cancelled ||
+          administratorData === null
+        ) {
+          return;
+        }
+
+        const settings =
+          administratorData.lifeSettings;
+
+        setLifeSettingsSource("server");
+        setBirth(settings.birth);
+        setMonth(settings.month);
+        setEducation(
+          normalizeEducation(
+            settings.education
+          )
+        );
+        setEducationEditorRevision(
+          (current) => current + 1
+        );
+        setAdultPeriods(
+          normalizeAdultPeriods(
+            settings.adultPeriods
+          )
+        );
+        setLifeSettingsStatus(
+          "管理者人生設定をブラウザ保存から読み込みました"
+        );
+      })
+      .catch((err) => {
+        console.error(
+          "Browser administrator life settings could not be loaded:",
+          err
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const updateEducation = (history) => {
     setEducation(

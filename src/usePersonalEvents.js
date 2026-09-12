@@ -56,27 +56,63 @@ export default function usePersonalEvents({
   useEffect(() => {
     let cancelled = false;
 
-    workspaceStore.personalEvents.load()
-      .then((events) => {
-        if (!cancelled) {
-          setMyEvents(events);
-          if (events.length > 0) {
-            setPersonalEventsSource("browser");
+    const loadInitialPersonalEvents =
+      async () => {
+        try {
+          const administratorData =
+            await workspaceStore
+              .administratorData
+              .load();
+
+          if (
+            !cancelled &&
+            administratorData !== null
+          ) {
+            setMyEvents(
+              administratorData.personalEvents
+            );
+            setPersonalEventsSource("server");
+            setPersonalFileStatus(
+              `管理者データ ${administratorData.personalEvents.length}件をブラウザ保存から読み込みました`
+            );
+            return;
           }
-        }
-      })
-      .catch((err) => {
-        console.error(
-          "Browser personal history could not be loaded:",
-          err
-        );
-        if (!cancelled) {
-          setPersonalFileStatus(
-            err?.message ||
-              "ブラウザ内の自分史を読み込めませんでした"
+        } catch (err) {
+          console.error(
+            "Browser administrator data could not be loaded:",
+            err
           );
         }
-      });
+
+        try {
+          const events =
+            await workspaceStore
+              .personalEvents
+              .load();
+
+          if (!cancelled) {
+            setMyEvents(events);
+            if (events.length > 0) {
+              setPersonalEventsSource(
+                "browser"
+              );
+            }
+          }
+        } catch (err) {
+          console.error(
+            "Browser personal history could not be loaded:",
+            err
+          );
+          if (!cancelled) {
+            setPersonalFileStatus(
+              err?.message ||
+                "ブラウザ内の自分史を読み込めませんでした"
+            );
+          }
+        }
+      };
+
+    loadInitialPersonalEvents();
 
     return () => {
       cancelled = true;
