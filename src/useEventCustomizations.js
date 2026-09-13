@@ -343,15 +343,6 @@ export default function useEventCustomizations({
       return;
     }
 
-    const iconByCategory = {
-      work: "video",
-      science: "chip",
-      education: "book",
-      computer: "computer",
-      culture: "music",
-      society: "flag",
-    };
-
     const additions = [
       ...(eventCustomizations.additions ?? []),
     ];
@@ -375,7 +366,6 @@ export default function useEventCustomizations({
       cats: [category],
       primary: category,
       importance,
-      icon: iconByCategory[category],
       summary: summary,
     };
 

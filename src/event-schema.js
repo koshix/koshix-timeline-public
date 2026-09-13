@@ -8,7 +8,6 @@ export const EVENT_TSV_HEADER = [
   "subs",
   "region",
   "importance",
-  "icon",
   "summary",
   "sources",
   "search",
@@ -87,27 +86,58 @@ export function eventYear(event) {
 }
 
 export function isValidEventDate(value) {
-  if (!/^\d{4}(?:-\d{2}(?:-\d{2})?)?$/.test(value)) {
+  const match =
+    /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(value);
+
+  if (!match) {
     return false;
   }
 
-  const parts = value.split("-").map(Number);
+  const year = Number(match[1]);
+  const month = match[2]
+    ? Number(match[2])
+    : null;
+  const day = match[3]
+    ? Number(match[3])
+    : null;
 
-  if (
-    parts.length >= 2 &&
-    (parts[1] < 1 || parts[1] > 12)
-  ) {
+  // 年精度 YYYY は有効。
+  if (month === null) {
+    return true;
+  }
+
+  if (month < 1 || month > 12) {
     return false;
   }
 
-  if (
-    parts.length === 3 &&
-    (parts[2] < 1 || parts[2] > 31)
-  ) {
-    return false;
+  // 月精度 YYYY-MM は有効。
+  if (day === null) {
+    return true;
   }
 
-  return true;
+  const leapYear =
+    year % 4 === 0 &&
+    (year % 100 !== 0 || year % 400 === 0);
+
+  const daysInMonth = [
+    31,
+    leapYear ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
+
+  return (
+    day >= 1 &&
+    day <= daysInMonth[month - 1]
+  );
 }
 
 function validateCommonEventRow(row) {
@@ -190,10 +220,6 @@ export function validatePublicEventRow(row) {
         `未知のsubsタグ "${sub}"`
       );
     }
-  }
-
-  if (!row.icon) {
-    throw new Error("icon がありません");
   }
 
   return {

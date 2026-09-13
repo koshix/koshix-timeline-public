@@ -25,7 +25,7 @@ export default function TimelinePersonalEventRow({
   const headerContent = (
     <>
       <Icon
-        name={event.icon ?? "flag"}
+        name="flag"
         color={CAT.me.bg}
       />
       <span

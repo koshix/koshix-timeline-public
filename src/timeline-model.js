@@ -156,7 +156,6 @@ export function buildTimelineEventList({
           ...event,
           cats: event.cats ?? ["me"],
           primary: "me",
-          icon: event.icon ?? "flag",
         }))
     : [];
 

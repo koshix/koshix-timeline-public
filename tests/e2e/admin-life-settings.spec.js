@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 
 const PERSONAL_EVENTS_TSV = [
-  "id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote",
+  "id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\tsummary\tsources\tsearch\tnote",
   [
     "admin-e2e-1",
     "2001-02-03",
@@ -13,7 +13,6 @@ const PERSONAL_EVENTS_TSV = [
     "",
     "",
     "2",
-    "flag",
     "管理者データから取り込む架空の個人史です",
     "",
     "",

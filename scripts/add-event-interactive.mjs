@@ -24,13 +24,6 @@ const CATEGORIES = {
   society: "政治・経済・社会・国際",
 };
 
-const ICONS = [
-  "book", "tv", "film", "robot", "watch", "comm",
-  "computer", "chip", "globe", "satellite", "rocket",
-  "hmd", "gamepad", "phone", "video", "ai", "ghost",
-  "music", "wifi", "flag",
-];
-
 function splitKeys(s) {
   return [...new Set(
     s.split(/[|,、\s]+/).map(x => x.trim()).filter(Boolean)
@@ -150,18 +143,6 @@ async function main() {
       );
     }
 
-    console.log(`icons: ${ICONS.join(", ")}`);
-
-    const iconInput = clean(
-      await rl.question("icon [Enter=book]: ")
-    );
-
-    const icon = iconInput || "book";
-
-    if (!ICONS.includes(icon)) {
-      throw new Error(`未知の icon: ${icon}`);
-    }
-
     const summary = clean(
       await rl.question("summary: ")
     );
@@ -235,7 +216,6 @@ sources を1件ずつ入力します。空Enterで終了。
       subs,
       region,
       importance,
-      icon,
       summary,
       sources: sources.join("|"),
       search,
@@ -251,7 +231,6 @@ sources を1件ずつ入力します。空Enterで終了。
     console.log(`  subs       ${row.subs || "(空)"}`);
     console.log(`  region     ${row.region || "(空)"}`);
     console.log(`  importance ${row.importance}`);
-    console.log(`  icon       ${row.icon}`);
     console.log(`  summary    ${row.summary}`);
     console.log(`  sources    ${row.sources || "(空)"}`);
     console.log(`  search     ${row.search || "(空)"}`);

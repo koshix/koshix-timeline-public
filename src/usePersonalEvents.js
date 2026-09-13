@@ -357,7 +357,6 @@ export default function usePersonalEvents({
           importance: Number(
             personalDraft.importance
           ),
-          icon: "flag",
           summary: summary,
         };
 

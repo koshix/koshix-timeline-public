@@ -82,7 +82,6 @@ export function parsePersonalEventsTsv(text) {
     events.push(
       decodeEventRow(row, {
         forcePrimary: "me",
-        defaultIcon: "flag",
       })
     );
   }
@@ -118,7 +117,6 @@ export function serializePersonalEventsTsv(events) {
     ...sorted.map((event) => {
       const row = encodeEventRow(event, {
         forcePrimary: "me",
-        defaultIcon: "flag",
       });
 
       return PERSONAL_EVENTS_HEADER

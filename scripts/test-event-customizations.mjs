@@ -11,7 +11,6 @@ const base = [
     cats: ["science"],
     primary: "science",
     importance: 2,
-    icon: "flask",
   },
   {
     id: "b",
@@ -21,7 +20,6 @@ const base = [
     cats: ["society"],
     primary: "society",
     importance: 2,
-    icon: "flag",
   },
 ];
 
@@ -46,7 +44,6 @@ const customizations = {
       cats: ["computer"],
       primary: "computer",
       importance: 2,
-      icon: "computer",
     },
   ],
 };

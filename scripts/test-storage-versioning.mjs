@@ -175,7 +175,6 @@ const personalEvents = [
     cats: ["me"],
     primary: "me",
     importance: 2,
-    icon: "flag",
     summary: "個人史テスト",
   },
 ];

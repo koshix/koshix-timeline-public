@@ -443,7 +443,13 @@ assert.equal(
 );
 assert.deepEqual(personal.cats, ["me"]);
 assert.equal(personal.primary, "me");
-assert.equal(personal.icon, "flag");
+assert.equal(
+  Object.prototype.hasOwnProperty.call(
+    personal,
+    "icon"
+  ),
+  false
+);
 
 const personalSearch = buildTimelineEventList({
   publicEvents: events,

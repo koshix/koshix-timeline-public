@@ -45,6 +45,8 @@ for (const value of [
   "2000",
   "2000-01",
   "2000-01-31",
+  "2000-02-29",
+  "2004-02-29",
 ]) {
   assert.equal(isValidEventDate(value), true);
 }
@@ -55,6 +57,11 @@ for (const value of [
   "2000-13",
   "2000-01-00",
   "2000-01-32",
+  "2000-02-30",
+  "2000-04-31",
+  "2001-02-29",
+  "1900-02-29",
+  "2026-02-31",
 ]) {
   assert.equal(isValidEventDate(value), false);
 }
@@ -69,7 +76,6 @@ const publicRow = {
   subs: "math|technology",
   region: "日本",
   importance: "3",
-  icon: "atom",
   summary: "要約",
   sources: "https://example.com::Example",
   search: "検索語",
@@ -123,7 +129,6 @@ assert.deepEqual(decodedPublic, {
   subs: ["math", "technology"],
   region: "日本",
   importance: 3,
-  icon: "atom",
   summary: "要約",
   sources: ["https://example.com::Example"],
   search: "検索語",
@@ -160,18 +165,20 @@ assert.throws(
 );
 
 const decodedPersonal = decodeEventRow(
-  {
-    ...personalRow,
-    icon: "",
-  },
+  personalRow,
   {
     forcePrimary: "me",
-    defaultIcon: "flag",
   }
 );
 
 assert.equal(decodedPersonal.primary, "me");
-assert.equal(decodedPersonal.icon, "flag");
+assert.equal(
+  Object.prototype.hasOwnProperty.call(
+    decodedPersonal,
+    "icon"
+  ),
+  false
+);
 assert.deepEqual(
   decodedPersonal.cats,
   ["me", "education"]

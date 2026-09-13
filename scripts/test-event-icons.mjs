@@ -36,6 +36,30 @@ function readPublicEvents() {
   });
 }
 
+test("icons.svg contains exactly public semantic icons plus personal flag", () => {
+  const svg = fs.readFileSync(
+    new URL("../public/icons.svg", import.meta.url),
+    "utf8"
+  );
+
+  const names = [
+    ...svg.matchAll(
+      /<symbol\b[^>]*\bid="icon-([^"]+)"/g
+    ),
+  ].map((match) => match[1]);
+
+  const expected = [
+    ...PUBLIC_EVENT_ICON_NAMES,
+    "flag",
+  ].sort();
+
+  assert.equal(names.length, 30);
+  assert.deepEqual(
+    [...names].sort(),
+    expected
+  );
+});
+
 test("all public events resolve to semantic icons", () => {
   const events = readPublicEvents();
 

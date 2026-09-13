@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {
   buildConfiguredThreads,
   buildDynamicThread,
   findThreadByKey,
 } from "../src/thread-model.js";
+import { THREADS } from "../src/threads.js";
 
 const events = [
   {
@@ -133,6 +135,37 @@ const events = [
   assert.equal(result.thread, null);
   assert.equal(result.error, "検索式を確認してください");
   assert.deepEqual(result.matches, []);
+}
+
+
+{
+  const text = fs.readFileSync(
+    new URL("../public/events.tsv", import.meta.url),
+    "utf8"
+  ).trimEnd();
+  const [headerLine, ...rows] = text.split(/\r?\n/);
+  const header = headerLine.split("\t");
+  const idIndex = header.indexOf("id");
+  const publicEventIds = new Set(
+    rows.map((row) => row.split("\t")[idIndex])
+  );
+
+  for (const thread of THREADS) {
+    const threadIds = thread.items.map((item) => item.id);
+
+    assert.equal(
+      new Set(threadIds).size,
+      threadIds.length,
+      `duplicate event ID in recommended theme: ${thread.key}`
+    );
+
+    for (const id of threadIds) {
+      assert.ok(
+        publicEventIds.has(id),
+        `missing event ID in recommended theme: ${thread.key} -> ${id}`
+      );
+    }
+  }
 }
 
 console.log("thread model tests passed");

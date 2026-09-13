@@ -5,8 +5,7 @@
 //   public-data audit takes precedence.
 // - Some tags then split into two visual subtypes.
 // - If subs is empty, primary supplies a fallback icon.
-// - The TSV icon column remains intact for compatibility; public display
-//   no longer depends on it.
+// - Icons are derived at display time and are not stored in event TSV data.
 
 export const SUB_ICON_PRIORITY = [
   "revolution", // 19

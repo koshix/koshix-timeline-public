@@ -153,7 +153,7 @@ const SHARE_URL = (() => {
   return origin + pathname;
 })();
 
-// ---- テーマの糸(年表に散らばった項目を、一本の流れとしてたどる) ----
+// ---- テーマでたどる(年表に散らばった項目を、一本の流れとしてたどる) ----
 // 永久ID { id } で参照する。
 const resolveThreadItem = ({ id }) =>
   EVENTS.find((event) => event.id === id);

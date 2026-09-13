@@ -92,15 +92,6 @@ function validateAddition(event, id) {
   }
 
   if (
-    typeof event.icon !== "string" ||
-    !event.icon.trim()
-  ) {
-    throw new Error(
-      `追加項目 "${id}": icon がありません`
-    );
-  }
-
-  if (
     typeof event.summary !== "string" ||
     !event.summary.trim()
   ) {

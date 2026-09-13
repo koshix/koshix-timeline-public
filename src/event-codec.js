@@ -17,7 +17,6 @@ export function decodeEventRow(
   row,
   {
     forcePrimary = null,
-    defaultIcon = "",
   } = {}
 ) {
   const primary = forcePrimary ?? row.primary;
@@ -36,7 +35,6 @@ export function decodeEventRow(
       : {}),
     ...(row.region ? { region: row.region } : {}),
     importance: Number(row.importance),
-    icon: row.icon || defaultIcon,
     summary: row.summary,
     ...(row.sources
       ? { sources: splitEventList(row.sources) }
@@ -50,7 +48,6 @@ export function encodeEventRow(
   event,
   {
     forcePrimary = null,
-    defaultIcon = "",
   } = {}
 ) {
   return {
@@ -67,10 +64,6 @@ export function encodeEventRow(
     subs: listCell(event.subs),
     region: String(event.region ?? ""),
     importance: String(event.importance ?? 2),
-    icon: String(
-      event.icon ??
-      defaultIcon
-    ),
     summary: String(
       event.summary ??
       ""

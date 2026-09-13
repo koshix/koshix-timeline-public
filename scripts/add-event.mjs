@@ -14,13 +14,6 @@ import {
 } from "./event-entry-core.mjs";
 
 const TSV = "public/events.tsv";
-const ICONS = new Set([
-  "book", "tv", "film", "robot", "watch", "comm",
-  "computer", "chip", "globe", "satellite", "rocket",
-  "hmd", "gamepad", "phone", "video", "ai", "ghost",
-  "music", "wifi", "flag",
-]);
-
 function list(v) {
   if (Array.isArray(v)) {
     return v.map(clean).filter(Boolean);
@@ -167,14 +160,6 @@ function normalize(data) {
     );
   }
 
-  const icon = clean(data.icon || "book");
-
-  if (!ICONS.has(icon)) {
-    throw new Error(
-      `未知の icon です: ${icon}`
-    );
-  }
-
   const summary = clean(data.summary);
 
   if (!summary) {
@@ -191,7 +176,6 @@ function normalize(data) {
     subs: [...new Set(list(data.subs))].join("|"),
     region: clean(data.region),
     importance,
-    icon,
     summary,
     sources: sourceList(data.sources).join("|"),
     search: clean(data.search),

@@ -1,21 +1,14 @@
+import {
+  PUBLIC_EVENT_ICON_NAMES,
+} from "./event-icon.js";
+
 const ICON_NAMES = new Set([
-  "book", "tv", "film", "robot",
-  "watch", "comm", "computer", "chip",
-  "globe", "satellite", "rocket", "hmd",
-  "gamepad", "phone", "video", "ai",
-  "ghost", "legacy-music", "wifi", "flag",
-  "politics-japan", "politics-world", "literature-japan", "literature-world",
-  "rights-expand", "rights-suppress", "technology-innovation", "technology-implementation",
-  "matter-physics", "matter-material", "war", "visual-work",
-  "visual-media", "economy", "music", "life-science",
-  "life-health", "thought", "space", "environment",
-  "art", "math", "revolution", "fallback-work",
-  "fallback-science", "fallback-education", "fallback-computer", "fallback-culture",
-  "fallback-society",
+  ...PUBLIC_EVENT_ICON_NAMES,
+  "flag",
 ]);
 
 export default function Icon({ name, color, size = 18 }) {
-  const iconName = ICON_NAMES.has(name) ? name : "book";
+  const iconName = ICON_NAMES.has(name) ? name : "fallback-work";
 
   return (
     <svg
