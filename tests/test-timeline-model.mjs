@@ -348,6 +348,12 @@ assert.deepEqual(
 );
 
 assert.deepEqual(
+  selectSubFilters(["literature"])
+    .map((event) => event.id),
+  ["thought"]
+);
+
+assert.deepEqual(
   selectSubFilters(
     ["literature"],
     { sfOnly: true }

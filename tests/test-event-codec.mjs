@@ -13,6 +13,7 @@ import {
   PUBLIC_EVENT_TSV_HEADER,
   isValidEventDate,
   splitEventList,
+  validateEventSources,
   validatePersonalEventRow,
   validatePublicEventRow,
 } from "../src/event-schema.js";
@@ -88,6 +89,27 @@ assert.deepEqual(
     cats: ["science", "education"],
     importance: 3,
   }
+);
+
+assert.doesNotThrow(
+  () => validateEventSources(
+    "https://example.com::Example"
+  )
+);
+
+assert.throws(
+  () => validateEventSources(
+    "[Example](https://example.com)"
+  ),
+  /Markdownリンク記法/
+);
+
+assert.throws(
+  () => validatePublicEventRow({
+    ...publicRow,
+    sources: "[Example](https://example.com)",
+  }),
+  /Markdownリンク記法/
 );
 
 assert.throws(

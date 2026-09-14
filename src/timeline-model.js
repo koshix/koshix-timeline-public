@@ -99,7 +99,12 @@ export function selectPublicTimelineEvents({
       const subVisible =
         activeSubFilters.size === 0 ||
         eventSubs.some((key) =>
-          activeSubFilters.has(key)
+          activeSubFilters.has(key) &&
+          (
+            key !== "literature" ||
+            sfOnly ||
+            !categories.includes("sf")
+          )
         );
 
       return (

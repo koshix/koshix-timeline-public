@@ -5,6 +5,7 @@ import { stdin as input, stdout as output } from "node:process";
 import {
   PUBLIC_EVENT_TSV_HEADER,
   isValidEventDate,
+  validateEventSources,
 } from "../src/event-schema.js";
 
 import {
@@ -12,6 +13,8 @@ import {
   eventId,
   readRows,
   runBuilder,
+  serializeRows,
+  sortRowsByDate,
 } from "./event-entry-core.mjs";
 
 const TSV = "public/events.tsv";
@@ -175,6 +178,8 @@ sources を1件ずつ入力します。空Enterで終了。
       );
 
       if (!s) break;
+
+      validateEventSources(s);
       sources.push(s);
     }
 
@@ -247,17 +252,14 @@ sources を1件ずつ入力します。空Enterで終了。
       return;
     }
 
-    const line = PUBLIC_EVENT_TSV_HEADER
-      .map(k => row[k])
-      .join("\t");
-
-    const base = original.endsWith("\n")
-      ? original
-      : original + "\n";
+    const mergedRows = sortRowsByDate([
+      ...rows,
+      row,
+    ]);
 
     fs.writeFileSync(
       TSV,
-      base + line + "\n",
+      serializeRows(mergedRows),
       "utf8"
     );
 

@@ -3,6 +3,7 @@ import {
   PUBLIC_EVENT_CATEGORIES,
   PUBLIC_EVENT_TSV_HEADER,
   isValidEventDate,
+  validateEventSources,
 } from "../src/event-schema.js";
 
 import {
@@ -11,6 +12,8 @@ import {
   EVENT_BUILDER,
   readRows,
   runBuilder,
+  serializeRows,
+  sortRowsByDate,
 } from "./event-entry-core.mjs";
 
 const TSV = "public/events.tsv";
@@ -166,6 +169,11 @@ function normalize(data) {
     throw new Error("summary は必須です");
   }
 
+  const sources =
+    sourceList(data.sources).join("|");
+
+  validateEventSources(sources);
+
   const row = {
     id: eventId(year, title),
     date,
@@ -177,7 +185,7 @@ function normalize(data) {
     region: clean(data.region),
     importance,
     summary,
-    sources: sourceList(data.sources).join("|"),
+    sources,
     search: clean(data.search),
     note: clean(data.note),
   };
@@ -295,21 +303,15 @@ async function addFromStdin() {
     );
   }
 
-  // 全件検査を通過してから、一度に追記。
-  const lines = rows.map(
-    (row) =>
-      PUBLIC_EVENT_TSV_HEADER
-        .map((key) => row[key])
-        .join("\t")
-  );
-
-  const base = originalTsv.endsWith("\n")
-    ? originalTsv
-    : originalTsv + "\n";
+  // 全件検査を通過してから、既存データと合わせて年代順に保存。
+  const mergedRows = sortRowsByDate([
+    ...existing,
+    ...rows,
+  ]);
 
   fs.writeFileSync(
     TSV,
-    base + lines.join("\n") + "\n",
+    serializeRows(mergedRows),
     "utf8"
   );
 

@@ -140,6 +140,16 @@ export function isValidEventDate(value) {
   );
 }
 
+export function validateEventSources(value) {
+  const sources = String(value ?? "");
+
+  if (/\[[^\]]+\]\([^)]+\)/.test(sources)) {
+    throw new Error(
+      "sources にMarkdownリンク記法は使えません。URL::表示名で指定してください"
+    );
+  }
+}
+
 function validateCommonEventRow(row) {
   if (!row.id) {
     throw new Error("id がありません");
@@ -167,6 +177,8 @@ function validateCommonEventRow(row) {
   if (!row.summary) {
     throw new Error("summary がありません");
   }
+
+  validateEventSources(row.sources);
 
   const importance = Number(row.importance);
 
