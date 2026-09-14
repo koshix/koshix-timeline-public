@@ -129,7 +129,6 @@ export const THREADS = [
     items: [
       { id: "1642-pascaline" },
       { id: "1673-leibniz-stepped-reckoner" },
-      { id: "1822-babbage-difference-engine" },
       { id: "1837-babbage-analytical-engine" },
       { id: "1843-lovelace-notes" },
       { id: "1854-boole-laws-of-thought" },

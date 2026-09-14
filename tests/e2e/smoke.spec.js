@@ -71,6 +71,31 @@ test("app loads and exposes the main controls", async ({ page }) => {
     .toHaveAttribute("aria-pressed", "false");
 });
 
+test("legal attribution and license links remain visible", async ({ page }) => {
+  await openApp(page);
+
+  await expect(
+    page.getByText(/松尾公也氏の/)
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("link", {
+      name: "MIT License",
+      exact: true,
+    })
+  ).toHaveAttribute("href", /LICENSE\.txt$/);
+
+  await expect(
+    page.getByRole("link", {
+      name: "第三者ソフトウェア表示",
+      exact: true,
+    })
+  ).toHaveAttribute(
+    "href",
+    /THIRD-PARTY-NOTICES\.md$/
+  );
+});
+
 test("pre-release hides public distribution links", async ({ page }) => {
   await openApp(page);
 
@@ -233,6 +258,132 @@ test("versioned display settings survive reload", async ({ page }) => {
       })
       .first()
   ).toHaveAttribute("aria-pressed", "false");
+});
+
+test("education history editing survives reload", async ({ page }) => {
+  await openApp(page);
+
+  const settings = page.locator("#timeline-settings");
+  const toggle = settings.locator(":scope > button");
+
+  if (
+    (await toggle.getAttribute("aria-expanded"))
+    !== "true"
+  ) {
+    await toggle.click();
+  }
+
+  const details = settings.locator("details");
+  if (
+    (await details.getAttribute("open")) === null
+  ) {
+    await details.locator("summary").click();
+  }
+
+  const start = page.getByLabel(
+    "高校など（任意）1行目の入学年",
+    { exact: true }
+  );
+  const years = page.getByLabel(
+    "高校など（任意）1行目の修学年数",
+    { exact: true }
+  );
+  const typeGroup = page.getByRole("group", {
+    name: "高校などの種類",
+    exact: true,
+  });
+
+  await start.fill("1980");
+  await years.fill("5");
+  await typeGroup
+    .getByRole("button", {
+      name: "高専",
+      exact: true,
+    })
+    .click();
+
+  await page.waitForFunction(
+    ({ key, format, version }) => {
+      const raw = globalThis.localStorage.getItem(key);
+      if (!raw) return false;
+
+      try {
+        const record = JSON.parse(raw);
+        const education = record?.data?.education;
+
+        return (
+          record?.format === format &&
+          record?.schemaVersion === version &&
+          Array.isArray(education) &&
+          education.some(
+            (row) =>
+              row?.start === "1980" &&
+              row?.years === "5" &&
+              row?.type === "kosen"
+          )
+        );
+      } catch {
+        return false;
+      }
+    },
+    {
+      key: SETTINGS_KEY,
+      format: SETTINGS_FORMAT,
+      version: SETTINGS_VERSION,
+    }
+  );
+
+  await page.reload();
+
+  const reloadedSettings =
+    page.locator("#timeline-settings");
+  const reloadedToggle =
+    reloadedSettings.locator(":scope > button");
+
+  if (
+    (await reloadedToggle.getAttribute(
+      "aria-expanded"
+    )) !== "true"
+  ) {
+    await reloadedToggle.click();
+  }
+
+  const reloadedDetails =
+    reloadedSettings.locator("details");
+
+  if (
+    (await reloadedDetails.getAttribute("open")) === null
+  ) {
+    await reloadedDetails
+      .locator("summary")
+      .click();
+  }
+
+  await expect(
+    page.getByLabel(
+      "高校など（任意）1行目の入学年",
+      { exact: true }
+    )
+  ).toHaveValue("1980");
+
+  await expect(
+    page.getByLabel(
+      "高校など（任意）1行目の修学年数",
+      { exact: true }
+    )
+  ).toHaveValue("5");
+
+  await expect(
+    page
+      .getByRole("group", {
+        name: "高校などの種類",
+        exact: true,
+      })
+      .getByRole("button", {
+        name: "高専",
+        exact: true,
+      })
+  ).toHaveAttribute("aria-pressed", "true");
 });
 
 test("synthetic personal history survives reload and protected file operations", async ({ page }) => {

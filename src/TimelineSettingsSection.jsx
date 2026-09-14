@@ -7,33 +7,49 @@ import EducationHistoryEditor from "./EducationHistoryEditor";
 import LifeSettingsFileControls from "./LifeSettingsFileControls";
 
 export default function TimelineSettingsSection({
-  setupOpen,
-  toggleSetup,
-  birth,
-  month,
-  adultPeriods,
-  adultYear,
-  adultPeriodErrors,
-  warnings,
-  setBirthYear,
-  setBirthMonth,
-  resetBirthSettings,
-  education,
-  educationEditorRevision,
-  updateEducation,
-  resetAdultPeriods,
-  updateAdultPeriod,
-  addAdultPeriod,
-  removeAdultPeriod,
-  lifeSettingsStatus,
-  lifeSettingsFileInputRef,
-  importLifeSettingsFile,
-  exportLifeSettingsFile,
-  onViewPersonalHistory,
-  font,
-  mono,
-  miniBtn,
+  settings,
+  display,
+  timeline,
+  navigation,
+  ui,
 }) {
+  const {
+    birth,
+    month,
+    adultPeriods,
+    setBirthYear,
+    setBirthMonth,
+    resetBirthSettings,
+    education,
+    educationEditorRevision,
+    updateEducation,
+    resetAdultPeriods,
+    updateAdultPeriod,
+    addAdultPeriod,
+    removeAdultPeriod,
+    lifeSettingsStatus,
+    lifeSettingsFileInputRef,
+    importLifeSettingsFile,
+    exportLifeSettingsFile,
+  } = settings;
+  const {
+    setupOpen,
+    toggleSetup,
+  } = display;
+  const {
+    adultYear,
+    adultPeriodErrors,
+    warnings,
+  } = timeline;
+  const {
+    onViewPersonalHistory,
+  } = navigation;
+  const {
+    font,
+    mono,
+    miniBtn,
+  } = ui;
+
   const birthConfigured =
     validYear(birth) != null;
 

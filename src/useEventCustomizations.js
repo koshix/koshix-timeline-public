@@ -16,6 +16,15 @@ import {
   workspaceStore,
 } from "./workspace-store.js";
 import { downloadBlob } from "./browser-download.js";
+import { isValidEventDate } from "./event-schema.js";
+import {
+  addEventCustomization,
+  customizationCounts,
+  hideEventCustomization,
+  removeAddedEventCustomization,
+  restoreHiddenEventCustomization,
+  updateEventOverride,
+} from "./event-customization-operations.js";
 
 export default function useEventCustomizations({
   events = [],
@@ -135,34 +144,14 @@ export default function useEventCustomizations({
       changes.importance = importance;
     }
 
-    const nextOverrides = {
-      ...(eventCustomizations.overrides ?? {}),
-    };
-
-    const previous = nextOverrides[event.id] ?? {};
-
-    const preserved = Object.fromEntries(
-      Object.entries(previous).filter(
-        ([key]) => !["t", "n", "importance"].includes(key)
-      )
+    const {
+      next,
+      merged,
+    } = updateEventOverride(
+      eventCustomizations,
+      event.id,
+      changes
     );
-
-    const merged = {
-      ...preserved,
-      ...changes,
-    };
-
-    if (Object.keys(merged).length === 0) {
-      delete nextOverrides[event.id];
-    } else {
-      nextOverrides[event.id] = merged;
-    }
-
-    const next = {
-      overrides: nextOverrides,
-      hidden: [...(eventCustomizations.hidden ?? [])],
-      additions: [...(eventCustomizations.additions ?? [])],
-    };
 
     try {
       await persistEventCustomizations(next);
@@ -200,12 +189,11 @@ export default function useEventCustomizations({
         parsed
       );
 
-      const overrideCount = Object.keys(
-        parsed.overrides ?? {}
-      ).length;
-      const hiddenCount = parsed.hidden?.length ?? 0;
-      const additionCount =
-        parsed.additions?.length ?? 0;
+      const {
+        overrideCount,
+        hiddenCount,
+        additionCount,
+      } = customizationCounts(parsed);
 
       const ok = window.confirm(
         `「${file.name}」を読み込み、` +
@@ -268,13 +256,13 @@ export default function useEventCustomizations({
         "koshix-timeline-customizations.tsv"
       );
 
-      const overrideCount = Object.keys(
-        eventCustomizations.overrides ?? {}
-      ).length;
-      const hiddenCount =
-        eventCustomizations.hidden?.length ?? 0;
-      const additionCount =
-        eventCustomizations.additions?.length ?? 0;
+      const {
+        overrideCount,
+        hiddenCount,
+        additionCount,
+      } = customizationCounts(
+        eventCustomizations
+      );
 
       setEventCustomizationStatus(
         `年表カスタマイズをTSVへ書き出しました` +
@@ -300,29 +288,13 @@ export default function useEventCustomizations({
     const category = eventAddDraft.category;
     const importance = Number(eventAddDraft.importance);
 
-    const dateMatch = date.match(
-      /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/
-    );
-
-    if (!dateMatch) {
+    if (!isValidEventDate(date)) {
       setEventCustomizationStatus(
-        "日付は YYYY、YYYY-MM、YYYY-MM-DD の形式で入力してください"
+        "日付は実在する YYYY、YYYY-MM、YYYY-MM-DD の形式で入力してください"
       );
       return;
     }
 
-    const month = dateMatch[2] ? Number(dateMatch[2]) : null;
-    const day = dateMatch[3] ? Number(dateMatch[3]) : null;
-
-    if (month !== null && (month < 1 || month > 12)) {
-      setEventCustomizationStatus("月は01〜12で入力してください");
-      return;
-    }
-
-    if (day !== null && (day < 1 || day > 31)) {
-      setEventCustomizationStatus("日は01〜31で入力してください");
-      return;
-    }
 
     if (!title || !summary) {
       setEventCustomizationStatus(
@@ -343,13 +315,10 @@ export default function useEventCustomizations({
       return;
     }
 
-    const additions = [
-      ...(eventCustomizations.additions ?? []),
-    ];
-
     const usedIds = new Set([
       ...events.map((event) => event.id),
-      ...additions.map((event) => event.id),
+      ...(eventCustomizations.additions ?? [])
+        .map((event) => event.id),
     ]);
 
     let id;
@@ -369,15 +338,10 @@ export default function useEventCustomizations({
       summary: summary,
     };
 
-    const next = {
-      overrides: {
-        ...(eventCustomizations.overrides ?? {}),
-      },
-      hidden: [
-        ...(eventCustomizations.hidden ?? []),
-      ],
-      additions: [...additions, addition],
-    };
+    const next = addEventCustomization(
+      eventCustomizations,
+      addition
+    );
 
     try {
       await persistEventCustomizations(next);
@@ -415,17 +379,11 @@ export default function useEventCustomizations({
 
     if (!ok) return;
 
-    const next = {
-      overrides: {
-        ...(eventCustomizations.overrides ?? {}),
-      },
-      hidden: [
-        ...(eventCustomizations.hidden ?? []),
-      ],
-      additions: (eventCustomizations.additions ?? []).filter(
-        (item) => item.id !== event.id
-      ),
-    };
+    const next =
+      removeAddedEventCustomization(
+        eventCustomizations,
+        event.id
+      );
 
     try {
       await persistEventCustomizations(next);
@@ -453,22 +411,11 @@ export default function useEventCustomizations({
 
     if (!ok) return;
 
-    const hidden = [
-      ...new Set([
-        ...(eventCustomizations.hidden ?? []),
-        event.id,
-      ]),
-    ];
-
-    const next = {
-      overrides: {
-        ...(eventCustomizations.overrides ?? {}),
-      },
-      hidden,
-      additions: [
-        ...(eventCustomizations.additions ?? []),
-      ],
-    };
+    const next =
+      hideEventCustomization(
+        eventCustomizations,
+        event.id
+      );
 
     try {
       await persistEventCustomizations(next);
@@ -496,17 +443,11 @@ export default function useEventCustomizations({
   const restoreHiddenEvent = async (id) => {
     const base = events.find((event) => event.id === id);
 
-    const next = {
-      overrides: {
-        ...(eventCustomizations.overrides ?? {}),
-      },
-      hidden: (eventCustomizations.hidden ?? []).filter(
-        (itemId) => itemId !== id
-      ),
-      additions: [
-        ...(eventCustomizations.additions ?? []),
-      ],
-    };
+    const next =
+      restoreHiddenEventCustomization(
+        eventCustomizations,
+        id
+      );
 
     try {
       await persistEventCustomizations(next);
@@ -527,12 +468,11 @@ export default function useEventCustomizations({
   };
 
   const clearEventCustomizations = async () => {
-    const overrideCount = Object.keys(
-      eventCustomizations.overrides ?? {}
-    ).length;
-    const hiddenCount = eventCustomizations.hidden?.length ?? 0;
-    const additionCount = eventCustomizations.additions?.length ?? 0;
-    const total = overrideCount + hiddenCount + additionCount;
+    const {
+      total,
+    } = customizationCounts(
+      eventCustomizations
+    );
 
     if (total === 0) {
       setEventCustomizationStatus(

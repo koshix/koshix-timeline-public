@@ -10,7 +10,6 @@ import {
   serializeLifeSettingsTsv,
 } from "./life-settings";
 import {
-  educationForKind,
   normalizeEducation,
 } from "./education-history";
 import { downloadBlob } from "./browser-download.js";
@@ -142,26 +141,6 @@ export default function useLifeSettings({
     setMonth(0);
     setLifeSettingsStatus("");
   };
-
-  const firstHigherEducation =
-    educationForKind(
-      education,
-      "higher"
-    )[0] ?? null;
-  const firstGraduateEducation =
-    educationForKind(
-      education,
-      "graduate"
-    )[0] ?? null;
-
-  const firstHigherYear =
-    firstHigherEducation?.start ?? "";
-  const firstHigherType =
-    firstHigherEducation?.type ?? "university";
-  const firstGraduateYear =
-    firstGraduateEducation?.start ?? "";
-  const firstGraduateType =
-    firstGraduateEducation?.type ?? "masters";
 
   const updateAdultPeriod = (index, key, value) => {
     setAdultPeriods((previous) =>
@@ -329,10 +308,6 @@ export default function useLifeSettings({
     resetBirthSettings,
     education,
     updateEducation,
-    firstHigherYear,
-    firstHigherType,
-    firstGraduateYear,
-    firstGraduateType,
     adultPeriods,
     lifeSettingsStatus,
     lifeSettingsSource,

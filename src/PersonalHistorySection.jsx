@@ -4,32 +4,45 @@ import PersonalHistoryEventForm from "./PersonalHistoryEventForm";
 import PersonalHistoryEditorList from "./PersonalHistoryEditorList";
 
 export default function PersonalHistorySection({
-  personalHistoryOpen,
-  togglePersonalHistory,
-  myEvents,
-  personalEventsSource,
-  personalFileStatus,
-  personalAddOpen,
-  personalEditorOpen,
-  editingPersonalId,
-  personalDraft,
-  personalFileInputRef,
-  importPersonalEventsFile,
-  exportPersonalEventsFile,
-  togglePersonalEditor,
-  closePersonalEditor,
-  updatePersonalDraft,
-  openNewPersonalEventForm,
-  closePersonalEventForm,
-  startEditingPersonalEvent,
-  clearPersonalEventsFile,
-  savePersonalEvent,
-  deletePersonalEvent,
-  copyServerPersonalEventsToBrowser,
-  onViewTimeline,
-  font,
-  miniBtn,
+  personal,
+  display,
+  navigation,
+  ui,
 }) {
+  const {
+    myEvents,
+    personalEventsSource,
+    personalFileStatus,
+    personalAddOpen,
+    personalEditorOpen,
+    editingPersonalId,
+    personalDraft,
+    personalFileInputRef,
+    importPersonalEventsFile,
+    exportPersonalEventsFile,
+    togglePersonalEditor,
+    closePersonalEditor,
+    updatePersonalDraft,
+    openNewPersonalEventForm,
+    closePersonalEventForm,
+    startEditingPersonalEvent,
+    clearPersonalEventsFile,
+    savePersonalEvent,
+    deletePersonalEvent,
+    copyServerPersonalEventsToBrowser,
+  } = personal;
+  const {
+    personalHistoryOpen,
+    togglePersonalHistory,
+  } = display;
+  const {
+    onViewTimeline,
+  } = navigation;
+  const {
+    font,
+    miniBtn,
+  } = ui;
+
   return (
     <div
       id="personal-history"

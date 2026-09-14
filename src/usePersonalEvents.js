@@ -181,15 +181,6 @@ export default function usePersonalEvents({
     setPersonalDraft(createPersonalDraft());
   };
 
-  const openPersonalEventEntry = () => {
-    if (personalEventsSource === "server") return;
-
-    setPersonalEditorOpen(true);
-    setPersonalAddOpen(true);
-    setEditingPersonalId(null);
-    resetPersonalDraft();
-  };
-
   const togglePersonalEditor = () => {
     if (personalEventsSource === "server") return;
 
@@ -519,7 +510,6 @@ export default function usePersonalEvents({
     personalFileInputRef,
     importPersonalEventsFile,
     exportPersonalEventsFile,
-    openPersonalEventEntry,
     togglePersonalEditor,
     closePersonalEditor,
     updatePersonalDraft,

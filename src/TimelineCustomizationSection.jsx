@@ -5,27 +5,37 @@ import EventCustomizationControls from "./EventCustomizationControls";
 import EventCustomizationHiddenList from "./EventCustomizationHiddenList";
 
 export default function TimelineCustomizationSection({
-  eventCustomizations,
-  eventCustomizationStatus,
-  eventCustomizationEditorOpen,
-  eventCustomizationFileInputRef,
-  importEventCustomizationsFile,
-  exportEventCustomizationsFile,
-  toggleEventCustomizationEditor,
-  closeEventCustomizationEditor,
-  clearEventCustomizations,
-  openNewEventForm,
-  eventAddOpen,
-  eventAddDraft,
-  updateEventAddDraft,
-  saveAddedEvent,
-  cancelAddingEvent,
-  restoreHiddenEvent,
-  events,
-  mainCategories,
-  font,
-  miniBtn,
+  customization,
+  timeline,
+  ui,
 }) {
+  const {
+    eventCustomizations,
+    eventCustomizationStatus,
+    eventCustomizationEditorOpen,
+    eventCustomizationFileInputRef,
+    importEventCustomizationsFile,
+    exportEventCustomizationsFile,
+    toggleEventCustomizationEditor,
+    closeEventCustomizationEditor,
+    clearEventCustomizations,
+    openNewEventForm,
+    eventAddOpen,
+    eventAddDraft,
+    updateEventAddDraft,
+    saveAddedEvent,
+    cancelAddingEvent,
+    restoreHiddenEvent,
+  } = customization;
+  const {
+    events,
+    mainCategories,
+  } = timeline;
+  const {
+    font,
+    miniBtn,
+  } = ui;
+
   const categoryOptions = mainCategories.map(
     (key) => ({
       key,

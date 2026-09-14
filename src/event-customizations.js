@@ -1,4 +1,7 @@
-import { eventYear } from "./event-schema.js";
+import {
+  eventYear,
+  validatePublicEvent,
+} from "./event-schema.js";
 
 export const EMPTY_EVENT_CUSTOMIZATIONS = {
   overrides: {},
@@ -87,9 +90,19 @@ export function applyEventCustomizations(
     .filter((event) => !hiddenIds.has(event.id))
     .map((event) => {
       const changes = overrides[event.id];
-      return changes
+      const customized = changes
         ? applyChanges(event, changes)
         : { ...event };
+
+      try {
+        validatePublicEvent(customized);
+      } catch (error) {
+        throw new Error(
+          `カスタマイズ後のイベント "${event.id}": ${error.message}`
+        );
+      }
+
+      return customized;
     });
 
   const usedIds = new Set(baseIds);
@@ -120,6 +133,14 @@ export function applyEventCustomizations(
         : {}),
     };
 
+
+    try {
+      validatePublicEvent(event);
+    } catch (error) {
+      throw new Error(
+        `追加イベント "${addition.id}": ${error.message}`
+      );
+    }
 
     events.push(event);
   }

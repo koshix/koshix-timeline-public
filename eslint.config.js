@@ -36,6 +36,13 @@ export default [
 
     rules: {
       "no-undef": "error",
+      "no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 
@@ -44,7 +51,8 @@ export default [
       "scripts/**/*.mjs",
       "vite.config.js",
       "playwright.config.js",
-      "tests/e2e/**/*.js",
+      "tests/**/*.js",
+      "tests/**/*.mjs",
     ],
 
     languageOptions: {

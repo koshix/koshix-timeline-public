@@ -228,6 +228,100 @@ export function validatePublicEventRow(row) {
   };
 }
 
+export function validatePublicEvent(event) {
+  if (!event?.id) {
+    throw new Error("id がありません");
+  }
+
+  const date = String(event.date ?? "");
+  if (!isValidEventDate(date)) {
+    throw new Error(
+      `date "${date}" の形式が不正です`
+    );
+  }
+
+  const endDate = String(event.end_date ?? "");
+  if (
+    endDate &&
+    !isValidEventDate(endDate)
+  ) {
+    throw new Error(
+      `end_date "${endDate}" の形式が不正です`
+    );
+  }
+
+  if (
+    typeof event.title !== "string" ||
+    !event.title.trim()
+  ) {
+    throw new Error("title がありません");
+  }
+
+  if (
+    typeof event.summary !== "string" ||
+    !event.summary.trim()
+  ) {
+    throw new Error("summary がありません");
+  }
+
+  const importance = Number(event.importance);
+  if (![1, 2, 3].includes(importance)) {
+    throw new Error(
+      "importance は 1, 2, 3 のいずれかです"
+    );
+  }
+
+  const cats = event.cats;
+  if (
+    !Array.isArray(cats) ||
+    cats.length === 0
+  ) {
+    throw new Error("cats が空です");
+  }
+
+  for (const cat of cats) {
+    if (!PUBLIC_EVENT_CATEGORIES.has(cat)) {
+      throw new Error(
+        `未知のカテゴリー "${cat}"`
+      );
+    }
+  }
+
+  if (
+    event.primary === "sf" ||
+    !PUBLIC_EVENT_CATEGORIES.has(event.primary)
+  ) {
+    throw new Error(
+      `primary "${event.primary}" が不正です`
+    );
+  }
+
+  if (!cats.includes(event.primary)) {
+    throw new Error(
+      `primary "${event.primary}" が cats に含まれていません`
+    );
+  }
+
+  const subs = event.subs ?? [];
+  if (!Array.isArray(subs)) {
+    throw new Error("subs が配列ではありません");
+  }
+
+  for (const sub of subs) {
+    if (!PUBLIC_EVENT_SUB_TAGS.has(sub)) {
+      throw new Error(
+        `未知のsubsタグ "${sub}"`
+      );
+    }
+  }
+
+  return {
+    cats,
+    importance,
+    subs,
+  };
+}
+
 export function validatePersonalEventRow(row) {
   const { cats, importance } =
     validateCommonEventRow(row);

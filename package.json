@@ -1,21 +1,21 @@
 {
   "name": "koshix-timeline",
   "private": true,
-  "version": "3.0.1",
+  "version": "3.1.0",
   "type": "module",
   "scripts": {
     "build:events": "node scripts/build-events.mjs",
     "dev": "vite",
-    "build": "npm run build:events && vite build && node scripts/copy-legal-files.mjs && node scripts/test-privacy-boundary.mjs --require-dist",
+    "build": "npm run build:events && vite build && node scripts/copy-legal-files.mjs && node scripts/verify-privacy-boundary.mjs --require-dist",
     "preview": "vite preview",
-    "lint": "eslint src scripts vite.config.js playwright.config.js tests/e2e",
+    "lint": "eslint src scripts vite.config.js playwright.config.js tests",
     "add:event": "node scripts/add-event.mjs",
     "validate:personal": "node scripts/validate-personal-events.mjs",
     "test:e2e": "npm run build && playwright test",
     "add:event:interactive": "node scripts/add-event-interactive.mjs",
     "build:starter": "npm run build && node scripts/build-starter.mjs",
-    "verify:public-release": "node scripts/test-privacy-boundary.mjs && node scripts/verify-public-release.mjs",
-    "test": "node --test scripts/test-*.mjs",
+    "verify:public-release": "node scripts/verify-privacy-boundary.mjs && node scripts/verify-public-release.mjs",
+    "test": "node --test tests/test-*.mjs",
     "check": "npm run lint && npm run build:events && npm run validate:personal && npm test"
   },
   "dependencies": {

@@ -9,12 +9,6 @@ import {
 } from "./life-settings";
 import useTimelineModel from "./useTimelineModel";
 import usePersonalEvents from "./usePersonalEvents";
-import {
-  loadPersonalEvents,
-} from "./personal-events-source.js";
-import {
-  loadLifeSettings,
-} from "./life-settings-source.js";
 import useEventCustomizations from "./useEventCustomizations";
 import useLifeSettings from "./useLifeSettings";
 import useDisplaySettings from "./useDisplaySettings";
@@ -26,24 +20,16 @@ import {
   eventId,
   findEventByShareParam,
 } from "./event-links";
-import ShareBar from "./ShareBar";
-import {
-  CAT,
-  catsOf,
-  primaryCatOf,
-  catKey,
-} from "./categories";
 import Theater from "./Theater";
-import TimelineCategoryFilters from "./TimelineCategoryFilters";
-import TimelineDisplayControls from "./TimelineDisplayControls";
-import TimelineEraHeadings from "./TimelineEraHeadings";
-import TimelinePersonalEventRow from "./TimelinePersonalEventRow";
-import TimelinePublicEventRow from "./TimelinePublicEventRow";
 import TimelineCustomizationSection from "./TimelineCustomizationSection";
 import PersonalHistorySection from "./PersonalHistorySection";
 import TimelineSettingsSection from "./TimelineSettingsSection";
-import TimelineSearchControls from "./TimelineSearchControls";
 import useVisibleEventsExport from "./useVisibleEventsExport";
+import useAdministratorData from "./useAdministratorData";
+import AppHeader from "./AppHeader";
+import AppFooter from "./AppFooter";
+import TimelineGroupList from "./TimelineGroupList";
+import TimelineViewControls from "./TimelineViewControls";
 
 const CONFIG = loadConfig();
 const PROFILE_DEFAULTS = CONFIG.defaults || {};
@@ -182,36 +168,20 @@ const INITIAL_EDUCATION = createInitialEducationSettings(
 );
 
 export default function App() {
-  const {
-    birth,
-    month,
-    setBirthYear,
-    setBirthMonth,
-    resetBirthSettings,
-    education,
-    updateEducation,
-    firstHigherYear,
-    firstHigherType,
-    firstGraduateYear,
-    firstGraduateType,
-    adultPeriods,
-    lifeSettingsStatus,
-    lifeSettingsSource,
-    educationEditorRevision,
-    lifeSettingsFileInputRef,
-    importLifeSettingsFile,
-    exportLifeSettingsFile,
-    applyServerLifeSettings,
-    resetAdultPeriods,
-    updateAdultPeriod,
-    addAdultPeriod,
-    removeAdultPeriod,
-  } = useLifeSettings({
+  const lifeSettings = useLifeSettings({
     initialBirth: INITIAL_BIRTH,
     initialMonth: INITIAL_MONTH,
     initialEducation: INITIAL_EDUCATION,
     savedAdultPeriods: SAVED.adultPeriods,
   });
+  const {
+    birth,
+    month,
+    education,
+    adultPeriods,
+    lifeSettingsSource,
+    applyServerLifeSettings,
+  } = lifeSettings;
 
   const {
     isEventOpen,
@@ -222,32 +192,7 @@ export default function App() {
     closeAllEvents,
   } = useOpenEvents();
 
-  const {
-    eventCustomizations,
-    eventCustomizationStatus,
-    eventCustomizationEditorOpen,
-    editingEventId,
-    eventEditDraft,
-    eventAddOpen,
-    eventAddDraft,
-    eventCustomizationFileInputRef,
-    startEditingEvent,
-    cancelEditingEvent,
-    openNewEventForm,
-    cancelAddingEvent,
-    toggleEventCustomizationEditor,
-    closeEventCustomizationEditor,
-    updateEventEditDraft,
-    updateEventAddDraft,
-    saveEditedEvent,
-    importEventCustomizationsFile,
-    exportEventCustomizationsFile,
-    saveAddedEvent,
-    deleteAddedEvent,
-    hideEvent,
-    restoreHiddenEvent,
-    clearEventCustomizations,
-  } = useEventCustomizations({
+  const eventCustomization = useEventCustomizations({
     events: EVENTS,
     mainCategories: MAIN_CATS,
     onReplaced: () => {
@@ -257,6 +202,17 @@ export default function App() {
       closeEvent(event.id);
     },
   });
+  const {
+    eventCustomizations,
+    editingEventId,
+    eventEditDraft,
+    startEditingEvent,
+    cancelEditingEvent,
+    updateEventEditDraft,
+    saveEditedEvent,
+    deleteAddedEvent,
+    hideEvent,
+  } = eventCustomization;
   const [showMe, setShowMe] = useState(false);
 
   const scrollToTimeline = () => {
@@ -275,30 +231,7 @@ export default function App() {
     });
   };
 
-  const {
-    myEvents,
-    personalEventsSource,
-    personalFileStatus,
-    personalAddOpen,
-    personalEditorOpen,
-    editingPersonalId,
-    personalDraft,
-    personalFileInputRef,
-    importPersonalEventsFile,
-    exportPersonalEventsFile,
-    openPersonalEventEntry,
-    togglePersonalEditor,
-    closePersonalEditor,
-    updatePersonalDraft,
-    openNewPersonalEventForm,
-    closePersonalEventForm,
-    startEditingPersonalEvent,
-    clearPersonalEventsFile,
-    savePersonalEvent,
-    deletePersonalEvent,
-    copyServerPersonalEventsToBrowser,
-    applyServerPersonalEvents,
-  } = usePersonalEvents({
+  const personalHistory = usePersonalEvents({
     onFirstAdded: () => {
       setShowMe(true);
     },
@@ -309,7 +242,18 @@ export default function App() {
       closeEvent(eventId(event));
     },
   });
+  const {
+    myEvents,
+    personalEventsSource,
+    startEditingPersonalEvent,
+    deletePersonalEvent,
+    applyServerPersonalEvents,
+  } = personalHistory;
 
+  const displaySettings = useDisplaySettings({
+    saved: SAVED,
+    mainCategories: MAIN_CATS,
+  });
   const {
     catOff,
     sfOnly,
@@ -328,16 +272,11 @@ export default function App() {
     expandAllStages,
     collapseStages,
     setupOpen,
-    toggleSetup,
     closeSetup,
     personalHistoryOpen,
     openPersonalHistory,
     closePersonalHistory,
-    togglePersonalHistory,
-  } = useDisplaySettings({
-    saved: SAVED,
-    mainCategories: MAIN_CATS,
-  });
+  } = displaySettings;
 
   const viewPersonalHistoryFromSetup = () => {
     closeSetup();
@@ -356,147 +295,14 @@ export default function App() {
   const [searchText, setSearchText] = useState("");
   const [earlyHistoryOpen, setEarlyHistoryOpen] =
     useState(false);
-  const [
+  const {
     administratorDataStatus,
-    setAdministratorDataStatus,
-  ] = useState("");
-
-  const loadAdministratorData = async () => {
-    setAdministratorDataStatus("");
-
-    try {
-      const [
-        personalEvents,
-        lifeSettings,
-      ] = await Promise.all([
-        loadPersonalEvents(),
-        loadLifeSettings(),
-      ]);
-
-      if (personalEvents === null) {
-        throw new Error(
-          "個人史TSVを取得できませんでした"
-        );
-      }
-
-      if (lifeSettings === null) {
-        throw new Error(
-          "人生設定TSVを取得できませんでした"
-        );
-      }
-
-      await workspaceStore
-        .administratorData
-        .save({
-          personalEvents,
-          lifeSettings,
-        });
-
-      applyServerPersonalEvents(
-        personalEvents
-      );
-      applyServerLifeSettings(
-        lifeSettings
-      );
-      setAdministratorDataStatus(
-        `管理者データを読み込み、ブラウザに保存しました（自分史 ${personalEvents.length}件）`
-      );
-    } catch (err) {
-      console.error(
-        "Administrator data could not be loaded:",
-        err
-      );
-      setAdministratorDataStatus(
-        `管理者データの読み込み失敗: ${
-          err?.message || String(err)
-        }`
-      );
-    }
-  };
-
-  const clearAdministratorBrowserData =
-    async () => {
-      const ok = window.confirm(
-        "ブラウザに保存した管理者データ（あなたの設定・自分史）を消去しますか？" +
-          " 通常のブラウザ設定と編集用の自分史は消去しません。"
-      );
-
-      if (!ok) return;
-
-      try {
-        await workspaceStore
-          .administratorData
-          .clear();
-
-        window.location.reload();
-      } catch (err) {
-        console.error(
-          "Administrator browser data could not be cleared:",
-          err
-        );
-        setAdministratorDataStatus(
-          `管理者データの消去失敗: ${err?.message || String(err)}`
-        );
-      }
-    };
-
-  const authenticateAndLoadAdministratorData = () => {
-    setAdministratorDataStatus(
-      "管理者認証を確認しています…"
-    );
-
-    let timeoutId = null;
-
-    const cleanup = () => {
-      window.removeEventListener(
-        "message",
-        handleAuthenticated
-      );
-
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-
-    const handleAuthenticated = (event) => {
-      if (
-        event.origin !== window.location.origin ||
-        event.data?.type !==
-          "koshix-admin-authenticated"
-      ) {
-        return;
-      }
-
-      cleanup();
-      loadAdministratorData();
-    };
-
-    window.addEventListener(
-      "message",
-      handleAuthenticated
-    );
-
-    const authWindow = window.open(
-      `${import.meta.env.BASE_URL}personal/auth.html`,
-      "koshix-timeline-admin-auth",
-      "popup=yes,width=520,height=360,resizable=yes,scrollbars=yes"
-    );
-
-    if (!authWindow) {
-      cleanup();
-      setAdministratorDataStatus(
-        "管理者認証画面を開けませんでした。ポップアップを許可して、もう一度お試しください。"
-      );
-      return;
-    }
-
-    timeoutId = window.setTimeout(() => {
-      cleanup();
-      setAdministratorDataStatus(
-        "管理者認証が完了しませんでした。もう一度お試しください。"
-      );
-    }, 120000);
-  };
+    authenticateAndLoadAdministratorData,
+    clearAdministratorBrowserData,
+  } = useAdministratorData({
+    applyServerPersonalEvents,
+    applyServerLifeSettings,
+  });
 
   useEffect(() => {
     const currentSettings =
@@ -728,989 +534,173 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#fafaf8", fontFamily: font, color: "#22272e" }}>
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 16px 64px" }}>
-        {/* ヘッダー */}
-        <header style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.25em", color: "#8a8f98", marginBottom: 6 }}>
-            {THREAD_LIST.length}のテーマでたどる、自分の時代
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-              flexWrap: "wrap",
-            }}
-          >
-            <h1
-              style={{
-                fontSize: 29,
-                fontWeight: 800,
-                margin: 0,
-                lineHeight: 1.35,
-                flex: "1 1 300px",
-              }}
-            >
-              {APP_TITLE}
-            </h1>
-
-            <div
-              role="group"
-              aria-label="共有"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                flexWrap: "wrap",
-                padding: "4px 7px",
-                border: "1px solid #e2e4e8",
-                borderRadius: 10,
-                background: "#f7f8f9",
-              }}
-            >
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: "#6b7280" }}>
-                共有：
-              </span>
-              <ShareBar
-                small
-                labelOnly
-                hashtag={HASHTAG}
-                url={SHARE_URL}
-                text={`${APP_TITLE}——${THREAD_LIST.length}のテーマで時代を自分の年齢から読む(${EVENTS.length}項目) ${HASHTAG}`}
-              />
-            </div>
-          </div>
-          <div style={{ fontSize: 12.5, color: "#59616c", marginTop: 8, lineHeight: 1.7 }}>
-            あなたの人生を、世界や日本の出来事の年表に重ねて見るアプリです。
-          </div>
-          <div style={{ fontSize: 11.5, color: "#8a8f98", marginTop: 8, fontFamily: mono }}>
-            全{effectiveStats.count}項目・解説{effectiveStats.chars.toLocaleString()}字
-          </div>
-        </header>
-
-        {SHOW_BEGINNER_GUIDE && (
-        <section
-          aria-label="はじめて使う方へ"
-          style={{
-            background: "#fffdf8",
-            border: "1px solid #eadfce",
-            borderRadius: 12,
-            padding: "12px 14px",
-            marginBottom: 14,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 800,
-              color: "#5f5142",
-            }}
-          >
-            はじめて使う方へ
-          </div>
-
-          <div
-            style={{
-              fontSize: 11.5,
-              lineHeight: 1.7,
-              color: "#6b7280",
-              marginTop: 3,
-            }}
-          >
-            まず①で生年を設定してください。必要なら②で自分史を追加すると、世界や日本の出来事と自分の人生を重ねて見られます。
-            設定や自分史は、この端末のこのブラウザ内だけに保存されます。
-          </div>
-
-        </section>
-        )}
-        <TimelineSettingsSection
-          setupOpen={setupOpen}
-          toggleSetup={toggleSetup}
-          birth={birth}
-          month={month}
-          firstHigherYear={firstHigherYear}
-          firstHigherType={firstHigherType}
-          firstGraduateYear={
-            firstGraduateYear
-          }
-          firstGraduateType={
-            firstGraduateType
-          }
-          adultPeriods={adultPeriods}
-          adultYear={grouped.adultYear}
-          adultPeriodErrors={
-            grouped.adultPeriodErrors
-          }
-          warnings={grouped.warnings}
-          setBirthYear={setBirthYear}
-          setBirthMonth={setBirthMonth}
-          resetBirthSettings={
-            resetBirthSettings
-          }
-          education={education}
-          educationEditorRevision={
-            educationEditorRevision
-          }
-          updateEducation={updateEducation}
-          resetAdultPeriods={
-            resetAdultPeriods
-          }
-          updateAdultPeriod={
-            updateAdultPeriod
-          }
-          addAdultPeriod={addAdultPeriod}
-          removeAdultPeriod={
-            removeAdultPeriod
-          }
-          lifeSettingsStatus={
-            lifeSettingsStatus
-          }
-          lifeSettingsFileInputRef={
-            lifeSettingsFileInputRef
-          }
-          importLifeSettingsFile={
-            importLifeSettingsFile
-          }
-          exportLifeSettingsFile={
-            exportLifeSettingsFile
-          }
-          onViewPersonalHistory={viewPersonalHistoryFromSetup}
-          font={font}
+        <AppHeader
+          appTitle={APP_TITLE}
+          threadCount={THREAD_LIST.length}
+          eventCount={EVENTS.length}
+          effectiveStats={effectiveStats}
+          hashtag={HASHTAG}
+          shareUrl={SHARE_URL}
+          showBeginnerGuide={SHOW_BEGINNER_GUIDE}
           mono={mono}
-          miniBtn={miniBtn}
+        />
+        <TimelineSettingsSection
+          settings={lifeSettings}
+          display={displaySettings}
+          timeline={{
+            adultYear: grouped.adultYear,
+            adultPeriodErrors:
+              grouped.adultPeriodErrors,
+            warnings: grouped.warnings,
+          }}
+          navigation={{
+            onViewPersonalHistory:
+              viewPersonalHistoryFromSetup,
+          }}
+          ui={{
+            font,
+            mono,
+            miniBtn,
+          }}
         />
 
 
         <PersonalHistorySection
-          personalHistoryOpen={personalHistoryOpen}
-          togglePersonalHistory={togglePersonalHistory}
-          myEvents={myEvents}
-          personalEventsSource={
-            personalEventsSource
-          }
-          personalFileStatus={
-            personalFileStatus
-          }
-          personalAddOpen={personalAddOpen}
-          personalEditorOpen={
-            personalEditorOpen
-          }
-          editingPersonalId={
-            editingPersonalId
-          }
-          personalDraft={personalDraft}
-          personalFileInputRef={
-            personalFileInputRef
-          }
-          importPersonalEventsFile={
-            importPersonalEventsFile
-          }
-          exportPersonalEventsFile={
-            exportPersonalEventsFile
-          }
-          togglePersonalEditor={
-            togglePersonalEditor
-          }
-          closePersonalEditor={
-            closePersonalEditor
-          }
-          updatePersonalDraft={
-            updatePersonalDraft
-          }
-          openNewPersonalEventForm={
-            openNewPersonalEventForm
-          }
-          closePersonalEventForm={
-            closePersonalEventForm
-          }
-          startEditingPersonalEvent={
-            startEditingPersonalEvent
-          }
-          clearPersonalEventsFile={
-            clearPersonalEventsFile
-          }
-          savePersonalEvent={
-            savePersonalEvent
-          }
-          deletePersonalEvent={
-            deletePersonalEvent
-          }
-          copyServerPersonalEventsToBrowser={
-            copyServerPersonalEventsToBrowser
-          }
-          onViewTimeline={viewTimelineFromPersonalHistory}
-          font={font}
-          miniBtn={miniBtn}
-        />
-        {/* ③年表の表示設定 */}
-        <div
-          id="timeline-view"
-          role="group"
-          aria-label="③年表の表示設定"
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 24,
-            flexWrap: "wrap",
-            alignItems: "center",
-            background: "#f5f8fb",
-            border: "1px solid #e2e4e8",
-            borderRadius: 12,
-            padding: "12px 14px",
+          personal={personalHistory}
+          display={displaySettings}
+          navigation={{
+            onViewTimeline:
+              viewTimelineFromPersonalHistory,
           }}
-        >
-          <div
-            style={{
-              flexBasis: "100%",
-              display: "flex",
-              alignItems: "baseline",
-              gap: 16,
-              flexWrap: "wrap",
-              marginBottom: 3,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 14,
-                fontWeight: 800,
-                color: "#4f7089",
-              }}
-            >
-              ③年表の表示設定
-            </span>
+          ui={{
+            font,
+            miniBtn,
+          }}
+        />
+        <TimelineViewControls
+          timeline={grouped}
+          filters={{
+            mainCategories: MAIN_CATS,
+            catOn,
+            toggleCat,
+            sfOnly,
+            toggleSfOnly,
+            subFilters,
+            toggleSubFilter,
+            showMe,
+            toggleMyEvents,
+            categoryMatchMode,
+            setCategoryMatchMode,
+            setAllCats,
+            importanceMin,
+            setImportanceLevel,
+            closedStages,
+            expandAllStages,
+            collapseStages,
+          }}
+          earlyHistory={{
+            open: earlyHistoryOpen,
+            setOpen: setEarlyHistoryOpen,
+            count: earlyHistoryCount,
+          }}
+          eventOpen={{
+            isEventOpen,
+            openOnlyEvents,
+            closeAllEvents,
+          }}
+          search={{
+            text: searchText,
+            setText: setSearchText,
+          }}
+          download={{
+            menuOpen: downloadMenuOpen,
+            exportVisibleEventsTsv,
+          }}
+          openThreadWindow={openThreadWindow}
+          resetTimelineFilters={resetTimelineFilters}
+          hasActiveDisplayFilters={hasActiveDisplayFilters}
+          ui={{
+            font,
+            mono,
+            miniBtn,
+            ImportanceBadge,
+          }}
+        />
 
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: "#9aa0a8",
-              }}
-            >
-              公開{grouped.shown}件
-              {grouped.myShown > 0
-                ? `＋個人史${grouped.myShown}件`
-                : ""}
-            </span>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flexWrap: "wrap",
-              width: "100%",
-              marginBottom: 2,
-            }}
-          >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "baseline",
-                gap: 5,
-                padding: "5px 10px",
-                borderRadius: 8,
-                background: "#eef1f5",
-                border: "1px solid #d7dce2",
-                color: "#37414f",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              表示中
-              <strong
-                style={{
-                  fontFamily: mono,
-                  fontSize: 20,
-                  lineHeight: 1,
-                }}
-              >
-                {grouped.shown + grouped.myShown}
-              </strong>
-              件
-            </span>
-
-            <button
-              type="button"
-              onClick={openThreadWindow}
-              className="timeline-thread-button"
-              style={{ "--timeline-font": font }}
-            >
-              テーマでたどる
-            </button>
-
-            <button
-              type="button"
-              onClick={resetTimelineFilters}
-              disabled={!hasActiveDisplayFilters}
-              style={{
-                ...miniBtn,
-                marginLeft: "auto",
-                fontSize: 11.5,
-                fontWeight: 800,
-                border: "1px solid #9aa4b2",
-                background: "#ffffff",
-                color: "#4b5563",
-                opacity: hasActiveDisplayFilters ? 1 : 0.45,
-                cursor: hasActiveDisplayFilters
-                  ? "pointer"
-                  : "default",
-              }}
-            >
-              条件をリセット
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flexWrap: "wrap",
-              width: "100%",
-              marginBottom: 2,
-            }}
-          >
-            <TimelineCategoryFilters
-              mainCategories={MAIN_CATS}
-              catOn={catOn}
-              toggleCat={toggleCat}
-              sfOnly={sfOnly}
-              toggleSfOnly={toggleSfOnly}
-              subFilters={subFilters}
-              toggleSubFilter={toggleSubFilter}
-              showMe={showMe}
-              toggleMyEvents={toggleMyEvents}
-              categoryMatchMode={categoryMatchMode}
-              setCategoryMatchMode={setCategoryMatchMode}
-              font={font}
-            />
-          </div>
-
-          <TimelineDisplayControls
-            controlTargets={grouped.controlTargets}
-            setAllCats={setAllCats}
-            allCatsOn={MAIN_CATS.every(catOn)}
-            allCatsOff={MAIN_CATS.every((key) => !catOn(key))}
-            importanceMin={importanceMin}
-            setImportanceLevel={setImportanceLevel}
-            closedStages={closedStages}
-            expandAllStages={expandAllStages}
-            collapseStages={collapseStages}
-            earlyHistoryOpen={earlyHistoryOpen}
-            setEarlyHistoryOpen={setEarlyHistoryOpen}
-            hasEarlyHistory={earlyHistoryCount > 0}
-            isEventOpen={isEventOpen}
-            openOnlyEvents={openOnlyEvents}
-            closeAllEvents={closeAllEvents}
-            font={font}
-          />
-
-          <TimelineSearchControls
-            searchText={searchText}
-            searchError={grouped.searchError}
-            onSearchTextChange={setSearchText}
-            onClearSearch={() => setSearchText("")}
-            font={font}
-            miniBtn={miniBtn}
-          />
-
-          <div
-            style={{
-              flexBasis: "100%",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 10,
-              fontSize: 10.5,
-              color: "#8a8f98",
-              marginTop: 2,
-            }}
-          >
-            <span>アイコン色＝主分野、＋数字＝関連分野数</span>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
-              重要度:
-              <ImportanceBadge level={3} /> L3 重要
-              <ImportanceBadge level={2} /> L2 標準
-              <ImportanceBadge level={1} /> L1 補足
-            </span>
-
-            <button
-              type="button"
-              onClick={() => exportVisibleEventsTsv()}
-              title={`現在表示中の項目 ${grouped.shown + grouped.myShown}件をダウンロード`}
-              style={{
-                ...miniBtn,
-                marginLeft: "auto",
-                fontSize: 11.5,
-                fontWeight: 800,
-                border: "1px solid #9aa4b2",
-                background: "#ffffff",
-                color: "#4b5563",
-              }}
-            >
-              表示項目のＤＬ
-            </button>
-
-            {downloadMenuOpen && (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => exportVisibleEventsTsv("public")}
-                  style={{
-                    ...miniBtn,
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                  }}
-                >
-                  共通年表
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => exportVisibleEventsTsv("personal")}
-                  style={{
-                    ...miniBtn,
-                    fontSize: 11.5,
-                    fontWeight: 800,
-                  }}
-                >
-                  自分史
-                </button>
-              </span>
-            )}
-          </div>
-
-        </div>
-
-        {/* 16〜19世紀の背景史をまとめる大枠 */}
-        {earlyHistoryCount > 0 && (
-          <section style={{ marginBottom: 12 }}>
-            <button
-              type="button"
-              onClick={() =>
-                setEarlyHistoryOpen((open) => !open)
-              }
-              aria-expanded={earlyHistoryOpen}
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 10,
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "9px 14px",
-                border: "1px solid #e0e3e7",
-                borderLeft: "4px solid #b8bec6",
-                borderRadius: 8,
-                background: "#f7f8f9",
-                color: "#7b838c",
-                cursor: "pointer",
-                textAlign: "left",
-                fontFamily: font,
-              }}
-            >
-              <strong
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "#7b838c",
-                }}
-              >
-                16〜19世紀
-              </strong>
-
-              <span
-                style={{
-                  fontFamily: mono,
-                  fontSize: 11.5,
-                  color: "#8a9199",
-                }}
-              >
-                1501–1900
-              </span>
-
-              <span style={{ flex: 1 }} />
-
-              <span
-                style={{
-                  fontFamily: mono,
-                  fontSize: 11,
-                  color: "#9aa0a8",
-                }}
-              >
-                {earlyHistoryCount}件
-              </span>
-
-              <span
-                aria-hidden="true"
-                style={{
-                  fontSize: 10.5,
-                  color: "#9299a1",
-                }}
-              >
-                {earlyHistoryOpen ? "▼" : "▶"}
-              </span>
-            </button>
-          </section>
-        )}
-
-        {/* 個人史グループ */}
-        {grouped.groups.map((g, gi) => {
-        const stageClosed = g.closed;
-        const isEarlyHistory =
-          earlyHistoryGroupKeys.has(g.key);
-
-        if (isEarlyHistory && !earlyHistoryOpen) {
-          return null;
-        }
-        return (
-          <section key={gi} style={{ marginBottom: 22 }}>
-            <button
-              onClick={() => toggleStage(g.key)}
-              aria-expanded={!stageClosed}
-              style={{
-                display: "flex", alignItems: "baseline", gap: 10, width: "100%", boxSizing: "border-box",
-                borderTop: "none", borderRight: "none", borderBottom: "none",
-                borderLeftWidth: 6, borderLeftStyle: "solid", borderLeftColor: g.stage.color,
-                background: g.stage.bg, borderRadius: 8,
-                padding: "8px 14px", marginBottom: 8,
-                cursor: "pointer", textAlign: "left", fontFamily: font,
-              }}
-            >
-              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: g.stage.color }}>
-                {g.stage.label}
-              </h2>
-              <span style={{ fontFamily: mono, fontSize: 12, color: "#6b7280" }}>
-                {g.rangeFrom != null
-                  ? `${g.rangeFrom}–${g.rangeTo}`
-                  : `${eventYear(g.items[0])}–${eventYear(g.items[g.items.length - 1])}`}
-              </span>
-              <span style={{ flex: 1 }} />
-              <span style={{ fontFamily: mono, fontSize: 11.5, color: "#8a8f98" }}>
-                {g.items.length}件
-              </span>
-              <span style={{ fontSize: 11, color: g.stage.color }} aria-hidden="true">
-                {stageClosed ? "▶" : "▼"}
-              </span>
-            </button>
-            {!stageClosed && (
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {g.items.map((ev, i) => {
-                const eraHeadings = (
-                  <TimelineEraHeadings
-                    event={ev}
-                    previousEvent={
-                      i > 0
-                        ? g.items[i - 1]
-                        : null
-                    }
-                    mono={mono}
-                  />
-                );
-
-                if (ev.primary === "me") {
-                  return (
-                    <TimelinePersonalEventRow
-                      key={ev.id}
-                      event={ev}
-                      eraHeadings={eraHeadings}
-                      stage={g.stage}
-                      font={font}
-                      mono={mono}
-                      gradeLabel={grouped.gradeLabel}
-                      isEventOpen={isEventOpen}
-                      toggleEvent={toggleEvent}
-                      personalEventsSource={
-                        personalEventsSource
-                      }
-                      startEditingPersonalEvent={
-                        startEditingPersonalEvent
-                      }
-                      deletePersonalEvent={
-                        deletePersonalEvent
-                      }
-                      miniBtn={miniBtn}
-                      gradeBadgeStyle={
-                        gradeBadgeStyle
-                      }
-                      formatEventDate={
-                        formatEventDate
-                      }
-                    />
-                  );
-                }
-
-                return (
-                  <TimelinePublicEventRow
-                    key={i}
-                    event={ev}
-                    eraHeadings={eraHeadings}
-                    stage={g.stage}
-                    font={font}
-                    mono={mono}
-                    gradeLabel={grouped.gradeLabel}
-                    isEventOpen={isEventOpen}
-                    toggleEvent={toggleEvent}
-                    eventCustomizations={
-                      eventCustomizations
-                    }
-                    editingEventId={
-                      editingEventId
-                    }
-                    eventEditDraft={
-                      eventEditDraft
-                    }
-                    updateEventEditDraft={
-                      updateEventEditDraft
-                    }
-                    deleteAddedEvent={
-                      deleteAddedEvent
-                    }
-                    startEditingEvent={
-                      startEditingEvent
-                    }
-                    hideEvent={hideEvent}
-                    saveEditedEvent={
-                      saveEditedEvent
-                    }
-                    cancelEditingEvent={
-                      cancelEditingEvent
-                    }
-                    hashtag={HASHTAG}
-                    shareBaseUrl={SHARE_URL}
-                    miniBtn={miniBtn}
-                    gradeBadgeStyle={
-                      gradeBadgeStyle
-                    }
-                    formatEventDate={
-                      formatEventDate
-                    }
-                    ImportanceBadge={
-                      ImportanceBadge
-                    }
-                  />
-                );
-              })}
-            </ul>
-            )}
-          </section>
-        );
-        })}
+        <TimelineGroupList
+          timeline={grouped}
+          earlyHistory={{
+            count: earlyHistoryCount,
+            open: earlyHistoryOpen,
+            setOpen: setEarlyHistoryOpen,
+            keys: earlyHistoryGroupKeys,
+          }}
+          toggleStage={toggleStage}
+          eventOpen={{
+            isEventOpen,
+            toggleEvent,
+          }}
+          personal={{
+            source: personalEventsSource,
+            startEditing: startEditingPersonalEvent,
+            deleteEvent: deletePersonalEvent,
+          }}
+          customization={{
+            eventCustomizations,
+            editingEventId,
+            eventEditDraft,
+            updateEventEditDraft,
+            deleteAddedEvent,
+            startEditingEvent,
+            hideEvent,
+            saveEditedEvent,
+            cancelEditingEvent,
+          }}
+          sharing={{
+            hashtag: HASHTAG,
+            baseUrl: SHARE_URL,
+          }}
+          ui={{
+            font,
+            mono,
+            miniBtn,
+            gradeBadgeStyle,
+            formatEventDate,
+            ImportanceBadge,
+          }}
+        />
 
         <TimelineCustomizationSection
-          eventCustomizations={
-            eventCustomizations
-          }
-          eventCustomizationStatus={
-            eventCustomizationStatus
-          }
-          eventCustomizationEditorOpen={
-            eventCustomizationEditorOpen
-          }
-          eventCustomizationFileInputRef={
-            eventCustomizationFileInputRef
-          }
-          importEventCustomizationsFile={
-            importEventCustomizationsFile
-          }
-          exportEventCustomizationsFile={
-            exportEventCustomizationsFile
-          }
-          toggleEventCustomizationEditor={
-            toggleEventCustomizationEditor
-          }
-          closeEventCustomizationEditor={
-            closeEventCustomizationEditor
-          }
-          clearEventCustomizations={
-            clearEventCustomizations
-          }
-          openNewEventForm={openNewEventForm}
-          eventAddOpen={eventAddOpen}
-          eventAddDraft={eventAddDraft}
-          updateEventAddDraft={
-            updateEventAddDraft
-          }
-          saveAddedEvent={saveAddedEvent}
-          cancelAddingEvent={
-            cancelAddingEvent
-          }
-          restoreHiddenEvent={
-            restoreHiddenEvent
-          }
-          events={EVENTS}
-          mainCategories={MAIN_CATS}
-          font={font}
-          miniBtn={miniBtn}
+          customization={eventCustomization}
+          timeline={{
+            events: EVENTS,
+            mainCategories: MAIN_CATS,
+          }}
+          ui={{
+            font,
+            miniBtn,
+          }}
         />
 
 
-        <footer
-          style={{
-            fontSize: 12,
-            color: "#59616c",
-            marginTop: 28,
-            lineHeight: 1.8,
-            background: "#fff",
-            border: "1px solid #e2e4e8",
-            borderRadius: 12,
-            padding: "12px 14px",
-          }}
-        >
-          <div
-            style={{
-              color: "#59616c",
-              fontWeight: 800,
-              fontSize: 13,
-            }}
-          >
-            このサイトについて
-          </div>
-
-          <div
-            style={{
-              marginTop: 3,
-              fontSize: 12,
-              color: "#59616c",
-            }}
-          >
-            Webアプリ v{APP_VERSION}　最終更新 {APP_UPDATED_DATE}
-          </div>
-
-          <div style={{ marginTop: 8 }}>
-            公開された歴史的出来事を、生年・学齢期・人生段階に重ねて表示するインタラクティブ年表です。
-            小中学校の学齢は誕生年と誕生月から概算し、高校など・大学など・大学院は設定した教育歴を反映します。成人期は必要に応じて任意に分割できます。
-          </div>
-
-          {PUBLIC_DISTRIBUTION_ENABLED &&
-            (DOWNLOAD_URL || PUBLIC_SOURCE_URL) && (
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 10,
-                  marginTop: 8,
-                }}
-              >
-                {DOWNLOAD_URL && (
-                  <a
-                    href={DOWNLOAD_URL}
-                    download="koshix-timeline-starter.zip"
-                    style={{ color: "#59616c" }}
-                  >
-                    ダウンロード版
-                  </a>
-                )}
-                {PUBLIC_SOURCE_URL && (
-                  <a
-                    href={PUBLIC_SOURCE_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ color: "#59616c" }}
-                  >
-                    公開用ソース
-                  </a>
-                )}
-              </div>
-            )}
-
-          <details
-            style={{
-              marginTop: 10,
-              paddingTop: 10,
-              borderTop: "1px solid #eceef1",
-              fontSize: 11,
-              color: "#8a8f98",
-            }}
-          >
-            <summary
-              style={{
-                cursor: "pointer",
-                userSelect: "none",
-                padding: "4px 0",
-              }}
-            >
-              管理者向け
-            </summary>
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: 10,
-                marginTop: 6,
-              }}
-            >
-              <button
-                type="button"
-                onClick={
-                  authenticateAndLoadAdministratorData
-                }
-                style={{
-                  ...miniBtn,
-                  ...(personalEventsSource === "server" &&
-                  lifeSettingsSource === "server"
-                    ? {
-                        background: "#fff1dc",
-                        border: "1px solid #d79a43",
-                        color: "#8a5208",
-                        fontWeight: 800,
-                      }
-                    : {}),
-                }}
-              >
-                管理者データ読込
-              </button>
-
-              <button
-                type="button"
-                onClick={
-                  clearAdministratorBrowserData
-                }
-                style={{
-                  ...miniBtn,
-                  background: "#fff3f3",
-                  border: "1px solid #e4bcbc",
-                  color: "#8a4f4f",
-                }}
-              >
-                管理者データをブラウザから消去
-              </button>
-
-              {personalEventsSource === "server" &&
-                lifeSettingsSource === "server" && (
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "#7c551d",
-                      fontWeight: 700,
-                    }}
-                  >
-                    管理者データ：ブラウザ保存済み
-                  </span>
-                )}
-
-              {administratorDataStatus && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "#9b4a3c",
-                  }}
-                >
-                  {administratorDataStatus}
-                </span>
-              )}
-
-              {!PUBLIC_DISTRIBUTION_ENABLED &&
-              personalEventsSource === "server" &&
-              DOWNLOAD_URL && (
-                <a
-                  href={DOWNLOAD_URL}
-                  download="koshix-timeline-starter.zip"
-                  style={{ color: "#59616c" }}
-                >
-                  ダウンロード版
-                </a>
-              )}
-
-              {!PUBLIC_DISTRIBUTION_ENABLED &&
-              personalEventsSource === "server" &&
-              PUBLIC_SOURCE_URL && (
-                <a
-                  href={PUBLIC_SOURCE_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "#59616c" }}
-                >
-                  公開用ソース
-                </a>
-              )}
-
-              {personalEventsSource === "server" && ACCESS_STATS_URL && (
-                <a
-                  href={ACCESS_STATS_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "#59616c" }}
-                >
-                  アクセス統計
-                </a>
-              )}
-            </div>
-          </details>
-
-          <div
-            style={{
-              marginTop: 10,
-              paddingTop: 10,
-              borderTop: "1px solid #eceef1",
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#59616c" }}>
-              <div
-                style={{
-                  marginBottom: 2,
-                }}
-              >
-                著作権表示：
-              </div>
-              <div>
-                このアプリは松尾公也氏の{" "}
-              <a
-                href="https://matsuo-koya.github.io/sf-tech-lifeline/"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#59616c" }}
-              >
-                SF × テクノロジー 自分史年表
-              </a>
-              {"（"}
-              <a
-                href="https://github.com/matsuo-koya/sf-tech-lifeline"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#59616c" }}
-              >
-                sf-tech-lifeline
-              </a>
-              {"）を基にKunio Koshigiriが改変しています。"}
-              </div>
-            </div>
-
-            <div style={{ fontSize: 12, color: "#59616c" }}>
-              原作品 © 2026 Koya Matsuo ／ 改変部分 © 2026 Kunio Koshigiri ／{" "}
-              <a
-                href={`${import.meta.env.BASE_URL}LICENSE.txt`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#59616c" }}
-              >
-                MIT License
-              </a>
-              {" ／ "}
-              <a
-                href={`${import.meta.env.BASE_URL}THIRD-PARTY-NOTICES.md`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#59616c" }}
-              >
-                第三者ソフトウェア表示
-              </a>
-            </div>
-          </div>
-        </footer>
+        <AppFooter
+          appVersion={APP_VERSION}
+          appUpdatedDate={APP_UPDATED_DATE}
+          publicDistributionEnabled={PUBLIC_DISTRIBUTION_ENABLED}
+          downloadUrl={DOWNLOAD_URL}
+          publicSourceUrl={PUBLIC_SOURCE_URL}
+          accessStatsUrl={ACCESS_STATS_URL}
+          personalEventsSource={personalEventsSource}
+          lifeSettingsSource={lifeSettingsSource}
+          administratorDataStatus={administratorDataStatus}
+          authenticateAndLoadAdministratorData={
+            authenticateAndLoadAdministratorData
+          }
+          clearAdministratorBrowserData={
+            clearAdministratorBrowserData
+          }
+          miniBtn={miniBtn}
+        />
       </div>
 
       {thread && (
@@ -1727,14 +717,6 @@ export default function App() {
   );
 }
 
-const btnStyle = {
-  width: 34, height: 34, borderRadius: 8, border: "1px solid #d5d8dd",
-  background: "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer",
-  color: "#22272e", lineHeight: 1,
-};
-
-// 日本語入力の変換確定のEnterで実行してしまわないようにする
-// (変換中はisComposingがtrue。古いSafari等のためkeyCode 229も見る)
 
 const miniBtn = {
   fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "4px 10px",

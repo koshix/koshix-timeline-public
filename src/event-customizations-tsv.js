@@ -1,6 +1,6 @@
 import {
   EVENT_FIELD_ORDER,
-  isValidEventDate,
+  validatePublicEvent,
 } from "./event-schema.js";
 
 export const EVENT_CUSTOMIZATIONS_TSV_HEADER = [
@@ -37,69 +37,13 @@ function requireKnownField(field, lineNo) {
 }
 
 function validateAddition(event, id) {
-  if (!isValidEventDate(event.date ?? "")) {
+  try {
+    validatePublicEvent(event);
+  } catch (error) {
     throw new Error(
-      `追加項目 "${id}": date "${event.date ?? ""}" が不正です`
+      `追加項目 "${id}": ${error.message}`
     );
   }
-
-  if (
-    event.end_date !== undefined &&
-    event.end_date !== null &&
-    event.end_date !== "" &&
-    !isValidEventDate(event.end_date)
-  ) {
-    throw new Error(
-      `追加項目 "${id}": end_date "${event.end_date}" が不正です`
-    );
-  }
-
-  if (
-    typeof event.title !== "string" ||
-    !event.title.trim()
-  ) {
-    throw new Error(
-      `追加項目 "${id}": title がありません`
-    );
-  }
-
-  if (
-    !Array.isArray(event.cats) ||
-    event.cats.length === 0 ||
-    event.cats.some(
-      (value) =>
-        typeof value !== "string" || !value.trim()
-    )
-  ) {
-    throw new Error(
-      `追加項目 "${id}": cats が不正です`
-    );
-  }
-
-  if (
-    typeof event.primary !== "string" ||
-    !event.primary.trim()
-  ) {
-    throw new Error(
-      `追加項目 "${id}": primary がありません`
-    );
-  }
-
-  if (![1, 2, 3].includes(Number(event.importance))) {
-    throw new Error(
-      `追加項目 "${id}": importance は1, 2, 3のいずれかです`
-    );
-  }
-
-  if (
-    typeof event.summary !== "string" ||
-    !event.summary.trim()
-  ) {
-    throw new Error(
-      `追加項目 "${id}": summary がありません`
-    );
-  }
-
 }
 
 export function parseEventCustomizationsTsv(text) {

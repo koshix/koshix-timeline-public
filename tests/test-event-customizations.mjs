@@ -90,6 +90,34 @@ assert.throws(
   /id は変更できません/
 );
 
+assert.throws(
+  () =>
+    applyEventCustomizations(base, {
+      overrides: {
+        a: { date: "2026-02-31" },
+      },
+    }),
+  /date "2026-02-31" の形式が不正/
+);
+
+assert.throws(
+  () =>
+    applyEventCustomizations(base, {
+      additions: [
+        {
+          id: "invalid-primary",
+          date: "2026",
+          title: "不正な追加項目",
+          summary: "primaryを検査する",
+          cats: ["science"],
+          primary: "unknown",
+          importance: 2,
+        },
+      ],
+    }),
+  /primary "unknown" が不正/
+);
+
 console.log("OK: event customizations");
 console.log(`effective events: ${result.events.length}`);
 console.log(`orphaned customizations: ${result.orphaned.length}`);
