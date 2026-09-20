@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "3.4.0",
-  "stableTag": "v3.4.0",
+  "version": "3.5.0",
+  "stableTag": "v3.5.0",
   "releaseDate": "2026-09-20",
-  "publicEvents": 1477
+  "publicEvents": 1649
 }
