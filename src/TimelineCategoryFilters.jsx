@@ -141,7 +141,7 @@ export default function TimelineCategoryFilters({
           className="timeline-category-mode-button"
           title="関連分野も含めて項目を表示する"
         >
-          副分野
+          ＋副分野
         </button>
       </span>
 
