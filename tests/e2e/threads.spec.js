@@ -5,7 +5,7 @@ test("dynamic thread can be generated and shared", async ({ page }) => {
 
   await expect(
     page.getByRole("heading", {
-      name: "テーマでたどる",
+      name: "48のテーマをたどる",
       exact: true,
     })
   ).toBeVisible();

@@ -521,7 +521,7 @@ test("small and landscape viewports avoid overflow and expose keyboard focus", a
 
     await expect(
       page.getByRole("heading", {
-        name: "テーマでたどる",
+        name: "48のテーマをたどる",
         exact: true,
       })
     ).toBeVisible();

@@ -15,7 +15,7 @@ export default function AppHeader({
       {/* ヘッダー */}
       <header style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 11, letterSpacing: "0.25em", color: "#8a8f98", marginBottom: 6 }}>
-          {threadCount}のテーマでたどる、自分の時代
+          {threadCount}のテーマをたどる、自分の時代
         </div>
         <div
           style={{

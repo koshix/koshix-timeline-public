@@ -155,7 +155,7 @@ export default function TimelineViewControls({
             className="timeline-thread-button"
             style={{ "--timeline-font": font }}
           >
-            テーマでたどる
+            48のテーマをたどる
           </button>
 
           <button

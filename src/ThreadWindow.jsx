@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { eventYear } from "./event-schema.js";
+import { CAT } from "./categories";
+import Icon from "./Icon";
+import { resolvePublicEventIcon } from "./event-icon.js";
 import Theater from "./Theater";
 import useDynamicThreads from "./useDynamicThreads.js";
 
@@ -16,6 +19,97 @@ const THREAD_COLORS = [
   ["#f6f2f2", "#ddcfcf"],
 ];
 
+
+const THREAD_ACCENTS = [
+  "#D05A00",
+  "#16835A",
+  "#3F63D8",
+  "#B0448B",
+  "#7A8A00",
+  "#0088A8",
+  "#C06A00",
+  "#7B52B9",
+  "#169B72",
+  "#C84444",
+];
+
+const THEME_KEYWORDS = Object.freeze({
+  "space-and-universe": "宇宙",
+  "energy-and-earth": "地球",
+  "computing-to-ai": "プログラム",
+  "connected-world": "通信網",
+  "war-and-order": "ルール",
+  "global-economy": "モノ",
+  "learning-systems": "学ぶ",
+  "empire-decolonization": "帝国",
+  "mechanics-as-math": "運動",
+  "heat-to-probability": "確率",
+  "inside-the-atom": "原子",
+  "mathematical-abstraction": "構造",
+  "instruments-open-worlds": "装置",
+  "life-earth-system": "系",
+  "epidemics-public-health": "感染症",
+  "read-write-genome": "遺伝子",
+  "ai-boom-winter-revival": "AI",
+  "vacuum-tube-to-pocket-computer": "真空管",
+  "electricity-into-society": "電気",
+  "record-copy-store": "複製",
+  "speed-mobility-navigation": "速く",
+  "standardize-the-world": "共通規格",
+  "women-gender-rights": "女",
+  "labor-to-welfare-state": "働く",
+  "democracy-expands-and-retreats": "人民",
+  "nuclear-age": "原子核",
+  "cold-war-world-system": "二つ",
+  "money-finance-crises": "お金",
+  "media-public-sphere": "世論",
+  "music-becomes-media": "メディア",
+  "moving-images": "映像",
+  "art-breaks-representation": "絵らしさ",
+  "architecture-design-modern-life": "生活",
+  "publishing-to-web": "出版",
+  "world-literature": "小説",
+  "japanese-literature": "日本語",
+  "sf-as-thought-experiment": "もしも",
+  "food-becomes-system": "食べる",
+  "population-family-policy": "家族",
+  "postwar-japan-daily-life": "ふつう",
+  "statistics-makes-world-legible": "数字",
+  "modern-thought-rethinks-society": "言葉",
+  "mind-becomes-science": "心",
+  "chemistry-builds-matter": "物質",
+  "faith-conflict-toleration": "寛容",
+  "modern-japan-state": "近代国家",
+  "life-as-chemistry": "化学反応",
+  "music-breaks-its-form": "音楽",
+});
+
+const renderThemeTitle = (item, accent) => {
+  const keyword = THEME_KEYWORDS[item.key];
+
+  if (!keyword) return item.title;
+
+  const start = item.title.indexOf(keyword);
+
+  if (start < 0) return item.title;
+
+  return (
+    <>
+      {item.title.slice(0, start)}
+      <span
+        style={{
+          color: accent,
+          fontSize: "1.35em",
+          fontWeight: 900,
+        }}
+      >
+        {keyword}
+      </span>
+      {item.title.slice(start + keyword.length)}
+    </>
+  );
+};
+
 const font =
   '"Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Noto Sans JP", sans-serif';
 
@@ -29,6 +123,109 @@ const miniBtn = {
   border: "1px solid #d5d8dd",
   background: "#fff",
   color: "#6b7280",
+};
+
+const eventSubs = (event) => {
+  if (Array.isArray(event?.subs)) {
+    return [...new Set(event.subs.filter(Boolean))];
+  }
+
+  if (typeof event?.subs === "string") {
+    return [
+      ...new Set(
+        event.subs
+          .split("|")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      ),
+    ];
+  }
+
+  return [];
+};
+
+const themeVisualSummary = (events) => {
+  const primaryStats = new Map();
+  const subStats = new Map();
+
+  events.forEach((event, index) => {
+    const primary =
+      event.primary && CAT[event.primary]
+        ? event.primary
+        : "society";
+
+    const primaryStat =
+      primaryStats.get(primary) || {
+        count: 0,
+        first: index,
+      };
+
+    primaryStat.count += 1;
+    primaryStats.set(primary, primaryStat);
+
+    eventSubs(event).forEach((sub) => {
+      const subStat =
+        subStats.get(sub) || {
+          count: 0,
+          first: index,
+          icons: new Map(),
+        };
+
+      subStat.count += 1;
+
+      // このsub単独だった場合の表示アイコンを求める。
+      // politics / literature / rights / technology /
+      // matter / visual / life の派生アイコンも既存規則に従う。
+      const iconName = resolvePublicEventIcon({
+        ...event,
+        subs: [sub],
+      });
+
+      const iconStat =
+        subStat.icons.get(iconName) || {
+          count: 0,
+          first: index,
+        };
+
+      iconStat.count += 1;
+      subStat.icons.set(iconName, iconStat);
+
+      subStats.set(sub, subStat);
+    });
+  });
+
+  const dominantPrimary =
+    [...primaryStats.entries()]
+      .sort(
+        (a, b) =>
+          b[1].count - a[1].count ||
+          a[1].first - b[1].first
+      )[0]?.[0] || "society";
+
+  const icons = [
+    ...new Set(
+      [...subStats.entries()]
+        .sort(
+          (a, b) =>
+            b[1].count - a[1].count ||
+            a[1].first - b[1].first
+        )
+        .map(([, stat]) =>
+          [...stat.icons.entries()]
+            .sort(
+              (a, b) =>
+                b[1].count - a[1].count ||
+                a[1].first - b[1].first
+            )[0]?.[0]
+        )
+        .filter(Boolean)
+    ),
+  ].slice(0, 6);
+
+  return {
+    primary: dominantPrimary,
+    icons,
+  };
 };
 
 export default function ThreadWindow({
@@ -108,7 +305,7 @@ export default function ThreadWindow({
                 color: "#374151",
               }}
             >
-              テーマでたどる
+              48のテーマをたどる
             </h1>
           </div>
 
@@ -424,6 +621,14 @@ export default function ThreadWindow({
                   THREAD_COLORS[
                     index % THREAD_COLORS.length
                   ];
+                const accent =
+                  THREAD_ACCENTS[
+                    index % THREAD_ACCENTS.length
+                  ];
+                const visual =
+                  themeVisualSummary(item.events);
+                const category =
+                  CAT[visual.primary] || CAT.society;
 
                 return (
                   <button
@@ -450,12 +655,60 @@ export default function ThreadWindow({
                         color: "#4B56A6",
                       }}
                     >
-                      ▶ {item.title}
+                      ▶ {renderThemeTitle(item, accent)}
                     </div>
 
                     <div
                       style={{
-                        marginTop: 5,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        minHeight: 20,
+                        marginTop: 7,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <span
+                        title={`主分野：${category.label}`}
+                        style={{
+                          flexShrink: 0,
+                          padding: "2px 6px",
+                          borderRadius: 999,
+                          border: "1px solid #707981",
+                          background: "#7D8790",
+                          color: "#FFFFFF",
+                          fontSize: 9.5,
+                          fontWeight: 800,
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {category.label}
+                      </span>
+
+                      <span
+                        title="テーマ内で多いsubsアイコン"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 2,
+                          minWidth: 0,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {visual.icons.map((name) => (
+                          <Icon
+                            key={name}
+                            name={name}
+                            color="#747c87"
+                            size={15}
+                          />
+                        ))}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 4,
                         fontSize: 11,
                         lineHeight: 1.6,
                         color: "#6b7280",
