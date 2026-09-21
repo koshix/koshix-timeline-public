@@ -1,9 +1,20 @@
 import { useState } from "react";
 
 import { CAT } from "./categories";
+import Icon from "./Icon";
 import {
-  PUBLIC_EVENT_SUB_TAG_ROWS,
+  PUBLIC_EVENT_SUB_FILTER_ICONS,
+  PUBLIC_EVENT_SUB_FILTER_ROWS,
 } from "./event-schema.js";
+
+const MAIN_CATEGORY_ICONS = {
+  work: "fallback-work",
+  science: "fallback-science",
+  education: "fallback-education",
+  computer: "fallback-computer",
+  culture: "fallback-culture",
+  society: "fallback-society",
+};
 
 export default function TimelineCategoryFilters({
   mainCategories,
@@ -13,8 +24,6 @@ export default function TimelineCategoryFilters({
   toggleSfOnly,
   subFilters,
   toggleSubFilter,
-  showMe,
-  toggleMyEvents,
   categoryMatchMode,
   setCategoryMatchMode,
   font,
@@ -32,6 +41,7 @@ export default function TimelineCategoryFilters({
 
   return (
     <>
+      <div className="timeline-category-filter-row">
       {mainCategories.map((k) => {
         const on = catOn(k);
 
@@ -48,7 +58,14 @@ export default function TimelineCategoryFilters({
                 aria-pressed={on}
                 className="timeline-category-split-button timeline-category-split-button--label"
               >
-                {CAT[k].label}
+                <span className="timeline-category-label-content">
+                  <span>{CAT[k].label}</span>
+                  <Icon
+                    name={MAIN_CATEGORY_ICONS[k]}
+                    color="currentColor"
+                    size={12}
+                  />
+                </span>
               </button>
 
               <button
@@ -79,23 +96,20 @@ export default function TimelineCategoryFilters({
             type="button"
             onClick={() => toggleCat(k)}
             aria-pressed={on}
-            className="timeline-category-pill"
+            className="timeline-category-pill timeline-category-pill--main"
             style={categoryStyle(k, on)}
           >
-            {CAT[k].label}
+            <span className="timeline-category-label-content">
+              <span>{CAT[k].label}</span>
+              <Icon
+                name={MAIN_CATEGORY_ICONS[k]}
+                color="currentColor"
+                size={12}
+              />
+            </span>
           </button>
         );
       })}
-
-      <button
-        type="button"
-        onClick={toggleMyEvents}
-        aria-pressed={showMe}
-        className="timeline-category-pill"
-        style={categoryStyle("me", showMe)}
-      >
-        {CAT.me.label}
-      </button>
 
       <span
         role="group"
@@ -127,7 +141,7 @@ export default function TimelineCategoryFilters({
           className="timeline-category-mode-button"
           title="関連分野も含めて項目を表示する"
         >
-          ＋関連分野
+          副分野
         </button>
       </span>
 
@@ -145,59 +159,71 @@ export default function TimelineCategoryFilters({
             : "横断タグを開く"
         }
       >
-        {subFiltersOpen ? "▼" : "▶"} 絞り込み
+        {subFiltersOpen ? "▼" : "▶"} 絞込み
         {subFilters.length > 0 ? `（${subFilters.length}）` : ""}
       </button>
+      </div>
 
-      {subFiltersOpen &&
-        PUBLIC_EVENT_SUB_TAG_ROWS.map((row, rowIndex) => (
-        <span
-          key={rowIndex}
+      {subFiltersOpen && (
+        <div
           role="group"
-          aria-label={`横断タグ ${rowIndex + 1}段目`}
-          style={{
-            flexBasis: "100%",
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(var(--timeline-subfilter-columns, 8), minmax(0, 1fr))",
-            gap: 5,
-            width: "100%",
-            marginTop: rowIndex === 0 ? 4 : 0,
-          }}
+          aria-label="横断タグ"
+          className="timeline-subfilter-scroll"
         >
-          {row.map(([key, label]) => {
-            const on = subFilters.includes(key);
+          <div
+            className="timeline-subfilter-grid"
+            style={{ "--timeline-font": font }}
+          >
+            {PUBLIC_EVENT_SUB_FILTER_ROWS
+              .flat()
+              .map(([key, label]) => {
+                const on = subFilters.includes(key);
+                const icons =
+                  PUBLIC_EVENT_SUB_FILTER_ICONS[key] ?? [];
 
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => toggleSubFilter(key)}
-                aria-pressed={on}
-                title={`${label}タグで絞り込む`}
-                style={{
-                  minWidth: 0,
-                  padding: "5px 4px",
-                  border: "1px solid #cbd1d8",
-                  borderRadius: 7,
-                  background: on
-                    ? "#e6e9ee"
-                    : "#ffffff",
-                  color: on
-                    ? "#374151"
-                    : "#6b7280",
-                  fontFamily: font,
-                  fontSize: 11.5,
-                  fontWeight: on ? 800 : 700,
-                  cursor: "pointer",
-                }}
-              >
-                {on ? "✓" : "□"}{label}
-              </button>
-            );
-          })}
-        </span>
-      ))}
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleSubFilter(key)}
+                    aria-pressed={on}
+                    title={`${label}タグで絞り込む`}
+                    className="timeline-subfilter-button"
+                    style={{
+                      background: on
+                        ? "#e6e9ee"
+                        : "#ffffff",
+                      color: on
+                        ? "#374151"
+                        : "#6b7280",
+                      fontFamily: font,
+                      fontWeight: on ? 800 : 700,
+                    }}
+                  >
+                    <span className="timeline-subfilter-label">
+                      {on ? "✓" : "□"}{label}
+                    </span>
+
+                    <span
+                      className="timeline-subfilter-icons"
+                      aria-hidden="true"
+                    >
+                      {icons.map((iconName) => (
+                        <Icon
+                          key={iconName}
+                          name={iconName}
+                          color="currentColor"
+                          size={11}
+                        />
+                      ))}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
     </>
   );
 }

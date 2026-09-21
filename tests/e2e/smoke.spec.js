@@ -597,7 +597,7 @@ test("small and landscape viewports avoid overflow and expose keyboard focus", a
 
   await page
     .getByRole("button", {
-      name: "▶ 絞り込み",
+      name: "▶ 絞込み",
       exact: true,
     })
     .click();

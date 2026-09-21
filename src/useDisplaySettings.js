@@ -1,5 +1,21 @@
 import { useState } from "react";
 
+export function normalizeSavedSubFilters(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      value.map((item) =>
+        item === "war" || item === "revolution"
+          ? "unrest"
+          : item
+      )
+    ),
+  ];
+}
+
 export default function useDisplaySettings({
   saved = {},
   mainCategories = [],
@@ -21,11 +37,9 @@ export default function useDisplaySettings({
     );
 
   // subsを使った主分類横断フィルタ。
-  // 空配列なら絞り込みなし、複数選択時はOR。
+  // 空配列なら絞込みなし、複数選択時はOR。
   const [subFilters, setSubFilters] = useState(
-    Array.isArray(saved.subFilters)
-      ? saved.subFilters
-      : []
+    () => normalizeSavedSubFilters(saved.subFilters)
   );
 
   const catOn = (key) =>

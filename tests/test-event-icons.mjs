@@ -53,7 +53,7 @@ test("icons.svg contains exactly public semantic icons plus personal flag", () =
     "flag",
   ].sort();
 
-  assert.equal(names.length, 30);
+  assert.equal(names.length, expected.length);
   assert.deepEqual(
     [...names].sort(),
     expected
@@ -73,7 +73,7 @@ test("all public events resolve to semantic icons", () => {
   }
 });
 
-test("rarer subs tag wins", () => {
+test("sub tag priority is stable", () => {
   assert.equal(
     resolvePublicEventIcon({
       id: "x",
@@ -102,6 +102,46 @@ test("rarer subs tag wins", () => {
       region: "世界",
     }),
     "revolution"
+  );
+
+  assert.equal(
+    resolvePublicEventIcon({
+      id: "x",
+      primary: "society",
+      subs: ["economy", "industry"],
+      region: "世界",
+    }),
+    "industry"
+  );
+
+  assert.equal(
+    resolvePublicEventIcon({
+      id: "x",
+      primary: "computer",
+      subs: ["technology", "communication"],
+      region: "世界",
+    }),
+    "communication"
+  );
+
+  assert.equal(
+    resolvePublicEventIcon({
+      id: "x",
+      primary: "society",
+      subs: ["rights", "law"],
+      region: "世界",
+    }),
+    "law"
+  );
+
+  assert.equal(
+    resolvePublicEventIcon({
+      id: "x",
+      primary: "society",
+      subs: ["environment", "law"],
+      region: "世界",
+    }),
+    "environment"
   );
 });
 

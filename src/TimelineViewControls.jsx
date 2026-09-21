@@ -1,3 +1,4 @@
+import { CAT } from "./categories";
 import TimelineCategoryFilters from "./TimelineCategoryFilters";
 import TimelineDisplayControls from "./TimelineDisplayControls";
 import TimelineSearchControls from "./TimelineSearchControls";
@@ -106,23 +107,12 @@ export default function TimelineViewControls({
             }}
           >
             公開{grouped.shown}件
-            {grouped.myShown > 0
-              ? `＋個人史${grouped.myShown}件`
-              : ""}
           </span>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            flexWrap: "wrap",
-            width: "100%",
-            marginBottom: 2,
-          }}
-        >
+        <div className="timeline-summary-row">
           <span
+            className="timeline-shown-count"
             style={{
               display: "inline-flex",
               alignItems: "baseline",
@@ -151,8 +141,27 @@ export default function TimelineViewControls({
 
           <button
             type="button"
+            onClick={toggleMyEvents}
+            aria-pressed={showMe}
+            className="timeline-category-pill timeline-personal-history-button"
+            style={{
+              "--timeline-font": font,
+              "--category-border": CAT.me.border,
+              "--category-bg": showMe
+                ? CAT.me.bg
+                : CAT.me.soft,
+              "--category-color": showMe
+                ? CAT.me.fg
+                : CAT.me.border,
+            }}
+          >
+            {CAT.me.label}
+          </button>
+
+          <button
+            type="button"
             onClick={openThreadWindow}
-            className="timeline-thread-button"
+            className="timeline-thread-button timeline-thread-button--summary"
             style={{ "--timeline-font": font }}
           >
             48のテーマをたどる
@@ -160,11 +169,11 @@ export default function TimelineViewControls({
 
           <button
             type="button"
+            className="timeline-reset-button"
             onClick={resetTimelineFilters}
             disabled={!hasActiveDisplayFilters}
             style={{
               ...miniBtn,
-              marginLeft: "auto",
               fontSize: 11.5,
               fontWeight: 800,
               border: "1px solid #9aa4b2",
@@ -198,8 +207,6 @@ export default function TimelineViewControls({
             toggleSfOnly={toggleSfOnly}
             subFilters={subFilters}
             toggleSubFilter={toggleSubFilter}
-            showMe={showMe}
-            toggleMyEvents={toggleMyEvents}
             categoryMatchMode={categoryMatchMode}
             setCategoryMatchMode={setCategoryMatchMode}
             font={font}

@@ -6,7 +6,7 @@ export const CAT = {
   computer:  { label: "情報", bg: "#34844F", fg: "#FFFFFF", soft: "#E5F4E9", border: "#286D40" },
   culture:   { label: "文化", bg: "#3779BC", fg: "#FFFFFF", soft: "#E5F0FA", border: "#2A6198" },
   society:   { label: "社会", bg: "#4B56A6", fg: "#FFFFFF", soft: "#E4E6F5", border: "#3C478D" },
-  me:        { label: "自分", bg: "#7A4FA3", fg: "#FFFFFF", soft: "#EEE4F5", border: "#663D8B" },
+  me:        { label: "自分史", bg: "#7A4FA3", fg: "#FFFFFF", soft: "#EEE4F5", border: "#663D8B" },
 
   // SFは大分類ではなく、作品を強調するタグとして保持する。
   sf:        { label: "SF", bg: "#8B1E2D", fg: "#FFFFFF", soft: "#F7DDE1", border: "#761825" },

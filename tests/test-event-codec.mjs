@@ -8,6 +8,8 @@ import {
   EVENT_TSV_HEADER,
   PERSONAL_EVENT_TSV_HEADER,
   PUBLIC_EVENT_CATEGORIES,
+  PUBLIC_EVENT_SUB_FILTER_ROWS,
+  PUBLIC_EVENT_SUB_FILTER_TAGS,
   PUBLIC_EVENT_SUB_TAG_KEYS,
   PUBLIC_EVENT_SUB_TAGS,
   PUBLIC_EVENT_TSV_HEADER,
@@ -30,12 +32,33 @@ assert.strictEqual(
 assert.equal(PUBLIC_EVENT_CATEGORIES.has("science"), true);
 assert.equal(PUBLIC_EVENT_CATEGORIES.has("me"), false);
 
-assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 16);
+assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 19);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("thought"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("technology"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("space"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("audio"), false);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("sf"), false);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("law"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("communication"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("industry"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("war"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("revolution"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("unrest"), false);
+
+assert.equal(
+  PUBLIC_EVENT_SUB_FILTER_ROWS.flat().length,
+  18
+);
+assert.equal(
+  PUBLIC_EVENT_SUB_FILTER_ROWS
+    .flat()
+    .some(([key]) => key === "unrest"),
+  true
+);
+assert.deepEqual(
+  PUBLIC_EVENT_SUB_FILTER_TAGS.unrest,
+  ["war", "revolution"]
+);
 
 assert.deepEqual(
   splitEventList("science| education |science"),

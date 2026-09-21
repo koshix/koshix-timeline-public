@@ -33,20 +33,52 @@ export const PUBLIC_EVENT_CATEGORIES = new Set(
   PUBLIC_EVENT_CATEGORY_KEYS
 );
 
-export const PUBLIC_EVENT_SUB_TAG_ROWS = [
+export const PUBLIC_EVENT_SUB_TAG_KEYS = [
+  "thought",
+  "rights",
+  "law",
+  "war",
+  "revolution",
+  "literature",
+  "music",
+  "art",
+  "visual",
+  "communication",
+  "politics",
+  "economy",
+  "industry",
+  "technology",
+  "math",
+  "matter",
+  "life",
+  "environment",
+  "space",
+];
+
+export const PUBLIC_EVENT_SUB_TAGS = new Set(
+  PUBLIC_EVENT_SUB_TAG_KEYS
+);
+
+// 画面上の横断フィルタ。
+// unrest（動乱）は実データタグではなく、war / revolution のOR条件。
+export const PUBLIC_EVENT_SUB_FILTER_ROWS = [
   [
     ["thought", "思想"],
     ["rights", "人権"],
-    ["war", "戦争"],
-    ["revolution", "革命"],
+    ["law", "法制"],
+    ["unrest", "動乱"],
+    ["politics", "政治"],
+    ["economy", "経済"],
+  ],
+  [
     ["literature", "文学"],
     ["music", "音楽"],
     ["art", "美術"],
     ["visual", "映像"],
+    ["communication", "通信"],
+    ["industry", "産業"],
   ],
   [
-    ["politics", "政治"],
-    ["economy", "経済"],
     ["technology", "技術"],
     ["math", "数理"],
     ["matter", "物質"],
@@ -56,14 +88,38 @@ export const PUBLIC_EVENT_SUB_TAG_ROWS = [
   ],
 ];
 
-export const PUBLIC_EVENT_SUB_TAG_KEYS =
-  PUBLIC_EVENT_SUB_TAG_ROWS
-    .flat()
-    .map(([key]) => key);
+export const PUBLIC_EVENT_SUB_FILTER_TAGS = {
+  unrest: ["war", "revolution"],
+};
 
-export const PUBLIC_EVENT_SUB_TAGS = new Set(
-  PUBLIC_EVENT_SUB_TAG_KEYS
-);
+export const PUBLIC_EVENT_SUB_FILTER_ICONS = {
+  thought: ["thought"],
+  rights: ["rights-expand", "rights-suppress"],
+  law: ["law"],
+  unrest: ["war", "revolution"],
+  politics: ["politics-japan", "politics-world"],
+  economy: ["economy"],
+
+  literature: [
+    "literature-japan",
+    "literature-world",
+  ],
+  music: ["music"],
+  art: ["art"],
+  visual: ["visual-work", "visual-media"],
+  communication: ["communication"],
+  industry: ["industry"],
+
+  technology: [
+    "technology-innovation",
+    "technology-implementation",
+  ],
+  math: ["math"],
+  matter: ["matter-physics", "matter-material"],
+  life: ["life-science", "life-health"],
+  environment: ["environment"],
+  space: ["space"],
+};
 
 // TSVとRuntime Eventは同じイベントフィールド名を使う。
 // idを除く順序は公開TSV schemaを正本とする。

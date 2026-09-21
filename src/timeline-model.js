@@ -1,6 +1,7 @@
 import {
   eventYear,
   PUBLIC_EVENT_CATEGORY_KEYS,
+  PUBLIC_EVENT_SUB_FILTER_TAGS,
 } from "./event-schema.js";
 import { eventId } from "./event-links.js";
 import { catsOf, primaryCatOf } from "./categories.js";
@@ -96,15 +97,26 @@ export function selectPublicTimelineEvents({
         ? event.subs
         : [];
 
+      const matchesSubFilter = (filterKey) => {
+        const targetTags =
+          PUBLIC_EVENT_SUB_FILTER_TAGS[filterKey] ??
+          [filterKey];
+
+        return targetTags.some(
+          (key) =>
+            eventSubs.includes(key) &&
+            (
+              key !== "literature" ||
+              sfOnly ||
+              !categories.includes("sf")
+            )
+        );
+      };
+
       const subVisible =
         activeSubFilters.size === 0 ||
-        eventSubs.some((key) =>
-          activeSubFilters.has(key) &&
-          (
-            key !== "literature" ||
-            sfOnly ||
-            !categories.includes("sf")
-          )
+        [...activeSubFilters].some(
+          matchesSubFilter
         );
 
       return (

@@ -317,6 +317,24 @@ const subFilterEvents = [
     subs: ["literature"],
     importance: 2,
   },
+  {
+    id: "war",
+    date: "2004",
+    title: "戦争",
+    cats: ["society"],
+    primary: "society",
+    subs: ["war"],
+    importance: 2,
+  },
+  {
+    id: "revolution",
+    date: "2005",
+    title: "革命",
+    cats: ["society"],
+    primary: "society",
+    subs: ["revolution"],
+    importance: 2,
+  },
 ];
 
 const selectSubFilters = (
@@ -359,6 +377,12 @@ assert.deepEqual(
     { sfOnly: true }
   ).map((event) => event.id),
   ["sf-literature"]
+);
+
+assert.deepEqual(
+  selectSubFilters(["unrest"])
+    .map((event) => event.id),
+  ["war", "revolution"]
 );
 
 const searched = selectPublicTimelineEvents({
