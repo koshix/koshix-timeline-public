@@ -107,13 +107,14 @@
 }
 
 .timeline-shown-count {
-  grid-column: 1;
+  grid-column: 1 / span 2;
   box-sizing: border-box;
   justify-content: center;
+  white-space: nowrap;
 }
 
 .timeline-personal-history-button {
-  grid-column: 2;
+  grid-column: 3;
   width: 70px;
   box-sizing: border-box;
 }
@@ -132,7 +133,7 @@
 .timeline-category-filter-row {
   display: grid;
   grid-template-columns:
-    104px repeat(5, 70px) auto auto;
+    104px repeat(5, 70px) max-content max-content;
   align-items: center;
   gap: 6px;
   width: 100%;
