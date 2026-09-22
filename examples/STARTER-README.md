@@ -47,7 +47,7 @@ ZIPを展開し、その中のファイル一式をWebサーバーへ配置し�
 公開年表の正本です。タブ区切りのUTF-8テキストとして編集します。
 
 ```text
-id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\ticon\tsummary\tsources\tsearch\tnote
+id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\tsummary\tsources\tsearch\tnote
 ```
 
 詳しい登録規約は `DATA-GUIDE.md` を参照してください。

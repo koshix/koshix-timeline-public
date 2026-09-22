@@ -16,9 +16,11 @@ import {
   PUBLIC_EVENT_SUB_TAGS,
   PUBLIC_EVENT_TSV_HEADER,
   isValidEventDate,
+  parseEventSourceItem,
   splitEventList,
   validateEventSources,
   validatePersonalEventRow,
+  validatePublicEvent,
   validatePublicEventRow,
 } from "../src/event-schema.js";
 
@@ -138,9 +140,58 @@ assert.deepEqual(
 );
 
 assert.doesNotThrow(
+  () => validatePublicEventRow({
+    ...publicRow,
+    date: "2000-12-31",
+    end_date: "2000",
+  })
+);
+
+assert.throws(
+  () => validatePublicEventRow({
+    ...publicRow,
+    date: "2000-12",
+    end_date: "2000-11",
+  }),
+  /end_date "2000-11" が date "2000-12" より前/
+);
+
+assert.doesNotThrow(
   () => validateEventSources(
     "https://example.com::Example"
   )
+);
+
+assert.deepEqual(
+  parseEventSourceItem(
+    "https://example.com/path::::value::Example"
+  ),
+  {
+    target:
+      "https://example.com/path::::value",
+    label: "Example",
+  }
+);
+
+assert.throws(
+  () => validateEventSources(
+    "https://example.com"
+  ),
+  /対象::表示名/
+);
+
+assert.throws(
+  () => validateEventSources(
+    "[https://example.com::Example"
+  ),
+  /対象形式が不正/
+);
+
+assert.throws(
+  () => validateEventSources(
+    "https://example.com::Example|broken source"
+  ),
+  /対象::表示名/
 );
 
 assert.throws(
@@ -208,6 +259,23 @@ assert.deepEqual(
     decodedPublic
   ),
   publicRow
+);
+
+assert.throws(
+  () => validatePublicEvent({
+    ...decodedPublic,
+    date: "2001",
+    end_date: "2000",
+  }),
+  /end_date "2000" が date "2001" より前/
+);
+
+assert.throws(
+  () => validatePublicEvent({
+    ...decodedPublic,
+    sources: ["broken source"],
+  }),
+  /対象::表示名/
 );
 
 const personalRow = {

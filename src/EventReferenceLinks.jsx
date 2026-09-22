@@ -1,4 +1,5 @@
 import { buildWikipediaQuery } from "./event-reference-query.js";
+import { parseEventSourceItem } from "./event-schema.js";
 
 export default function EventReferenceLinks({
   title,
@@ -70,10 +71,13 @@ export default function EventReferenceLinks({
           }}
         >
           {links.map((item) => {
-            // TSVでは "|" をソース間の区切りに使うので、
-            // 1ソース内の「対象::表示名」は "::" で分ける。
-            // 外部URLは "https://…::表示名"、Wikipediaは "記事名::表示名"。
-            const [rawTarget, rawLabel] = item.split("::");
+            // TSVでは "|" をソース間の区切りに使う。
+            // 1ソース内では最後の "::" を対象と表示名の区切りにする。
+            // URL自身に "::" が含まれる場合も正しく扱う。
+            const {
+              target: rawTarget,
+              label: rawLabel,
+            } = parseEventSourceItem(item);
             const external = rawTarget.startsWith("http");
             const english = rawTarget.startsWith("en:");
             const article = english

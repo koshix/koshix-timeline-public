@@ -204,13 +204,154 @@ export function isValidEventDate(value) {
   );
 }
 
-export function validateEventSources(value) {
-  const sources = String(value ?? "");
-
-  if (/\[[^\]]+\]\([^)]+\)/.test(sources)) {
-    throw new Error(
-      "sources にMarkdownリンク記法は使えません。URL::表示名で指定してください"
+function eventDateBoundaryNumber(
+  value,
+  endBoundary = false
+) {
+  const match =
+    /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/.exec(
+      String(value ?? "")
     );
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = match[2]
+    ? Number(match[2])
+    : endBoundary
+      ? 12
+      : 1;
+
+  let day;
+
+  if (match[3]) {
+    day = Number(match[3]);
+  } else if (!endBoundary) {
+    day = 1;
+  } else {
+    const leapYear =
+      year % 4 === 0 &&
+      (year % 100 !== 0 || year % 400 === 0);
+
+    const daysInMonth = [
+      31,
+      leapYear ? 29 : 28,
+      31,
+      30,
+      31,
+      30,
+      31,
+      31,
+      30,
+      31,
+      30,
+      31,
+    ];
+
+    day = daysInMonth[month - 1];
+  }
+
+  return (
+    year * 10000 +
+    month * 100 +
+    day
+  );
+}
+
+function isEndDateDefinitelyBeforeStart(
+  date,
+  endDate
+) {
+  const start =
+    eventDateBoundaryNumber(date, false);
+  const end =
+    eventDateBoundaryNumber(endDate, true);
+
+  if (start === null || end === null) {
+    return false;
+  }
+
+  return end < start;
+}
+
+export function parseEventSourceItem(value) {
+  const item =
+    String(value ?? "").trim();
+
+  const separator =
+    item.lastIndexOf("::");
+
+  if (
+    separator <= 0 ||
+    separator >= item.length - 2
+  ) {
+    throw new Error(
+      "sources は 対象::表示名 の形式で指定してください"
+    );
+  }
+
+  const target =
+    item.slice(0, separator).trim();
+  const label =
+    item.slice(separator + 2).trim();
+
+  if (!target || !label) {
+    throw new Error(
+      "sources は 対象::表示名 の形式で指定してください"
+    );
+  }
+
+  const external =
+    target.startsWith("https://") ||
+    target.startsWith("http://");
+
+  const englishWikipedia =
+    target.startsWith("en:");
+
+  if (
+    /[\[\]]/.test(target) ||
+    (
+      !external &&
+      !englishWikipedia &&
+      target.includes("://")
+    ) ||
+    (
+      englishWikipedia &&
+      !target.slice(3).trim()
+    )
+  ) {
+    throw new Error(
+      `sources の対象形式が不正です: ${target}`
+    );
+  }
+
+  return {
+    target,
+    label,
+  };
+}
+
+export function validateEventSources(value) {
+  const items = Array.isArray(value)
+    ? value
+        .map((item) =>
+          String(item ?? "").trim()
+        )
+        .filter(Boolean)
+    : splitEventList(value);
+
+  for (const item of items) {
+    if (
+      /\[[^\]]+\]\([^)]+\)/.test(item)
+    ) {
+      throw new Error(
+        "sources にMarkdownリンク記法は使えません。URL::表示名で指定してください"
+      );
+    }
+
+    parseEventSourceItem(item);
   }
 }
 
@@ -231,6 +372,18 @@ function validateCommonEventRow(row) {
   ) {
     throw new Error(
       `end_date "${row.end_date}" の形式が不正です`
+    );
+  }
+
+  if (
+    row.end_date &&
+    isEndDateDefinitelyBeforeStart(
+      row.date,
+      row.end_date
+    )
+  ) {
+    throw new Error(
+      `end_date "${row.end_date}" が date "${row.date}" より前です`
     );
   }
 
@@ -326,6 +479,18 @@ export function validatePublicEvent(event) {
   }
 
   if (
+    endDate &&
+    isEndDateDefinitelyBeforeStart(
+      date,
+      endDate
+    )
+  ) {
+    throw new Error(
+      `end_date "${endDate}" が date "${date}" より前です`
+    );
+  }
+
+  if (
     typeof event.title !== "string" ||
     !event.title.trim()
   ) {
@@ -338,6 +503,8 @@ export function validatePublicEvent(event) {
   ) {
     throw new Error("summary がありません");
   }
+
+  validateEventSources(event.sources);
 
   const importance = Number(event.importance);
   if (![1, 2, 3].includes(importance)) {

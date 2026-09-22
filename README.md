@@ -5,7 +5,7 @@
 このリポジトリは、React / Vite のソースコードを含む開発・改変可能な版です。
 MIT Licenseの条件に従って、ソースコードを修正・再配布できます。
 
-簡単に設置して使いたい場合は、GitHub Releaseの `koshix-timeline-starter.zip` を利用してください。Release ZIPはNode.jsやビルド作業を必要としない静的配布版です。
+簡単に設置して使いたい場合は、自分史プロジェクションWeb版の「ダウンロード版」から `koshix-timeline-starter.zip` を利用してください。このZIPはNode.jsやビルド作業を必要としない静的配布版です。
 
 ## クイックスタート
 
