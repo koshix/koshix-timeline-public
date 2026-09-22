@@ -3,10 +3,15 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
 import {
-  PUBLIC_EVENT_TSV_HEADER,
+  PUBLIC_EVENT_CATEGORIES,
+  PUBLIC_EVENT_CATEGORY_KEYS,
+  PUBLIC_EVENT_PRIMARY_CATEGORIES,
+  PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS,
   isValidEventDate,
   validateEventSources,
+  validatePublicEventRow,
 } from "../src/event-schema.js";
+import { CAT } from "../src/categories.js";
 
 import {
   clean,
@@ -18,14 +23,15 @@ import {
 } from "./event-entry-core.mjs";
 
 const TSV = "public/events.tsv";
-const CATEGORIES = {
-  sf: "SF",
-  science: "数学・物理学",
-  education: "日本の教育",
-  computer: "コンピュータ・インターネット・AI",
-  culture: "文化・流行",
-  society: "政治・経済・社会・国際",
-};
+
+const AUXILIARY_CATEGORY_KEYS =
+  PUBLIC_EVENT_CATEGORY_KEYS.filter(
+    (key) =>
+      !PUBLIC_EVENT_PRIMARY_CATEGORIES.has(key)
+  );
+
+const categoryLabel = (key) =>
+  CAT[key]?.label ?? key;
 
 function splitKeys(s) {
   return [...new Set(
@@ -52,9 +58,20 @@ async function main() {
 
   console.log("\nKoshix Timeline — 新規イベント追加\n");
 
-  console.log("大分類:");
-  for (const [key, label] of Object.entries(CATEGORIES)) {
-    console.log(`  ${key.padEnd(10)} ${label}`);
+  console.log("大分類（primary に指定可能）:");
+  for (const key of PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS) {
+    console.log(
+      `  ${key.padEnd(10)} ${categoryLabel(key)}`
+    );
+  }
+
+  if (AUXILIARY_CATEGORY_KEYS.length > 0) {
+    console.log("\n補助カテゴリー（cats のみに指定）:");
+    for (const key of AUXILIARY_CATEGORY_KEYS) {
+      console.log(
+        `  ${key.padEnd(10)} ${categoryLabel(key)}`
+      );
+    }
   }
 
   console.log("");
@@ -98,7 +115,9 @@ async function main() {
       throw new Error("cats は1つ以上必要です");
     }
 
-    const badCats = cats.filter(k => !CATEGORIES[k]);
+    const badCats = cats.filter(
+      (key) => !PUBLIC_EVENT_CATEGORIES.has(key)
+    );
 
     if (badCats.length) {
       throw new Error(
@@ -106,13 +125,31 @@ async function main() {
       );
     }
 
+    const defaultPrimary = cats.find(
+      (key) =>
+        PUBLIC_EVENT_PRIMARY_CATEGORIES.has(key)
+    );
+
+    if (!defaultPrimary) {
+      throw new Error(
+        "cats には primary に指定できる大分類が1つ以上必要です"
+      );
+    }
+
     const primaryInput = clean(
       await rl.question(
-        `primary [Enter=${cats[0]}]: `
+        `primary [Enter=${defaultPrimary}]: `
       )
     );
 
-    const primary = primaryInput || cats[0];
+    const primary =
+      primaryInput || defaultPrimary;
+
+    if (!PUBLIC_EVENT_PRIMARY_CATEGORIES.has(primary)) {
+      throw new Error(
+        `primary に指定できない分類です: ${primary}`
+      );
+    }
 
     if (!cats.includes(primary)) {
       throw new Error(
@@ -226,6 +263,9 @@ sources を1件ずつ入力します。空Enterで終了。
       search,
       note,
     };
+
+    // 公開イベントschemaを最終的な正本として検証する。
+    validatePublicEventRow(row);
 
     console.log("\n追加内容:");
     console.log(`  id         ${row.id}`);

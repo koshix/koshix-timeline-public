@@ -63,21 +63,36 @@ export function createIndexedDbKeyValueStore({
             tx.objectStore(storeName);
 
           let request;
+          let requestResult;
+          let settled = false;
+
+          const fail = (error) => {
+            if (settled) return;
+
+            settled = true;
+            db.close();
+
+            reject(
+              error ||
+                new Error(
+                  operationErrorMessage
+                )
+            );
+          };
 
           try {
             request = operation(store);
           } catch (err) {
-            db.close();
-            reject(err);
+            fail(err);
             return;
           }
 
           request.onsuccess = () => {
-            resolve(request.result);
+            requestResult = request.result;
           };
 
           request.onerror = () => {
-            reject(
+            fail(
               request.error ||
                 new Error(
                   operationErrorMessage
@@ -86,15 +101,31 @@ export function createIndexedDbKeyValueStore({
           };
 
           tx.oncomplete = () => {
+            if (settled) return;
+
+            settled = true;
             db.close();
+            resolve(requestResult);
           };
 
           tx.onerror = () => {
-            db.close();
+            fail(
+              tx.error ||
+                request?.error ||
+                new Error(
+                  operationErrorMessage
+                )
+            );
           };
 
           tx.onabort = () => {
-            db.close();
+            fail(
+              tx.error ||
+                request?.error ||
+                new Error(
+                  operationErrorMessage
+                )
+            );
           };
         })
     );

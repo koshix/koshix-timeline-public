@@ -99,11 +99,6 @@ for (const relativePath of requiredSourceFiles) {
 fs.cpSync(distDir, stageDir, {
   recursive: true,
   filter(sourcePath) {
-    const relativePath = path
-      .relative(distDir, sourcePath)
-      .split(path.sep)
-      .join("/");
-
     if (path.basename(sourcePath) === ".DS_Store") return false;
     return true;
   },

@@ -1,82 +1,13 @@
-import { eventYear } from "./event-schema.js";
 import {
-  decodeEventRow,
-} from "./event-codec.js";
-import {
-  PUBLIC_EVENT_TSV_HEADER,
-  validatePublicEventRow,
-} from "./event-schema.js";
+  parsePublicEventsTsv,
+} from "./public-events-tsv.js";
 
 let currentEvents = null;
 
 export function parseEventsTsv(text) {
-  const normalized = text.replace(/\r\n/g, "\n");
-  const lines = normalized
-    .split("\n")
-    .filter((line) => line.trim() !== "");
-
-  if (lines.length < 2) {
-    throw new Error("events.tsv にデータ行がありません");
-  }
-
-  const header = lines[0].split("\t");
-
-  if (
-    JSON.stringify(header) !==
-    JSON.stringify(PUBLIC_EVENT_TSV_HEADER)
-  ) {
-    throw new Error("events.tsv のヘッダーが一致しません");
-  }
-
-  const ids = new Set();
-  const events = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const lineNo = i + 1;
-    const cols = lines[i].split("\t");
-
-    if (cols.length !== PUBLIC_EVENT_TSV_HEADER.length) {
-      throw new Error(
-        `${lineNo}行目: 列数が ${cols.length}。` +
-        `${PUBLIC_EVENT_TSV_HEADER.length}列必要です`
-      );
-    }
-
-    const row = Object.fromEntries(
-      PUBLIC_EVENT_TSV_HEADER.map(
-        (key, j) => [key, cols[j].trim()]
-      )
-    );
-
-    try {
-      validatePublicEventRow(row);
-    } catch (error) {
-      throw new Error(
-        `${lineNo}行目: ${error.message}`
-      );
-    }
-
-    if (ids.has(row.id)) {
-      throw new Error(
-        `${lineNo}行目: id "${row.id}" が重複しています`
-      );
-    }
-    ids.add(row.id);
-
-    events.push(
-      decodeEventRow(row)
-    );
-  }
-
-  events.sort(
-    (a, b) =>
-      eventYear(a) - eventYear(b) ||
-      a.date.localeCompare(b.date) ||
-      a.title.localeCompare(b.title, "ja")
-  );
-
-  return events;
+  return parsePublicEventsTsv(text);
 }
+
 
 /*
  * 公開イベントをランタイムで準備する。

@@ -170,6 +170,58 @@ window.close();
     "1988年4月生まれ"
   );
 
+  const threadPagePromise =
+    context.waitForEvent("page");
+
+  await page
+    .getByRole("button", {
+      name: /のテーマをたどる$/,
+    })
+    .click();
+
+  const threadPage =
+    await threadPagePromise;
+
+  await threadPage.waitForLoadState();
+
+  const threadQuery =
+    threadPage.getByRole("searchbox", {
+      name: "たどるキーワード",
+    });
+
+  await threadQuery.fill(
+    "1947 || 1948"
+  );
+
+  await threadPage
+    .getByRole("button", {
+      name: "たどる",
+      exact: true,
+    })
+    .click();
+
+  await threadPage
+    .getByRole("button", {
+      name: /1947 \|\| 1948をたどる.*項目/,
+    })
+    .click();
+
+  const threadDialog =
+    threadPage.getByRole("dialog", {
+      name:
+        /テーマ閲覧:1947 \|\| 1948をたどる/,
+    });
+
+  await expect(threadDialog).toBeVisible();
+  await expect(
+    threadDialog.getByText(
+      "生まれる前",
+      { exact: true }
+    ).first()
+  ).toBeVisible();
+
+  await threadPage.close();
+
   await page
     .locator("summary")
     .filter({ hasText: "管理者向け" })
@@ -337,6 +389,40 @@ window.close();
       "1番目の成人期区分の名称"
     )
   ).toHaveValue("E2E架空成人期");
+
+  await expect(
+    settings.getByText(
+      "管理者人生設定を表示中です",
+      { exact: false }
+    )
+  ).toBeVisible();
+
+  await expect(
+    page.getByLabel(
+      "誕生年",
+      { exact: true }
+    )
+  ).toBeDisabled();
+
+  await expect(
+    page.getByLabel(
+      "大学など（任意）1行目の入学年"
+    )
+  ).toBeDisabled();
+
+  await expect(
+    settings.getByRole("button", {
+      name: "ファイルから読込",
+      exact: true,
+    })
+  ).toBeDisabled();
+
+  await expect(
+    settings.getByRole("button", {
+      name: "ファイルに保存",
+      exact: true,
+    })
+  ).toBeEnabled();
 
   const downloadPromise =
     page.waitForEvent("download");

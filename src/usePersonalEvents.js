@@ -12,13 +12,12 @@ import {
   parsePersonalEventsTsv,
   serializePersonalEventsTsv,
 } from "./personal-events-tsv.js";
-
-const createPersonalDraft = () => ({
-  date: "",
-  title: "",
-  importance: 2,
-  summary: "",
-});
+import {
+  applyPersonalEventDraft,
+  createPersonalDraft,
+  personalDraftFromEvent,
+  removePersonalEventById,
+} from "./personal-event-operations.js";
 
 export default function usePersonalEvents({
   onFirstAdded,
@@ -238,12 +237,9 @@ export default function usePersonalEvents({
 
     setPersonalEditorOpen(true);
     setEditingPersonalId(event.id);
-    setPersonalDraft({
-      date: event.date ?? "",
-      title: event.title ?? "",
-      importance: event.importance ?? 2,
-      summary: event.summary ?? "",
-    });
+    setPersonalDraft(
+      personalDraftFromEvent(event)
+    );
     setPersonalAddOpen(true);
     setPersonalFileStatus(
       `自分史「${event.title}」を編集中です`
@@ -305,16 +301,6 @@ export default function usePersonalEvents({
       return;
     }
 
-    const date = String(
-      personalDraft.date ?? ""
-    ).trim();
-    const title = String(
-      personalDraft.title ?? ""
-    ).trim();
-    const summary = String(
-      personalDraft.summary ?? ""
-    ).trim();
-
     const existing = editingPersonalId
       ? myEvents.find(
           (event) =>
@@ -329,40 +315,30 @@ export default function usePersonalEvents({
       return;
     }
 
-    const event = existing
-      ? {
-          ...existing,
-          date,
-          title: title,
-          importance: Number(
-            personalDraft.importance
-          ),
-          summary: summary,
-        }
-      : {
-          id: `me-${Date.now().toString(36)}`,
-          date,
-          title: title,
-          cats: ["me"],
-          primary: "me",
-          importance: Number(
-            personalDraft.importance
-          ),
-          summary: summary,
-        };
-
     const firstAdded =
       !existing && myEvents.length === 0;
 
-    const rawEvents = existing
-      ? myEvents.map((item) =>
-          item.id === editingPersonalId
-            ? event
-            : item
-        )
-      : [...myEvents, event];
-
     try {
+      const change =
+        applyPersonalEventDraft(
+          myEvents,
+          {
+            existing,
+            draft: personalDraft,
+            newId: existing
+              ? null
+              : `me-${Date.now().toString(36)}`,
+          }
+        );
+
+      const {
+        event,
+        events: rawEvents,
+        created,
+      } = change;
+
+      const title = event.title;
+
       // 既存TSV仕様で検証してからIndexedDBへ保存する。
       const events = parsePersonalEventsTsv(
         serializePersonalEventsTsv(rawEvents)
@@ -381,9 +357,9 @@ export default function usePersonalEvents({
       resetPersonalDraft();
       setPersonalAddOpen(false);
       setPersonalFileStatus(
-        existing
-          ? `自分史「${title}」を更新し、このブラウザに保存しました`
-          : `自分史「${title}」を追加し、このブラウザに保存しました`
+        created
+          ? `自分史「${title}」を追加し、このブラウザに保存しました`
+          : `自分史「${title}」を更新し、このブラウザに保存しました`
       );
     } catch (err) {
       console.error(
@@ -413,9 +389,11 @@ export default function usePersonalEvents({
     if (!ok) return;
 
     try {
-      const remaining = myEvents.filter(
-        (item) => item.id !== event.id
-      );
+      const remaining =
+        removePersonalEventById(
+          myEvents,
+          event.id
+        );
 
       // 削除後もTSVとして読み戻せることを確認してから保存する。
       const events = parsePersonalEventsTsv(

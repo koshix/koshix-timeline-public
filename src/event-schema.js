@@ -19,18 +19,26 @@ export const PUBLIC_EVENT_TSV_HEADER =
 export const PERSONAL_EVENT_TSV_HEADER =
   EVENT_TSV_HEADER;
 
-export const PUBLIC_EVENT_CATEGORY_KEYS = [
-  "sf",
-  "work",
+export const PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS = [
+  "society",
   "science",
   "education",
   "computer",
   "culture",
-  "society",
+  "work",
+];
+
+export const PUBLIC_EVENT_CATEGORY_KEYS = [
+  "sf",
+  ...PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS,
 ];
 
 export const PUBLIC_EVENT_CATEGORIES = new Set(
   PUBLIC_EVENT_CATEGORY_KEYS
+);
+
+export const PUBLIC_EVENT_PRIMARY_CATEGORIES = new Set(
+  PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS
 );
 
 export const PUBLIC_EVENT_SUB_TAG_KEYS = [
@@ -268,8 +276,7 @@ export function validatePublicEventRow(row) {
   }
 
   if (
-    row.primary === "sf" ||
-    !PUBLIC_EVENT_CATEGORIES.has(row.primary)
+    !PUBLIC_EVENT_PRIMARY_CATEGORIES.has(row.primary)
   ) {
     throw new Error(
       `primary "${row.primary}" が不正です`
@@ -356,8 +363,7 @@ export function validatePublicEvent(event) {
   }
 
   if (
-    event.primary === "sf" ||
-    !PUBLIC_EVENT_CATEGORIES.has(event.primary)
+    !PUBLIC_EVENT_PRIMARY_CATEGORIES.has(event.primary)
   ) {
     throw new Error(
       `primary "${event.primary}" が不正です`

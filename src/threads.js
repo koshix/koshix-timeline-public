@@ -8,6 +8,7 @@ export const THREADS = [
   {
     key: "space-and-universe",
     title: "宇宙の中心から外へ出る",
+    keyword: "宇宙",
     lead: "地球中心の閉じた天球から、太陽系、銀河、膨張宇宙、系外惑星へ。さらに人間自身が宇宙へ飛び出し、探査機と望遠鏡で宇宙像を更新し続ける。",
     items: [
       { id: "1543-copernicus-revolutionibus" },
@@ -36,6 +37,7 @@ export const THREADS = [
   {
     key: "energy-and-earth",
     title: "燃やす社会から地球を管理する社会へ",
+    keyword: "地球",
     lead: "蒸気機関、石油、電力、原子力によって産業社会は巨大化した。その副作用として大気汚染、温暖化、オゾン層破壊、原発事故が現れ、エネルギー問題は地球環境と国際政治の問題になる。",
     items: [
       { id: "1760-british-industrial-revolution" },
@@ -67,6 +69,7 @@ export const THREADS = [
   {
     key: "computing-to-ai",
     title: "計算機に「プログラム」が宿る",
+    keyword: "プログラム",
     lead: "機械式計算器から解析機関、計算可能性、電子計算機へ。さらにプログラミング言語、OS、データベース、パーソナルコンピュータ、自由ソフトウェアへ進み、計算機は汎用の知的道具になる。",
     items: [
       { id: "1642-pascaline" },
@@ -100,6 +103,7 @@ export const THREADS = [
   {
     key: "connected-world",
     title: "通信網が距離を消していく",
+    keyword: "通信網",
     lead: "腕木通信、電信、海底ケーブル、電話、無線から光ファイバー、インターネット、携帯通信へ。人を移動させずに情報を運ぶ距離と時間が縮み、通信網が社会の基盤になる。",
     items: [
       { id: "1793-chappe-optical-telegraph" },
@@ -136,6 +140,7 @@ export const THREADS = [
   {
     key: "war-and-order",
     title: "戦争のあとに世界のルールを作る",
+    keyword: "ルール",
     lead: "宗教戦争後の和平から主権国家、国際法、国際連盟、国際連合、人権条約、核不拡散、国際刑事裁判所へ。破壊のたびに、国家間の暴力を抑える規則と組織が作り直される。",
     items: [
       { id: "1555-peace-of-augsburg" },
@@ -170,6 +175,7 @@ export const THREADS = [
   {
     key: "global-economy",
     title: "モノが世界を流れる仕組みを作る",
+    keyword: "モノ",
     lead: "海上交易、銀、勅許会社、航海法から自由貿易、運河、冷蔵輸送、コンテナ、バーコード、宅配、WTO、世界的供給網へ。世界経済を支えるのは、お金だけでなくモノを運ぶ仕組みでもある。",
     items: [
       { id: "1510-portuguese-goa-malacca" },
@@ -203,6 +209,7 @@ export const THREADS = [
   {
     key: "learning-systems",
     title: "学ぶ仕組みはどう変わったか",
+    keyword: "学ぶ",
     lead: "学校・大学・幼稚園から義務教育、教育権、共通試験、情報教育、生成AIまで。誰が何をどう学ぶかの仕組みが変わる。",
     items: [
       { id: "1599-ratio-studiorum" },
@@ -239,6 +246,7 @@ export const THREADS = [
   {
     key: "empire-decolonization",
     title: "帝国はどう広がり、どうほどけたか",
+    keyword: "帝国",
     lead: "海上拠点の獲得と征服、勅許会社による進出から帝国支配、植民地戦争、民族独立、脱植民地化へ。世界の政治地図が組み替えられていく。",
     items: [
       { id: "1510-portuguese-goa-malacca" },
@@ -275,6 +283,7 @@ export const THREADS = [
   {
     key: "mechanics-as-math",
     title: "運動を数式にする",
+    keyword: "運動",
     lead: "惑星・落体・振り子から解析力学、時空、確率過程、カオスへ。物体が「どう動くか」を数式へ写し取る方法そのものが変わっていく。",
     items: [
       { id: "1609-kepler-first-two-laws" },
@@ -307,6 +316,7 @@ export const THREADS = [
   {
     key: "heat-to-probability",
     title: "熱は確率になる",
+    keyword: "確率",
     lead: "熱伝導と蒸気機関から、エントロピー、分子運動、統計力学、確率過程、情報理論へ。熱を理解する過程で「多数の偶然」を扱う科学が生まれる。",
     items: [
       { id: "1822-fourier-analytic-theory-heat" },
@@ -339,6 +349,7 @@ export const THREADS = [
   {
     key: "inside-the-atom",
     title: "原子の中へ降りていく",
+    keyword: "原子",
     lead: "原子論と周期律から電子・原子核・量子力学へ、さらに中性子、クォーク、標準模型、ヒッグス粒子へ。物質の「最小単位」は何度も作り替えられる。",
     items: [
       { id: "1803-dalton-atomic-theory" },
@@ -371,6 +382,7 @@ export const THREADS = [
   {
     key: "mathematical-abstraction",
     title: "数学が「構造」を発見する",
+    keyword: "構造",
     lead: "対数・座標・微積分から、非ユークリッド幾何、群、集合、位相、論理、圏、スキームへ。数学は具体的な計算から抽象的な構造そのものを扱う学問へ進む。",
     items: [
       { id: "1614-napier-logarithms" },
@@ -403,6 +415,7 @@ export const THREADS = [
   {
     key: "instruments-open-worlds",
     title: "装置が新しい世界を開く",
+    keyword: "装置",
     lead: "肉眼観測から望遠鏡・顕微鏡・写真・分光・X線・加速器へ。さらにCT、MRI、宇宙望遠鏡、重力波、ブラックホール像まで、見えなかったものが装置によって現れる。",
     items: [
       { id: "1572-tycho-supernova" },
@@ -435,6 +448,7 @@ export const THREADS = [
   {
     key: "life-earth-system",
     title: "生命と地球を一つの系として見る",
+    keyword: "系",
     lead: "地層・分類・進化論から、生態学、生態系、プレートテクトニクス、環境保全、生物多様性へ。生命は個体だけでなく地球の長い時間と相互作用の中で捉えられる。",
     items: [
       { id: "1669-steno-stratigraphy" },
@@ -467,6 +481,7 @@ export const THREADS = [
   {
     key: "epidemics-public-health",
     title: "感染症を社会で防ぐ",
+    keyword: "感染症",
     lead: "天然痘が歴史を動かした時代から、ワクチン、衛生、細菌学、上下水道、抗生物質、医療制度、世界的根絶、COVID-19へ。病気への対抗は個人治療から社会システムへ広がる。",
     items: [
       { id: "1519-tenochtitlan-conquest" },
@@ -495,6 +510,7 @@ export const THREADS = [
   {
     key: "read-write-genome",
     title: "遺伝子を読む、書く",
+    keyword: "遺伝子",
     lead: "メンデルの法則から染色体、DNA、遺伝暗号へ。配列決定、PCR、ゲノム解析、クローン、iPS細胞を経て、CRISPRで遺伝情報そのものを書き換えるところまで進む。",
     items: [
       { id: "1865-mendel-inheritance-laws" },
@@ -528,6 +544,7 @@ export const THREADS = [
   {
     key: "ai-boom-winter-revival",
     title: "AIは何度も夢を見て、何度も冬を越す",
+    keyword: "AI",
     lead: "形式ニューロンとサイバネティクスから人工知能研究が始まり、二度のAI冬を経て、深層学習・Transformer・生成AIへ。期待と失望を繰り返しながら社会制度の対象にまでなる。",
     items: [
       { id: "1943-mcculloch-pitts-neuron" },
@@ -559,6 +576,7 @@ export const THREADS = [
   {
     key: "vacuum-tube-to-pocket-computer",
     title: "真空管から手のひらの計算機へ",
+    keyword: "真空管",
     lead: "真空管、巨大電子計算機、トランジスタ、集積回路、マイクロプロセッサを経て、個人用コンピュータと携帯型計算機へ。計算能力は部屋いっぱいの装置から個人の道具へ縮んでいく。",
     items: [
       { id: "1904-fleming-valve" },
@@ -591,6 +609,7 @@ export const THREADS = [
   {
     key: "electricity-into-society",
     title: "電気をつかまえ、社会に流す",
+    keyword: "電気",
     lead: "雷の正体から電池、電流、電磁誘導、発電・送電へ。電気は理論上の現象から通信・照明・家電・工場・蓄電池を支える社会インフラへ変わる。",
     items: [
       { id: "1752-franklin-lightning-electricity" },
@@ -623,6 +642,7 @@ export const THREADS = [
   {
     key: "record-copy-store",
     title: "記録し、複製し、持ち歩く",
+    keyword: "複製",
     lead: "印刷物から写真、録音、映画、磁気媒体、光ディスク、デジタルデータ、ストリーミングへ。情報は物体に固定するものから、複製し同期し呼び出すものへ変わる。",
     items: [
       { id: "1501-aldus-portable-books" },
@@ -657,6 +677,7 @@ export const THREADS = [
   {
     key: "speed-mobility-navigation",
     title: "人間はどこまで速く移動できるか",
+    keyword: "速く",
     lead: "気球、蒸気船、鉄道、自動車、飛行機、ジェット、新幹線へ。速度が上がるたびに、道路・航路・時刻・安全制度・測位・ナビゲーションも作り替えられる。",
     items: [
       { id: "1783-montgolfier-manned-flight" },
@@ -690,6 +711,7 @@ export const THREADS = [
   {
     key: "standardize-the-world",
     title: "バラバラな世界に共通規格をつくる",
+    keyword: "共通規格",
     lead: "長さ、郵便、時刻から文字コード、通信方式、文書・音声・無線規格へ。人や機械が互いに接続するため、世界は共通の尺度と言語を少しずつ作ってきた。",
     items: [
       { id: "1875-1emr89y" },
@@ -723,6 +745,7 @@ export const THREADS = [
   {
     key: "women-gender-rights",
     title: "「女であること」はどう変わったか",
+    keyword: "女",
     lead: "女性の権利論、参政権、家族法、避妊、雇用、フェミニズムからジェンダー論、交差性、#MeTooへ。性別を社会制度と文化がどう作るかという問いが広がる。",
     items: [
       { id: "1792-wollstonecraft-rights-woman" },
@@ -755,6 +778,7 @@ export const THREADS = [
   {
     key: "labor-to-welfare-state",
     title: "働くことを社会が引き受ける",
+    keyword: "働く",
     lead: "産業革命の工場労働から労働時間、労働組合、社会保険、失業対策、社会保障へ。働けない時、老いた時、子育てや介護をする時まで、生活を個人だけに任せない制度が作られる。",
     items: [
       { id: "1760-british-industrial-revolution" },
@@ -787,6 +811,7 @@ export const THREADS = [
   {
     key: "democracy-expands-and-retreats",
     title: "民主主義は誰を「人民」に含めるか",
+    keyword: "人民",
     lead: "権利章典と憲法から選挙権の拡大、人種・性別による排除の撤廃へ。しかし民主主義は一方向に進むわけではなく、独裁化や弾圧、国民投票という緊張も繰り返す。",
     items: [
       { id: "1688-glorious-revolution" },
@@ -820,6 +845,7 @@ export const THREADS = [
   {
     key: "nuclear-age",
     title: "原子核を開けてしまった世界",
+    keyword: "原子核",
     lead: "放射能と原子核の発見から核分裂、原爆、原子力発電へ。同じ物理学が兵器と電源を生み、被爆の記憶、核抑止、不拡散、原発事故という問題を長く残す。",
     items: [
       { id: "1896-r903zn" },
@@ -849,6 +875,7 @@ export const THREADS = [
   {
     key: "cold-war-world-system",
     title: "世界が二つに割れた四十年",
+    keyword: "二つ",
     lead: "第二次世界大戦後、米ソ対立は軍事同盟、代理戦争、革命、宇宙開発、核危機を世界各地へ広げる。同時に非同盟や第三世界の動きも生まれ、最後は東欧革命とソ連解体へ至る。",
     items: [
       { id: "1939-czrwgj" },
@@ -881,6 +908,7 @@ export const THREADS = [
   {
     key: "money-finance-crises",
     title: "お金の仕組みが世界を揺らす",
+    keyword: "お金",
     lead: "中央銀行、世界恐慌、国際通貨体制、変動相場、金融自由化、バブルと金融危機へ。最後には銀行を介さないデジタル通貨まで現れ、「お金」の制度そのものが変わる。",
     items: [
       { id: "1694-bank-of-england" },
@@ -910,6 +938,7 @@ export const THREADS = [
   {
     key: "media-public-sphere",
     title: "メディアが「世論」をつくる",
+    keyword: "世論",
     lead: "新聞、ラジオ、映画、テレビからインターネットとSNSへ。情報を同時に共有する範囲が広がるほど、社会が何を知り、何を話題にするかという公共空間そのものが変わる。",
     items: [
       { id: "1605-carolus-relation-newspaper" },
@@ -942,6 +971,7 @@ export const THREADS = [
   {
     key: "music-becomes-media",
     title: "音楽が「作品」から「メディア」になる",
+    keyword: "メディア",
     lead: "蓄音機とレコードが音を保存し、ジャズ、ロック、電子音楽、ヒップホップへ。さらにWalkman、CD、MP3、配信へ進み、音楽は演奏の場から切り離されて世界を移動する。",
     items: [
       { id: "1877-edison-phonograph" },
@@ -975,6 +1005,7 @@ export const THREADS = [
   {
     key: "moving-images",
     title: "動く映像が世界の見方を変える",
+    keyword: "映像",
     lead: "映画の誕生から編集、モンタージュ、音声、特撮、テレビ、CG、動画配信へ。映像は現実の記録から、時間と空間を自由に組み替える文化の中心的な言語になる。",
     items: [
       { id: "1895-lumiere-cinematograph" },
@@ -1009,6 +1040,7 @@ export const THREADS = [
   {
     key: "art-breaks-representation",
     title: "美術は何度も「絵らしさ」を壊す",
+    keyword: "絵らしさ",
     lead: "印象派が光を分解し、セザンヌが空間を組み替え、キュビスム、抽象、レディメイド、シュルレアリスム、ポップアートへ。美術は何を描くかより「芸術とは何か」を問い始める。",
     items: [
       { id: "1872-impression-sunrise" },
@@ -1039,6 +1071,7 @@ export const THREADS = [
   {
     key: "architecture-design-modern-life",
     title: "建築とデザインが生活を設計する",
+    keyword: "生活",
     lead: "古典建築の原理から鉄とガラス、Arts and Crafts、モダニズム、バウハウスへ。戦後には都市、製品、広告、ピクトグラムまでがデザインされ、生活環境そのものが設計対象になる。",
     items: [
       { id: "1570-palladio-quattro-libri" },
@@ -1071,6 +1104,7 @@ export const THREADS = [
   {
     key: "publishing-to-web",
     title: "本を作る人から、誰もが出版する時代へ",
+    keyword: "出版",
     lead: "携帯できる印刷本、新聞、著作権、文庫、雑誌、コピー、DTPから電子図書館、Web、ブログ、Web小説へ。出版の入口は次第に専門家だけのものではなくなる。",
     items: [
       { id: "1501-aldus-portable-books" },
@@ -1104,6 +1138,7 @@ export const THREADS = [
   {
     key: "world-literature",
     title: "小説は世界の見方を作り替える",
+    keyword: "小説",
     lead: "近代小説、詩、演劇からモダニズム、植民地経験、移民、記憶へ。文学は物語の形式を変えながら、人間が社会と世界を見る位置そのものを組み替えていく。",
     items: [
       { id: "1603-1t4ryn7" },
@@ -1142,6 +1177,7 @@ export const THREADS = [
   {
     key: "japanese-literature",
     title: "日本語で「近代」を書き直す",
+    keyword: "日本語",
     lead: "近世の物語から言文一致、私小説、戦争と敗戦、女性の身体、都市と消費、現代の生きづらさへ。日本文学が新しい経験を受け止めるたび、日本語の語り方も変わっていく。",
     items: [
       { id: "1887-ukigumo-genbun-itchi" },
@@ -1179,6 +1215,7 @@ export const THREADS = [
   {
     key: "sf-as-thought-experiment",
     title: "SFは「もしも」で世界を試す",
+    keyword: "もしも",
     lead: "生命創造、時間旅行、ロボット、管理社会、宇宙文明、ジェンダー、人工知能へ。SFは未来を予言するだけでなく、現実の前提を一つ変えて、人間と社会の可能性を実験する。",
     items: [
       { id: "1818-frankenstein-novel" },
@@ -1216,6 +1253,7 @@ export const THREADS = [
   {
     key: "food-becomes-system",
     title: "食べることが巨大なシステムになる",
+    keyword: "食べる",
     lead: "飢饉と人口問題から、缶詰、冷蔵、化学肥料、緑の革命、加工食品、外食、コンビニへ。食料は土地と季節に縛られた営みから、生産・保存・輸送・販売を結ぶ巨大なシステムになる。",
     items: [
       { id: "1782-tenmei-famine" },
@@ -1245,6 +1283,7 @@ export const THREADS = [
   {
     key: "population-family-policy",
     title: "人口と家族の「当たり前」が変わる",
+    keyword: "家族",
     lead: "人口論、国勢調査、人口転換から、核家族化、出生率低下、生殖医療、高齢化、介護、同性婚へ。人口構造と家族のかたちは、社会制度とともに変わっていく。",
     items: [
       { id: "1798-malthus-population" },
@@ -1275,6 +1314,7 @@ export const THREADS = [
   {
     key: "postwar-japan-daily-life",
     title: "戦後日本の「ふつう」ができる",
+    keyword: "ふつう",
     lead: "住宅、家電、テレビ、鉄道、自動車、外食、宅配、音楽、ゲーム、携帯電話へ。高度成長から消費社会を経て、戦後日本の日常生活そのものが作り替えられていく。",
     items: [
       { id: "1950-kuigy" },
@@ -1311,6 +1351,7 @@ export const THREADS = [
   {
     key: "statistics-makes-world-legible",
     title: "世界を数字で読めるようにする",
+    keyword: "数字",
     lead: "確率論から国勢調査、標本分布、仮説検定、無作為化比較試験、モンテカルロ法、ベイズ統計へ。不確実な世界を数え、比較し、推論する方法が社会と科学の共通言語になる。",
     items: [
       { id: "1654-pascal-fermat-probability" },
@@ -1344,6 +1385,7 @@ export const THREADS = [
   {
     key: "modern-thought-rethinks-society",
     title: "社会を考える言葉が組み替わる",
+    keyword: "言葉",
     lead: "国家、自由、権利、階級、無意識、権力、正義、公共性へ。近代思想は、人間と社会を理解するための基本語彙そのものを何度も作り替えてきた。",
     items: [
       { id: "1651-1j579rb" },
@@ -1378,6 +1420,7 @@ export const THREADS = [
   {
     key: "mind-becomes-science",
     title: "心が観察と実験の対象になる",
+    keyword: "心",
     lead: "実験心理学、精神分析、行動主義、発達心理学から認知革命、言語、意思決定へ。目に見えない心を、観察・実験・モデルによって研究する科学が形づくられる。",
     items: [
       { id: "1879-wundt-experimental-psychology" },
@@ -1406,6 +1449,7 @@ export const THREADS = [
   {
     key: "chemistry-builds-matter",
     title: "化学が物質を設計し始める",
+    keyword: "物質",
     lead: "元素と原子、化学量論、構造式、周期表から高分子、立体化学、触媒、材料科学へ。化学は物質を分類する学問から、望む性質をもつ物質を作る学問へ進む。",
     items: [
       { id: "1662-boyle-law" },
@@ -1443,6 +1487,7 @@ export const THREADS = [
   {
     key: "faith-conflict-toleration",
     title: "信仰の争いから寛容をつくる",
+    keyword: "寛容",
     lead: "宗教改革、宗派戦争、国教化と迫害から、信教の自由、宗教批判、宗教間の共存へ。信仰をめぐる対立の中から、異なる信念を同じ社会に置く仕組みが作られていく。",
     items: [
       { id: "1516-o8yaxr" },
@@ -1476,6 +1521,7 @@ export const THREADS = [
   {
     key: "modern-japan-state",
     title: "日本は近代国家を組み立てる",
+    keyword: "近代国家",
     lead: "開国から明治維新、中央集権、学校、徴兵、租税、憲法、帝国拡大へ。幕藩体制を解体し、西欧型の制度を短期間に組み合わせながら近代国家を作っていく。",
     items: [
       { id: "1853-perry-kanagawa-treaty" },
@@ -1509,6 +1555,7 @@ export const THREADS = [
   {
     key: "life-as-chemistry",
     title: "生命が化学反応として見えてくる",
+    keyword: "化学反応",
     lead: "細胞の発見から酵素、代謝、ATP、遺伝子発現、抗体、タンパク質へ。生命現象を特別な生命力ではなく、物質と反応の連鎖として説明する生化学が形づくられる。",
     items: [
       { id: "1665-hooke-micrographia" },
@@ -1541,6 +1588,7 @@ export const THREADS = [
   {
     key: "music-breaks-its-form",
     title: "音楽は何度も自分の形を壊す",
+    keyword: "音楽",
     lead: "楽譜出版、オペラ、交響曲から標題音楽、無調、リズム革命、偶然性、沈黙、東西の楽器の融合へ。音楽は既成の形式を壊しながら、新しい聴き方そのものを作っていく。",
     items: [
       { id: "1501-petrucci-odhecaton" },

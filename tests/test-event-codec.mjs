@@ -8,6 +8,8 @@ import {
   EVENT_TSV_HEADER,
   PERSONAL_EVENT_TSV_HEADER,
   PUBLIC_EVENT_CATEGORIES,
+  PUBLIC_EVENT_PRIMARY_CATEGORIES,
+  PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS,
   PUBLIC_EVENT_SUB_FILTER_ROWS,
   PUBLIC_EVENT_SUB_FILTER_TAGS,
   PUBLIC_EVENT_SUB_TAG_KEYS,
@@ -30,7 +32,28 @@ assert.strictEqual(
 );
 
 assert.equal(PUBLIC_EVENT_CATEGORIES.has("science"), true);
+assert.equal(PUBLIC_EVENT_CATEGORIES.has("sf"), true);
 assert.equal(PUBLIC_EVENT_CATEGORIES.has("me"), false);
+
+assert.deepEqual(
+  PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS,
+  [
+    "society",
+    "science",
+    "education",
+    "computer",
+    "culture",
+    "work",
+  ]
+);
+assert.equal(
+  PUBLIC_EVENT_PRIMARY_CATEGORIES.has("work"),
+  true
+);
+assert.equal(
+  PUBLIC_EVENT_PRIMARY_CATEGORIES.has("sf"),
+  false
+);
 
 assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 19);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("thought"), true);

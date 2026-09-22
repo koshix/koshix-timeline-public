@@ -86,10 +86,11 @@ export default function useDynamicThreads({
       setThreadQueriesLoaded(true);
     };
 
-    restoreThreadQueries().catch(() => {
-      if (!cancelled) {
-        setThreadQueriesLoaded(true);
-      }
+    restoreThreadQueries().catch((err) => {
+      console.error(
+        "Browser thread queries could not be loaded; automatic saving is disabled:",
+        err
+      );
     });
 
     return () => {

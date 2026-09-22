@@ -25,23 +25,99 @@ export function decodeSettingsStorageValue(value) {
   });
 }
 
-export const settingsStore = {
-  load() {
-    try {
-      const raw = window.localStorage.getItem(
-        SETTINGS_STORAGE_KEY
-      );
+export function readSettingsStorage() {
+  let raw;
 
-      if (raw == null) {
-        return null;
-      }
+  try {
+    raw = window.localStorage.getItem(
+      SETTINGS_STORAGE_KEY
+    );
+  } catch (error) {
+    return {
+      status: "unavailable",
+      data: null,
+      error,
+    };
+  }
 
-      return decodeSettingsStorageValue(
-        JSON.parse(raw)
-      ).data;
-    } catch {
-      return null;
+  if (raw == null) {
+    return {
+      status: "missing",
+      data: null,
+      error: null,
+    };
+  }
+
+  let parsed;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    return {
+      status: "invalid",
+      data: null,
+      error,
+    };
+  }
+
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    !Array.isArray(parsed) &&
+    parsed.format ===
+      SETTINGS_STORAGE_FORMAT &&
+    Number.isInteger(
+      parsed.schemaVersion
+    )
+  ) {
+    if (
+      parsed.schemaVersion >
+      SETTINGS_STORAGE_VERSION
+    ) {
+      return {
+        status: "future",
+        data: null,
+        error: new Error(
+          `設定保存データは新しい形式(version ${parsed.schemaVersion})です`
+        ),
+      };
     }
+
+    if (
+      parsed.schemaVersion <
+      SETTINGS_STORAGE_VERSION
+    ) {
+      return {
+        status: "obsolete",
+        data: null,
+        error: null,
+      };
+    }
+  }
+
+  try {
+    return {
+      status: "ok",
+      data:
+        decodeSettingsStorageValue(
+          parsed
+        ).data,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      status: "invalid",
+      data: null,
+      error,
+    };
+  }
+}
+
+export const settingsStore = {
+  read: readSettingsStorage,
+
+  load() {
+    return readSettingsStorage().data;
   },
 
   save(data) {
@@ -52,7 +128,17 @@ export const settingsStore = {
           encodeSettingsStorageValue(data)
         )
       );
-    } catch {}
+
+      return {
+        ok: true,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error,
+      };
+    }
   },
 
   replace(data) {

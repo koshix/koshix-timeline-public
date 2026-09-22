@@ -8,6 +8,7 @@ import ShareBar from "./ShareBar";
 
 export default function Theater({
   thread,
+  threadCount,
   gradeLabel,
   birth,
   onClose,
@@ -104,7 +105,7 @@ export default function Theater({
       <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #d7dce2", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.2em", color: "#8a93a3" }}>48のテーマをたどる</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.2em", color: "#8a93a3" }}>{threadCount}のテーマをたどる</div>
             <div style={{ fontSize: 17, fontWeight: 800, marginTop: 3 }}>{thread.title}</div>
             <div style={{ fontSize: 11.5, color: "#4b5563", marginTop: 4, lineHeight: 1.6 }}>
               {thread.lead}

@@ -1,12 +1,17 @@
-import { eventYear } from "./event-schema.js";
+import {
+  eventYear,
+  PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS,
+} from "./event-schema.js";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { loadEvents } from "./events-source";
-import { loadConfig } from "./config-source";
+import {
+  loadAppRuntimeState,
+} from "./app-runtime.js";
 import { applyEventCustomizations } from "./event-customizations";
 import { THREADS } from "./threads";
 import {
-  createInitialEducationSettings,
-} from "./life-settings";
+  buildConfiguredThreads,
+  findThreadByKey,
+} from "./thread-model";
 import useTimelineModel from "./useTimelineModel";
 import usePersonalEvents from "./usePersonalEvents";
 import useEventCustomizations from "./useEventCustomizations";
@@ -31,20 +36,27 @@ import AppFooter from "./AppFooter";
 import TimelineGroupList from "./TimelineGroupList";
 import TimelineViewControls from "./TimelineViewControls";
 
-const CONFIG = loadConfig();
-const PROFILE_DEFAULTS = CONFIG.defaults || {};
-const EVENTS = loadEvents();
+const {
+  config: CONFIG,
+  events: EVENTS,
+  saved: SAVED,
+  initialBirth: INITIAL_BIRTH,
+  initialMonth: INITIAL_MONTH,
+  initialEducation: INITIAL_EDUCATION,
+  initialAdultPeriods: INITIAL_ADULT_PERIODS,
+  appTitle: APP_TITLE,
+  hashtag: HASHTAG,
+  shareUrl: SHARE_URL,
+  showBeginnerGuide: SHOW_BEGINNER_GUIDE,
+  settingsAutoSaveEnabled:
+    SETTINGS_AUTO_SAVE_ENABLED,
+} = loadAppRuntimeState();
+
 const APP_VERSION = __APP_VERSION__;
 const APP_UPDATED_DATE = __APP_UPDATED_DATE__;
 
-const MAIN_CATS = [
-  "work",
-  "science",
-  "education",
-  "computer",
-  "culture",
-  "society",
-];
+const MAIN_CATS =
+  PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS;
 
 function ImportanceBadge({ level }) {
   const value = Math.max(1, Math.min(3, Number(level) || 2));
@@ -112,8 +124,6 @@ function formatEventDate(value) {
 }
 
 // ---- 共有 ----
-const APP_TITLE = CONFIG.title || "自分史プロジェクション";
-const HASHTAG = CONFIG.hashtag ?? "#自分史プロジェクション";
 const DOWNLOAD_URL = String(CONFIG.downloadUrl || "").trim();
 const PUBLIC_SOURCE_URL = String(
   CONFIG.publicSourceUrl || ""
@@ -124,47 +134,11 @@ const ACCESS_STATS_URL = String(
   CONFIG.accessStats?.pageUrl || ""
 ).trim();
 
-const SHARE_URL = (() => {
-  const configured = String(CONFIG.shareUrl || "").trim();
-
-  if (configured) {
-    return configured;
-  }
-
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  const { origin, pathname } = window.location;
-  return origin + pathname;
-})();
-
 // ---- テーマでたどる(年表に散らばった項目を、一本の流れとしてたどる) ----
-// 永久ID { id } で参照する。
-const resolveThreadItem = ({ id }) =>
-  EVENTS.find((event) => event.id === id);
-
-const THREAD_LIST = THREADS.map((th) => ({
-  ...th,
-  events: th.items.map(resolveThreadItem).filter(Boolean),
-})).filter((th) => th.events.length > 1);
-
-const findThread = (key) => THREAD_LIST.find((t) => t.key === key) || null;
-
-// ---- 保存(ブラウザのみ。使えない環境では黙ってメモリ動作) ----
-const SAVED =
-  (typeof window !== "undefined" &&
-    workspaceStore.settings.load()) ||
-  {};
-const SHOW_BEGINNER_GUIDE = SAVED.beginnerGuideSeen !== true;
-const INITIAL_BIRTH =
-  SAVED.birth ?? PROFILE_DEFAULTS.birthYear ?? null;
-const INITIAL_MONTH = SAVED.month ?? PROFILE_DEFAULTS.birthMonth ?? 0;
-const INITIAL_EDUCATION = createInitialEducationSettings(
-  SAVED,
-  PROFILE_DEFAULTS,
-  INITIAL_BIRTH,
-  INITIAL_MONTH
+// 永久ID { id } からの解決規則は thread-model.js を正本とする。
+const THREAD_LIST = buildConfiguredThreads(
+  THREADS,
+  EVENTS
 );
 
 export default function App() {
@@ -172,7 +146,7 @@ export default function App() {
     initialBirth: INITIAL_BIRTH,
     initialMonth: INITIAL_MONTH,
     initialEducation: INITIAL_EDUCATION,
-    savedAdultPeriods: SAVED.adultPeriods,
+    savedAdultPeriods: INITIAL_ADULT_PERIODS,
   });
   const {
     birth,
@@ -305,32 +279,44 @@ export default function App() {
   });
 
   useEffect(() => {
+    if (!SETTINGS_AUTO_SAVE_ENABLED) {
+      return;
+    }
+
     const currentSettings =
       lifeSettingsSource === "server"
         ? workspaceStore.settings.load() || {}
         : {};
 
-    workspaceStore.settings.save({
-      ...currentSettings,
-      ...(lifeSettingsSource === "server"
-        ? {}
-        : {
-            birth,
-            month,
-            education,
-            adultPeriods,
-          }),
-      catOff,
-      sfOnly,
-      subFilters,
-      categoryMatchMode,
-      importanceMin,
-      closed: [...closedStages],
-      periodFramesInitialized: true,
-      setupOpen,
-      personalHistoryOpen,
-      beginnerGuideSeen: true,
-    });
+    const saveResult =
+      workspaceStore.settings.save({
+        ...currentSettings,
+        ...(lifeSettingsSource === "server"
+          ? {}
+          : {
+              birth,
+              month,
+              education,
+              adultPeriods,
+            }),
+        catOff,
+        sfOnly,
+        subFilters,
+        categoryMatchMode,
+        importanceMin,
+        closed: [...closedStages],
+        periodFramesInitialized: true,
+        setupOpen,
+        personalHistoryOpen,
+        beginnerGuideSeen: true,
+      });
+
+    if (!saveResult.ok) {
+      console.error(
+        "Browser settings could not be saved:",
+        saveResult.error
+      );
+    }
   }, [
     birth,
     month,
@@ -370,7 +356,10 @@ export default function App() {
   // ?t=<テーマのキー> ならそのテーマを開いた状態で始める
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    const th = findThread(q.get("t"));
+    const th = findThreadByKey(
+      THREAD_LIST,
+      q.get("t")
+    );
     if (th) setThread(th);
     const ev = findEventByShareParam(
       EVENTS,
@@ -617,6 +606,7 @@ export default function App() {
             exportVisibleEventsTsv,
           }}
           openThreadWindow={openThreadWindow}
+          threadCount={THREAD_LIST.length}
           resetTimelineFilters={resetTimelineFilters}
           hasActiveDisplayFilters={hasActiveDisplayFilters}
           ui={{
@@ -706,6 +696,7 @@ export default function App() {
       {thread && (
         <Theater
           thread={thread}
+          threadCount={THREAD_LIST.length}
           gradeLabel={grouped.gradeLabel}
           birth={birth}
           hashtag={HASHTAG}

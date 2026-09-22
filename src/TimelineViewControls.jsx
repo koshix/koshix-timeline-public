@@ -11,6 +11,7 @@ export default function TimelineViewControls({
   search,
   download,
   openThreadWindow,
+  threadCount,
   resetTimelineFilters,
   hasActiveDisplayFilters,
   ui,
@@ -164,7 +165,7 @@ export default function TimelineViewControls({
             className="timeline-thread-button timeline-thread-button--summary"
             style={{ "--timeline-font": font }}
           >
-            48のテーマをたどる
+            {threadCount}のテーマをたどる
           </button>
 
           <button

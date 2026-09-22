@@ -159,8 +159,14 @@ export default function TimelineCategoryFilters({
             : "横断タグを開く"
         }
       >
-        {subFiltersOpen ? "▼" : "▶"} 絞込み
-        {subFilters.length > 0 ? `（${subFilters.length}）` : ""}
+        <span className="timeline-subfilter-toggle-label">
+          {subFiltersOpen ? "▼" : "▶"} 絞込み
+        </span>
+        {subFilters.length > 0 ? (
+          <span className="timeline-subfilter-toggle-count">
+            （{subFilters.length}）
+          </span>
+        ) : null}
       </button>
       </div>
 

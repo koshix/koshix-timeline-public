@@ -442,6 +442,46 @@ assert.deepEqual(
   ]
 );
 
+const sameYearCategoryOrder =
+  buildTimelineEventList({
+    publicEvents: [
+      "work",
+      "culture",
+      "computer",
+      "education",
+      "science",
+      "society",
+    ].map((primary) => ({
+      id: `same-year-${primary}`,
+      date: "2000",
+      title: primary,
+      cats: [primary],
+      primary,
+      importance: 2,
+    })),
+    personalEvents: [],
+    showPersonal: false,
+    birth: null,
+    catOff: {},
+    sfOnly: false,
+    importanceMin: 2,
+    search: allSearch,
+  });
+
+assert.deepEqual(
+  sameYearCategoryOrder.map(
+    (event) => event.primary
+  ),
+  [
+    "society",
+    "science",
+    "education",
+    "computer",
+    "culture",
+    "work",
+  ]
+);
+
 const personal = timelineList.find(
   (event) => event.id === "personal"
 );

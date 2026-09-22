@@ -6,6 +6,10 @@ import {
 import {
   createIndexedDbKeyValueStore,
 } from "./indexeddb-key-value-store.js";
+import {
+  parseEventCustomizationsTsv,
+  serializeEventCustomizationsTsv,
+} from "./event-customizations-tsv.js";
 
 const DB_NAME = "koshix-timeline-customizations";
 const DB_VERSION = 1;
@@ -53,11 +57,13 @@ function validateCustomizations(value) {
     );
   }
 
-  return {
-    overrides,
-    hidden,
-    additions,
-  };
+  return parseEventCustomizationsTsv(
+    serializeEventCustomizationsTsv({
+      overrides,
+      hidden,
+      additions,
+    })
+  );
 }
 
 export function encodeEventCustomizationsStorageValue(

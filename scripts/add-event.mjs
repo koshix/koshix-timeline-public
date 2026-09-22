@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import {
   PUBLIC_EVENT_CATEGORIES,
-  PUBLIC_EVENT_TSV_HEADER,
+  PUBLIC_EVENT_PRIMARY_CATEGORIES,
   isValidEventDate,
   validateEventSources,
+  validatePublicEventRow,
 } from "../src/event-schema.js";
 
 import {
@@ -139,12 +140,17 @@ function normalize(data) {
     }
   }
 
-  const primary =
-    clean(data.primary) || cats[0];
+  const defaultPrimary = cats.find(
+    (cat) =>
+      PUBLIC_EVENT_PRIMARY_CATEGORIES.has(cat)
+  );
 
-  if (!PUBLIC_EVENT_CATEGORIES.has(primary)) {
+  const primary =
+    clean(data.primary) || defaultPrimary;
+
+  if (!PUBLIC_EVENT_PRIMARY_CATEGORIES.has(primary)) {
     throw new Error(
-      `未知の primary です: ${primary}`
+      `primary に指定できない分類です: ${primary}`
     );
   }
 
@@ -197,6 +203,9 @@ function normalize(data) {
       );
     }
   }
+
+  // 公開イベントschemaを最終的な正本として検証する。
+  validatePublicEventRow(row);
 
   return row;
 }

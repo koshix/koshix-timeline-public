@@ -28,6 +28,7 @@ export default function TimelineSettingsSection({
     addAdultPeriod,
     removeAdultPeriod,
     lifeSettingsStatus,
+    lifeSettingsSource,
     lifeSettingsFileInputRef,
     importLifeSettingsFile,
     exportLifeSettingsFile,
@@ -52,6 +53,8 @@ export default function TimelineSettingsSection({
 
   const birthConfigured =
     validYear(birth) != null;
+  const readOnly =
+    lifeSettingsSource === "server";
 
   return (
     <div
@@ -147,17 +150,46 @@ export default function TimelineSettingsSection({
             ここで入力した内容は、この端末のこのブラウザ内だけに保存されます。
             公開年表の元データには書き込まれません。
           </div>
-          <BirthSettingsEditor
-            birth={birth}
-            month={month}
-            setBirthYear={setBirthYear}
-            setBirthMonth={setBirthMonth}
-            resetBirthSettings={
-              resetBirthSettings
-            }
-            font={font}
-            mono={mono}
-          />
+          {readOnly && (
+            <div
+              role="status"
+              style={{
+                margin: "0 16px 10px",
+                padding: "8px 10px",
+                borderRadius: 8,
+                background: "#fff8ec",
+                border: "1px solid #e1c08c",
+                color: "#7c551d",
+                fontSize: 11,
+                lineHeight: 1.6,
+              }}
+            >
+              管理者人生設定を表示中です。設定は読み取り専用です。
+              ファイルへの保存はできます。
+            </div>
+          )}
+
+          <fieldset
+            disabled={readOnly}
+            style={{
+              border: 0,
+              padding: 0,
+              margin: 0,
+              minWidth: 0,
+            }}
+          >
+            <BirthSettingsEditor
+              birth={birth}
+              month={month}
+              setBirthYear={setBirthYear}
+              setBirthMonth={setBirthMonth}
+              resetBirthSettings={
+                resetBirthSettings
+              }
+              font={font}
+              mono={mono}
+            />
+          </fieldset>
 
           <details
             style={{
@@ -190,36 +222,47 @@ export default function TimelineSettingsSection({
                 "12px 16px 14px",
             }}
           >
-            <EducationHistoryEditor
-              key={educationEditorRevision}
-              education={education}
-              onEducationChange={
-                updateEducation
-              }
-            />
+            <fieldset
+              disabled={readOnly}
+              style={{
+                width: "100%",
+                minWidth: 0,
+                border: 0,
+                padding: 0,
+                margin: 0,
+              }}
+            >
+              <EducationHistoryEditor
+                key={educationEditorRevision}
+                education={education}
+                onEducationChange={
+                  updateEducation
+                }
+              />
 
-            <AdultPeriodsEditor
-              adultPeriods={adultPeriods}
-              adultYear={adultYear}
-              adultPeriodErrors={
-                adultPeriodErrors
-              }
-              resetAdultPeriods={
-                resetAdultPeriods
-              }
-              updateAdultPeriod={
-                updateAdultPeriod
-              }
-              addAdultPeriod={
-                addAdultPeriod
-              }
-              removeAdultPeriod={
-                removeAdultPeriod
-              }
-              font={font}
-              mono={mono}
-              miniBtn={miniBtn}
-            />
+              <AdultPeriodsEditor
+                adultPeriods={adultPeriods}
+                adultYear={adultYear}
+                adultPeriodErrors={
+                  adultPeriodErrors
+                }
+                resetAdultPeriods={
+                  resetAdultPeriods
+                }
+                updateAdultPeriod={
+                  updateAdultPeriod
+                }
+                addAdultPeriod={
+                  addAdultPeriod
+                }
+                removeAdultPeriod={
+                  removeAdultPeriod
+                }
+                font={font}
+                mono={mono}
+                miniBtn={miniBtn}
+              />
+            </fieldset>
 
             <LifeSettingsFileControls
               lifeSettingsStatus={
@@ -234,6 +277,7 @@ export default function TimelineSettingsSection({
               exportLifeSettingsFile={
                 exportLifeSettingsFile
               }
+              readOnly={readOnly}
               miniBtn={miniBtn}
             />
 

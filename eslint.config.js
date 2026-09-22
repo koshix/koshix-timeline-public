@@ -49,6 +49,22 @@ export default [
   {
     files: [
       "scripts/**/*.mjs",
+    ],
+
+    rules: {
+      "no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+
+  {
+    files: [
+      "scripts/**/*.mjs",
       "vite.config.js",
       "playwright.config.js",
       "tests/**/*.js",

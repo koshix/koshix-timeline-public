@@ -6,6 +6,10 @@ import {
 import {
   createIndexedDbKeyValueStore,
 } from "./indexeddb-key-value-store.js";
+import {
+  parsePersonalEventsTsv,
+  serializePersonalEventsTsv,
+} from "./personal-events-tsv.js";
 
 const DB_NAME = "koshix-timeline";
 const DB_VERSION = 1;
@@ -21,7 +25,13 @@ function validatePersonalEvents(value) {
     throw new Error("ブラウザ内の個人史データ形式が不正です");
   }
 
-  return value;
+  if (value.length === 0) {
+    return [];
+  }
+
+  return parsePersonalEventsTsv(
+    serializePersonalEventsTsv(value)
+  );
 }
 
 export function encodePersonalEventsStorageValue(events) {

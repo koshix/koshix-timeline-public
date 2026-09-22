@@ -4,6 +4,10 @@ import {
   SETTINGS_STORAGE_KEY,
   SETTINGS_STORAGE_VERSION,
 } from "../../src/settings-store.js";
+import { THREADS } from "../../src/threads.js";
+
+const THEME_HEADING =
+  `${THREADS.length}のテーマをたどる`;
 
 const SETTINGS_KEY = SETTINGS_STORAGE_KEY;
 const SETTINGS_FORMAT = SETTINGS_STORAGE_FORMAT;
@@ -40,6 +44,13 @@ test("app loads and exposes the main controls", async ({ page }) => {
       name: "教育",
       exact: true,
     }).first()
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", {
+      name: THEME_HEADING,
+      exact: true,
+    })
   ).toBeVisible();
 
   const showAllCategories = page.getByRole("button", {
@@ -521,7 +532,7 @@ test("small and landscape viewports avoid overflow and expose keyboard focus", a
 
     await expect(
       page.getByRole("heading", {
-        name: "48のテーマをたどる",
+        name: THEME_HEADING,
         exact: true,
       })
     ).toBeVisible();

@@ -33,59 +33,8 @@ const THREAD_ACCENTS = [
   "#C84444",
 ];
 
-const THEME_KEYWORDS = Object.freeze({
-  "space-and-universe": "宇宙",
-  "energy-and-earth": "地球",
-  "computing-to-ai": "プログラム",
-  "connected-world": "通信網",
-  "war-and-order": "ルール",
-  "global-economy": "モノ",
-  "learning-systems": "学ぶ",
-  "empire-decolonization": "帝国",
-  "mechanics-as-math": "運動",
-  "heat-to-probability": "確率",
-  "inside-the-atom": "原子",
-  "mathematical-abstraction": "構造",
-  "instruments-open-worlds": "装置",
-  "life-earth-system": "系",
-  "epidemics-public-health": "感染症",
-  "read-write-genome": "遺伝子",
-  "ai-boom-winter-revival": "AI",
-  "vacuum-tube-to-pocket-computer": "真空管",
-  "electricity-into-society": "電気",
-  "record-copy-store": "複製",
-  "speed-mobility-navigation": "速く",
-  "standardize-the-world": "共通規格",
-  "women-gender-rights": "女",
-  "labor-to-welfare-state": "働く",
-  "democracy-expands-and-retreats": "人民",
-  "nuclear-age": "原子核",
-  "cold-war-world-system": "二つ",
-  "money-finance-crises": "お金",
-  "media-public-sphere": "世論",
-  "music-becomes-media": "メディア",
-  "moving-images": "映像",
-  "art-breaks-representation": "絵らしさ",
-  "architecture-design-modern-life": "生活",
-  "publishing-to-web": "出版",
-  "world-literature": "小説",
-  "japanese-literature": "日本語",
-  "sf-as-thought-experiment": "もしも",
-  "food-becomes-system": "食べる",
-  "population-family-policy": "家族",
-  "postwar-japan-daily-life": "ふつう",
-  "statistics-makes-world-legible": "数字",
-  "modern-thought-rethinks-society": "言葉",
-  "mind-becomes-science": "心",
-  "chemistry-builds-matter": "物質",
-  "faith-conflict-toleration": "寛容",
-  "modern-japan-state": "近代国家",
-  "life-as-chemistry": "化学反応",
-  "music-breaks-its-form": "音楽",
-});
-
 const renderThemeTitle = (item, accent) => {
-  const keyword = THEME_KEYWORDS[item.key];
+  const keyword = item.keyword;
 
   if (!keyword) return item.title;
 
@@ -305,7 +254,7 @@ export default function ThreadWindow({
                 color: "#374151",
               }}
             >
-              48のテーマをたどる
+              {configuredThreads.length}のテーマをたどる
             </h1>
           </div>
 
@@ -727,6 +676,7 @@ export default function ThreadWindow({
       {thread && (
         <Theater
           thread={thread}
+          threadCount={configuredThreads.length}
           gradeLabel={gradeLabel}
           birth={birth}
           hashtag={hashtag}

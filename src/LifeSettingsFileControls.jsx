@@ -3,6 +3,7 @@ export default function LifeSettingsFileControls({
   lifeSettingsFileInputRef,
   importLifeSettingsFile,
   exportLifeSettingsFile,
+  readOnly = false,
   miniBtn,
 }) {
   return (
@@ -60,6 +61,7 @@ export default function LifeSettingsFileControls({
 
         <button
           type="button"
+          disabled={readOnly}
           onClick={() =>
             lifeSettingsFileInputRef.current?.click()
           }
@@ -69,6 +71,12 @@ export default function LifeSettingsFileControls({
             background: "#f0f6fd",
             border: "1px solid #bdd0e5",
             color: "#41698f",
+            ...(readOnly
+              ? {
+                  opacity: 0.45,
+                  cursor: "not-allowed",
+                }
+              : {}),
           }}
         >
           ファイルから読込
@@ -79,6 +87,7 @@ export default function LifeSettingsFileControls({
           type="file"
           accept=".tsv,text/tab-separated-values,text/plain"
           onChange={importLifeSettingsFile}
+          disabled={readOnly}
           style={{ display: "none" }}
         />
 

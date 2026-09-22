@@ -150,7 +150,47 @@ const events = [
     rows.map((row) => row.split("\t")[idIndex])
   );
 
+  const threadKeys = THREADS.map(
+    (thread) => thread.key
+  );
+
+  assert.equal(
+    new Set(threadKeys).size,
+    threadKeys.length,
+    "recommended theme keys must be unique"
+  );
+
   for (const thread of THREADS) {
+    assert.ok(
+      thread.key,
+      "recommended theme key is required"
+    );
+    assert.ok(
+      thread.title,
+      `recommended theme title is required: ${thread.key}`
+    );
+    assert.ok(
+      thread.lead,
+      `recommended theme lead is required: ${thread.key}`
+    );
+    assert.ok(
+      thread.keyword,
+      `recommended theme keyword is required: ${thread.key}`
+    );
+    assert.ok(
+      thread.items.length >= 2,
+      `recommended theme requires at least two events: ${thread.key}`
+    );
+
+    const keywordCount =
+      thread.title.split(thread.keyword).length - 1;
+
+    assert.equal(
+      keywordCount,
+      1,
+      `recommended theme keyword must occur exactly once in title: ${thread.key}`
+    );
+
     const threadIds = thread.items.map((item) => item.id);
 
     assert.equal(

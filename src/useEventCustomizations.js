@@ -78,6 +78,11 @@ export default function useEventCustomizations({
 
     workspaceStore.eventCustomizations.load()
       .then((customizations) => {
+        applyEventCustomizations(
+          events,
+          customizations
+        );
+
         if (!cancelled) {
           setEventCustomizations(customizations);
         }

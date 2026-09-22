@@ -6,6 +6,7 @@ import {
   SETTINGS_STORAGE_VERSION,
   decodeSettingsStorageValue,
   encodeSettingsStorageValue,
+  settingsStore,
 } from "../src/settings-store.js";
 import {
   PERSONAL_EVENTS_STORAGE_FORMAT,
@@ -167,6 +168,123 @@ assert.throws(
   /version付き形式が不正/
 );
 
+const originalWindow =
+  globalThis.window;
+
+try {
+  let rawValue = null;
+  let failGet = false;
+  let failSet = false;
+
+  globalThis.window = {
+    localStorage: {
+      getItem() {
+        if (failGet) {
+          throw new Error(
+            "storage unavailable"
+          );
+        }
+
+        return rawValue;
+      },
+
+      setItem(_key, value) {
+        if (failSet) {
+          throw new Error(
+            "storage full"
+          );
+        }
+
+        rawValue = value;
+      },
+
+      removeItem() {
+        rawValue = null;
+      },
+    },
+  };
+
+  assert.equal(
+    settingsStore.read().status,
+    "missing"
+  );
+
+  rawValue = JSON.stringify(
+    encodeSettingsStorageValue(
+      settings
+    )
+  );
+
+  assert.deepEqual(
+    settingsStore.read(),
+    {
+      status: "ok",
+      data: settings,
+      error: null,
+    }
+  );
+
+  rawValue = JSON.stringify({
+    format: SETTINGS_STORAGE_FORMAT,
+    schemaVersion:
+      SETTINGS_STORAGE_VERSION - 1,
+    data: settings,
+  });
+
+  assert.equal(
+    settingsStore.read().status,
+    "obsolete"
+  );
+
+  rawValue = JSON.stringify({
+    format: SETTINGS_STORAGE_FORMAT,
+    schemaVersion:
+      SETTINGS_STORAGE_VERSION + 1,
+    data: settings,
+  });
+
+  assert.equal(
+    settingsStore.read().status,
+    "future"
+  );
+
+  rawValue = "{invalid json";
+
+  assert.equal(
+    settingsStore.read().status,
+    "invalid"
+  );
+
+  failGet = true;
+
+  assert.equal(
+    settingsStore.read().status,
+    "unavailable"
+  );
+
+  failGet = false;
+  failSet = true;
+
+  const failedSave =
+    settingsStore.save(settings);
+
+  assert.equal(
+    failedSave.ok,
+    false
+  );
+  assert.match(
+    failedSave.error.message,
+    /storage full/
+  );
+} finally {
+  if (originalWindow === undefined) {
+    delete globalThis.window;
+  } else {
+    globalThis.window =
+      originalWindow;
+  }
+}
+
 const personalEvents = [
   {
     id: "me-1",
@@ -233,6 +351,23 @@ assert.throws(
       )
     ),
   /個人史データ形式が不正/
+);
+
+assert.throws(
+  () =>
+    decodePersonalEventsStorageValue(
+      createVersionedRecord(
+        PERSONAL_EVENTS_STORAGE_FORMAT,
+        PERSONAL_EVENTS_STORAGE_VERSION,
+        [
+          {
+            ...personalEvents[0],
+            date: "2000-99-99",
+          },
+        ]
+      )
+    ),
+  /date "2000-99-99" の形式が不正/
 );
 
 const administratorData = {
@@ -350,6 +485,52 @@ assert.throws(
   () =>
     decodeEventCustomizationsStorageValue(customizations),
   /version付き形式が不正/
+);
+
+assert.throws(
+  () =>
+    decodeEventCustomizationsStorageValue(
+      createVersionedRecord(
+        EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
+        EVENT_CUSTOMIZATIONS_STORAGE_VERSION,
+        {
+          overrides: {},
+          hidden: [],
+          additions: [
+            {
+              id: "broken-addition",
+              date: "2000-01-01",
+              title: "壊れた追加項目",
+              cats: ["unknown"],
+              primary: "unknown",
+              importance: 2,
+              summary: "テスト",
+            },
+          ],
+        }
+      )
+    ),
+  /未知のカテゴリー/
+);
+
+assert.throws(
+  () =>
+    decodeEventCustomizationsStorageValue(
+      createVersionedRecord(
+        EVENT_CUSTOMIZATIONS_STORAGE_FORMAT,
+        EVENT_CUSTOMIZATIONS_STORAGE_VERSION,
+        {
+          overrides: {
+            "event-1": {
+              unsupported: true,
+            },
+          },
+          hidden: [],
+          additions: [],
+        }
+      )
+    ),
+  /未対応の内部フィールド/
 );
 
 assert.throws(

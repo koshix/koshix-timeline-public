@@ -1,15 +1,13 @@
 import {
   eventYear,
-  PUBLIC_EVENT_CATEGORY_KEYS,
+  PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS,
   PUBLIC_EVENT_SUB_FILTER_TAGS,
 } from "./event-schema.js";
 import { eventId } from "./event-links.js";
 import { catsOf, primaryCatOf } from "./categories.js";
 
 const RELATED_CATEGORY_KEYS = new Set(
-  PUBLIC_EVENT_CATEGORY_KEYS.filter(
-    (key) => key !== "sf"
-  )
+  PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS
 );
 import {
   buildLifeModel,
@@ -133,15 +131,15 @@ export function selectPublicTimelineEvents({
     }));
 }
 
-const TIMELINE_CATEGORY_RANK = {
-  me: 0,
-  sf: 1,
-  science: 2,
-  education: 3,
-  computer: 4,
-  culture: 5,
-  society: 6,
-};
+const TIMELINE_CATEGORY_RANK =
+  Object.fromEntries(
+    [
+      "me",
+      ...PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS,
+    ].map(
+      (key, index) => [key, index]
+    )
+  );
 
 export function buildTimelineEventList({
   publicEvents,
