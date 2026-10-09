@@ -92,6 +92,20 @@ assert.equal(
   ),
   null
 );
+assert.equal(
+  findEventByShareParam(
+    [
+      {
+        id: "1947-transistor",
+        date: "1947-12-16",
+        title: "トランジスタの発明",
+      },
+    ],
+    "1947-core75-12"
+  )?.id,
+  "1947-transistor"
+);
+
 
 assert.equal(
   weighShareText("ABC"),

@@ -208,7 +208,7 @@ test("split icon rules are stable", () => {
 
   assert.equal(
     resolvePublicEventIcon({
-      id: "1953-core75-16",
+      id: "1953-dna-double-helix",
       primary: "science",
       subs: ["life"],
       region: "世界",

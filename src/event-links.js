@@ -1,4 +1,5 @@
 import { eventYear } from "./event-schema.js";
+import { LEGACY_EVENT_ID_ALIASES } from "./event-id-aliases.js";
 export const legacyEventId = (event) => {
   const source = `${eventYear(event)}-${event.title}`;
   let hash = 5381;
@@ -33,8 +34,13 @@ export const findEventByShareParam = (
   } catch {}
 
   const key = normalizeLegacyShareKey(decoded);
+  const aliasedId =
+    LEGACY_EVENT_ID_ALIASES[decoded] ?? decoded;
 
   return (
+    events.find(
+      (event) => eventId(event) === aliasedId
+    ) ||
     events.find(
       (event) => eventId(event) === decoded
     ) ||

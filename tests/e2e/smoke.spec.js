@@ -108,6 +108,19 @@ test("legal attribution and license links remain visible", async ({ page }) => {
 });
 
 test("pre-release hides public distribution links", async ({ page }) => {
+  await page.route("**/config.json", async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+
+    await route.fulfill({
+      response,
+      json: {
+        ...config,
+        publicDistributionEnabled: false,
+      },
+    });
+  });
+
   await openApp(page);
 
   await expect(
