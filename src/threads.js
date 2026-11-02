@@ -1614,7 +1614,7 @@ export const THREADS = [
     key: "music-breaks-its-form",
     title: "音楽は何度も自分の形を壊す",
     keyword: "音楽",
-    lead: "楽譜出版、オペラ、ピアノ、交響曲から十二音技法、リズム革命、録音音響、沈黙、コンピュータ音楽、東西の楽器の対峙へ。音楽は既成の形式を変えながら、新しい聴き方を作っていく。",
+    lead: "楽譜出版、オペラ、ピアノ、交響曲から十二音技法、リズム革命、録音音響、沈黙、コンピュータ音楽、東西の楽器の対峙、デジタル音色、生成AIへ。音楽は既成の形式を変えながら、新しい聴き方を作っていく。",
     items: [
       { id: "1501-petrucci-odhecaton" },
       { id: "1567-1tjp74u" },
@@ -1635,9 +1635,9 @@ export const THREADS = [
       { id: "1894-17o10bq" },
       { id: "1895-mahler-symphony-2" },
       { id: "1905-16wl4xk" },
-      { id: "1921-schoenberg-twelve-tone" },
       { id: "1913-rite-of-spring" },
       { id: "1917-1rpwq2k" },
+      { id: "1921-schoenberg-twelve-tone" },
       { id: "1924-rhapsody-in-blue" },
       { id: "1937-1q3ne7p" },
       { id: "1941-akhpcn" },
@@ -1646,6 +1646,8 @@ export const THREADS = [
       { id: "1956-illiac-music-i" },
       { id: "1965-nifya" },
       { id: "1967-takemitsu-november-steps" },
+      { id: "1983-yamaha-dx7" },
+      { id: "2024-generative-ai-music-lawsuits" },
     ],
   },
 
