@@ -1,7 +1,7 @@
 {
   "name": "koshix-timeline",
   "private": true,
-  "version": "3.16.0",
+  "version": "3.17.0",
   "type": "module",
   "scripts": {
     "build:events": "node scripts/build-events.mjs",
@@ -26,6 +26,6 @@
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^10.9.1",
     "globals": "^16.5.0",
-    "vite": "^6.4.3"
+    "vite": "^6.4.5"
   }
 }
