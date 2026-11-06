@@ -61,6 +61,13 @@ export const PUBLIC_EVENT_SUB_TAG_KEYS = [
   "life",
   "environment",
   "space",
+  "stage",
+  "comics",
+  "game",
+  "architecture",
+  "design",
+  "sport",
+  "food",
 ];
 
 export const PUBLIC_EVENT_SUB_TAGS = new Set(
@@ -81,10 +88,18 @@ export const PUBLIC_EVENT_SUB_FILTER_ROWS = [
   [
     ["literature", "文学"],
     ["music", "音楽"],
+    ["stage", "舞台"],
     ["art", "美術"],
+    ["architecture", "建築"],
+    ["design", "意匠"],
+  ],
+  [
     ["visual", "映像"],
+    ["comics", "漫画"],
+    ["game", "遊戯"],
     ["communication", "通信"],
     ["industry", "産業"],
+    ["lifestyle", "生活"],
   ],
   [
     ["technology", "技術"],
@@ -98,6 +113,7 @@ export const PUBLIC_EVENT_SUB_FILTER_ROWS = [
 
 export const PUBLIC_EVENT_SUB_FILTER_TAGS = {
   unrest: ["war", "revolution"],
+  lifestyle: ["sport", "food"],
 };
 
 export const PUBLIC_EVENT_SUB_FILTER_ICONS = {
@@ -127,6 +143,13 @@ export const PUBLIC_EVENT_SUB_FILTER_ICONS = {
   life: ["life-science", "life-health"],
   environment: ["environment"],
   space: ["space"],
+
+  stage: ["art"],
+  comics: ["art"],
+  game: ["visual-media"],
+  architecture: ["art"],
+  design: ["art"],
+  lifestyle: ["fallback-culture"],
 };
 
 // TSVとRuntime Eventは同じイベントフィールド名を使う。

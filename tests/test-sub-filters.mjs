@@ -21,10 +21,18 @@ const EXPECTED_ROWS = [
   [
     "literature",
     "music",
+    "stage",
     "art",
+    "architecture",
+    "design",
+  ],
+  [
     "visual",
+    "comics",
+    "game",
     "communication",
     "industry",
+    "lifestyle",
   ],
   [
     "technology",
@@ -36,7 +44,7 @@ const EXPECTED_ROWS = [
   ],
 ];
 
-test("sub filters use fixed 6 x 3 layout", () => {
+test("sub filters use fixed 6 x 4 layout", () => {
   assert.deepEqual(
     PUBLIC_EVENT_SUB_FILTER_ROWS.map((row) =>
       row.map(([key]) => key)

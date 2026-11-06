@@ -57,7 +57,18 @@ assert.equal(
   false
 );
 
-assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 19);
+assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 26);
+for (const key of [
+  "stage",
+  "comics",
+  "game",
+  "architecture",
+  "design",
+  "sport",
+]) {
+  assert.equal(PUBLIC_EVENT_SUB_TAGS.has(key), true);
+}
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("food"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("thought"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("technology"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("space"), true);
@@ -72,7 +83,7 @@ assert.equal(PUBLIC_EVENT_SUB_TAGS.has("unrest"), false);
 
 assert.equal(
   PUBLIC_EVENT_SUB_FILTER_ROWS.flat().length,
-  18
+  24
 );
 assert.equal(
   PUBLIC_EVENT_SUB_FILTER_ROWS
