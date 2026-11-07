@@ -181,8 +181,8 @@ export default function TimelineCategoryFilters({
             style={{ "--timeline-font": font }}
           >
             {PUBLIC_EVENT_SUB_FILTER_ROWS
-              .flat()
-              .map(([key, label]) => {
+              .flatMap((row, rowIndex) =>
+                row.map(([key, label], columnIndex) => {
                 const on = subFilters.includes(key);
                 const icons =
                   PUBLIC_EVENT_SUB_FILTER_ICONS[key] ?? [];
@@ -196,6 +196,8 @@ export default function TimelineCategoryFilters({
                     title={`${label}タグで絞り込む`}
                     className="timeline-subfilter-button"
                     style={{
+                      gridRow: rowIndex + 1,
+                      gridColumn: columnIndex + 1,
                       background: on
                         ? "#e6e9ee"
                         : "#ffffff",
@@ -225,7 +227,7 @@ export default function TimelineCategoryFilters({
                     </span>
                   </button>
                 );
-              })}
+              }))}
           </div>
         </div>
       )}

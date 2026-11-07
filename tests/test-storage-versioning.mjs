@@ -123,7 +123,7 @@ assert.equal(
 
 assert.equal(
   SETTINGS_STORAGE_VERSION,
-  4
+  5
 );
 
 const settings = {
@@ -142,7 +142,7 @@ const currentSettings = decodeSettingsStorageValue(encodedSettings);
 assert.equal(currentSettings.migrated, false);
 assert.deepEqual(currentSettings.data, settings);
 
-// v3 の「生命」選択を v4 の biomed へ移行し、他の設定は保存。
+// v3 の「生命」を biomed へ移し、v5 まで段階的に移行する。
 const oldSettings = {
   birth: 1953,
   month: 9,
@@ -164,7 +164,27 @@ assert.deepEqual(oldSettings.subFilters, [
   "life", "lifestyle", "music", "life",
 ]);
 
-// v4 では life は「生活」なので置換しない。
+// v4 の旧フィルタを v5 の統合先へ移行する。
+const v4Settings = {
+  ...oldSettings,
+  subFilters: [
+    "architecture", "design",
+    "comics", "game", "visual",
+    "sport", "food", "life", "lifestyle",
+    "music",
+  ],
+};
+const decodedV4 = decodeSettingsStorageValue({
+  format: SETTINGS_STORAGE_FORMAT,
+  schemaVersion: 4,
+  data: v4Settings,
+});
+assert.equal(decodedV4.migrated, true);
+assert.deepEqual(decodedV4.data.subFilters, [
+  "design", "visual", "lifestyle", "music",
+]);
+
+// v5 の life は旧フィルタではなく、現行値として保持する。
 const newSettings = {
   ...oldSettings,
   subFilters: ["life", "biomed", "lifestyle"],

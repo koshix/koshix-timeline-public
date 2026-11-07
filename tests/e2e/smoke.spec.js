@@ -82,6 +82,45 @@ test("app loads and exposes the main controls", async ({ page }) => {
     .toHaveAttribute("aria-pressed", "false");
 });
 
+test("sub filters preserve the 6-5-5-5 grid", async ({ page }) => {
+  await openApp(page);
+
+  await page.locator(".timeline-subfilter-toggle").click();
+
+  const buttons = page.locator(
+    ".timeline-subfilter-grid .timeline-subfilter-button"
+  );
+
+  await expect(buttons).toHaveCount(21);
+
+  const expectedRows = [
+    ["思想", "人権", "法制", "動乱", "政治", "経済"],
+    ["文学", "音楽", "舞台", "美術", "意匠"],
+    ["映像", "通信", "技術", "産業", "生活"],
+    ["数理", "物質", "生命", "環境", "宇宙"],
+  ];
+
+  const actual = await buttons.evaluateAll((elements) =>
+    elements.map((button) => ({
+      label: button
+        .querySelector(".timeline-subfilter-label")
+        .textContent.replace(/^[✓□]/u, ""),
+      row: Number(button.style.gridRow),
+      column: Number(button.style.gridColumn),
+    }))
+  );
+
+  const expected = expectedRows.flatMap((labels, rowIndex) =>
+    labels.map((label, columnIndex) => ({
+      label,
+      row: rowIndex + 1,
+      column: columnIndex + 1,
+    }))
+  );
+
+  expect(actual).toEqual(expected);
+});
+
 test("legal attribution and license links remain visible", async ({ page }) => {
   await openApp(page);
 
