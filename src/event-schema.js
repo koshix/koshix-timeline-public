@@ -52,6 +52,7 @@ export const PUBLIC_EVENT_SUB_TAG_KEYS = [
   "art",
   "visual",
   "communication",
+  "media",
   "politics",
   "economy",
   "industry",
@@ -87,10 +88,11 @@ export const PUBLIC_EVENT_SUB_FILTER_ROWS = [
     ["stage", "舞台"],
     ["art", "美術"],
     ["design", "意匠"],
+    ["visual", "映像"],
   ],
   [
-    ["visual", "映像"],
     ["communication", "通信"],
+    ["media", "媒体"],
     ["technology", "技術"],
     ["industry", "産業"],
     ["lifestyle", "生活"],
@@ -125,6 +127,7 @@ export const PUBLIC_EVENT_SUB_FILTER_ICONS = {
   art: ["art"],
   visual: ["visual-work", "visual-media"],
   communication: ["communication"],
+  media: ["visual-media"],
   industry: ["industry"],
 
   technology: [

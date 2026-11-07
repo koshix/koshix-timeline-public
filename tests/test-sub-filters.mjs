@@ -24,10 +24,11 @@ const EXPECTED_ROWS = [
     "stage",
     "art",
     "design",
+    "visual",
   ],
   [
-    "visual",
     "communication",
+    "media",
     "technology",
     "industry",
     "lifestyle",
@@ -41,7 +42,7 @@ const EXPECTED_ROWS = [
   ],
 ];
 
-test("sub filters use 21 options in 6 columns", () => {
+test("sub filters use 22 options in 6 columns", () => {
   assert.deepEqual(
     PUBLIC_EVENT_SUB_FILTER_ROWS.map((row) =>
       row.map(([key]) => key)

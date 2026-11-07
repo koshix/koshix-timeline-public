@@ -82,7 +82,7 @@ test("app loads and exposes the main controls", async ({ page }) => {
     .toHaveAttribute("aria-pressed", "false");
 });
 
-test("sub filters preserve the 6-5-5-5 grid", async ({ page }) => {
+test("sub filters preserve the 6-6-5-5 grid", async ({ page }) => {
   await openApp(page);
 
   await page.locator(".timeline-subfilter-toggle").click();
@@ -91,12 +91,12 @@ test("sub filters preserve the 6-5-5-5 grid", async ({ page }) => {
     ".timeline-subfilter-grid .timeline-subfilter-button"
   );
 
-  await expect(buttons).toHaveCount(21);
+  await expect(buttons).toHaveCount(22);
 
   const expectedRows = [
     ["思想", "人権", "法制", "動乱", "政治", "経済"],
-    ["文学", "音楽", "舞台", "美術", "意匠"],
-    ["映像", "通信", "技術", "産業", "生活"],
+    ["文学", "音楽", "舞台", "美術", "意匠", "映像"],
+    ["通信", "媒体", "技術", "産業", "生活"],
     ["数理", "物質", "生命", "環境", "宇宙"],
   ];
 

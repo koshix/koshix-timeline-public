@@ -57,7 +57,7 @@ assert.equal(
   false
 );
 
-assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 22);
+assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 23);
 for (const key of ["stage", "design", "visual"]) {
   assert.equal(PUBLIC_EVENT_SUB_TAGS.has(key), true);
 }
@@ -75,6 +75,7 @@ assert.equal(PUBLIC_EVENT_SUB_TAGS.has("audio"), false);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("sf"), false);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("law"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("communication"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("media"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("industry"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("war"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("revolution"), true);
@@ -82,7 +83,7 @@ assert.equal(PUBLIC_EVENT_SUB_TAGS.has("unrest"), false);
 
 assert.equal(
   PUBLIC_EVENT_SUB_FILTER_ROWS.flat().length,
-  21
+  22
 );
 assert.equal(
   PUBLIC_EVENT_SUB_FILTER_ROWS
