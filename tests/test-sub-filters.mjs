@@ -38,7 +38,7 @@ const EXPECTED_ROWS = [
     "technology",
     "math",
     "matter",
-    "life",
+    "biomed",
     "environment",
     "space",
   ],
@@ -50,6 +50,17 @@ test("sub filters use fixed 6 x 4 layout", () => {
       row.map(([key]) => key)
     ),
     EXPECTED_ROWS
+  );
+});
+
+test("biomed has the science/health icons and life is not an independent filter", () => {
+  assert.deepEqual(
+    PUBLIC_EVENT_SUB_FILTER_ICONS.biomed,
+    ["life-science", "life-health"]
+  );
+  assert.equal(
+    Object.hasOwn(PUBLIC_EVENT_SUB_FILTER_ICONS, "life"),
+    false
   );
 });
 

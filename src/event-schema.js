@@ -59,6 +59,7 @@ export const PUBLIC_EVENT_SUB_TAG_KEYS = [
   "math",
   "matter",
   "life",
+  "biomed",
   "environment",
   "space",
   "stage",
@@ -105,7 +106,7 @@ export const PUBLIC_EVENT_SUB_FILTER_ROWS = [
     ["technology", "技術"],
     ["math", "数理"],
     ["matter", "物質"],
-    ["life", "生命"],
+    ["biomed", "生命"],
     ["environment", "環境"],
     ["space", "宇宙"],
   ],
@@ -113,7 +114,7 @@ export const PUBLIC_EVENT_SUB_FILTER_ROWS = [
 
 export const PUBLIC_EVENT_SUB_FILTER_TAGS = {
   unrest: ["war", "revolution"],
-  lifestyle: ["sport", "food"],
+  lifestyle: ["life", "sport", "food"],
 };
 
 export const PUBLIC_EVENT_SUB_FILTER_ICONS = {
@@ -140,7 +141,7 @@ export const PUBLIC_EVENT_SUB_FILTER_ICONS = {
   ],
   math: ["math"],
   matter: ["matter-physics", "matter-material"],
-  life: ["life-science", "life-health"],
+  biomed: ["life-science", "life-health"],
   environment: ["environment"],
   space: ["space"],
 

@@ -19,7 +19,7 @@ export const SUB_ICON_PRIORITY = [
   "environment",
   "law",
   "space",
-  "life",
+  "biomed",
   "thought",
   "music",
   "economy",
@@ -30,6 +30,7 @@ export const SUB_ICON_PRIORITY = [
   "rights",
   "literature",
   "politics",
+  "life",
 ];
 
 export const PUBLIC_EVENT_ICON_NAMES = new Set([
@@ -138,7 +139,6 @@ const LIFE_HEALTH_IDS = new Set([
   "1981-first-aids-report",
   "1986-163vwou",
   "1999-17pr3hn",
-  "2000-long-term-care-insurance",
   "2011-au3xzt",
   "2020-13ara66",
   "2020-mrna-vaccine-first-approval",
@@ -212,10 +212,13 @@ export function resolvePublicEventIcon(event) {
         ? "visual-media"
         : "visual-work";
 
-    case "life":
+    case "biomed":
       return LIFE_HEALTH_IDS.has(event?.id)
         ? "life-health"
         : "life-science";
+
+    case "life":
+      return "fallback-culture";
 
     default:
       return selectedSub;

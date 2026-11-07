@@ -123,7 +123,7 @@ assert.equal(
 
 assert.equal(
   SETTINGS_STORAGE_VERSION,
-  3
+  4
 );
 
 const settings = {
@@ -141,6 +141,40 @@ assert.deepEqual(encodedSettings, {
 const currentSettings = decodeSettingsStorageValue(encodedSettings);
 assert.equal(currentSettings.migrated, false);
 assert.deepEqual(currentSettings.data, settings);
+
+// v3 の「生命」選択を v4 の biomed へ移行し、他の設定は保存。
+const oldSettings = {
+  birth: 1953,
+  month: 9,
+  education: [{ start: "1972", years: "4", type: "university" }],
+  closed: ["period-1"],
+  subFilters: ["life", "lifestyle", "music", "life"],
+};
+const decodedV3Settings = decodeSettingsStorageValue({
+  format: SETTINGS_STORAGE_FORMAT,
+  schemaVersion: 3,
+  data: oldSettings,
+});
+assert.equal(decodedV3Settings.migrated, true);
+assert.deepEqual(decodedV3Settings.data, {
+  ...oldSettings,
+  subFilters: ["biomed", "lifestyle", "music"],
+});
+assert.deepEqual(oldSettings.subFilters, [
+  "life", "lifestyle", "music", "life",
+]);
+
+// v4 では life は「生活」なので置換しない。
+const newSettings = {
+  ...oldSettings,
+  subFilters: ["life", "biomed", "lifestyle"],
+};
+assert.deepEqual(
+  decodeSettingsStorageValue(
+    encodeSettingsStorageValue(newSettings)
+  ).data.subFilters,
+  newSettings.subFilters
+);
 
 // 開発中の旧ブラウザ設定version 1 / 2は移行せず、明示的に破棄する。
 assert.throws(
@@ -226,8 +260,22 @@ try {
 
   rawValue = JSON.stringify({
     format: SETTINGS_STORAGE_FORMAT,
-    schemaVersion:
-      SETTINGS_STORAGE_VERSION - 1,
+    schemaVersion: 3,
+    data: oldSettings,
+  });
+
+  assert.deepEqual(settingsStore.read(), {
+    status: "ok",
+    data: {
+      ...oldSettings,
+      subFilters: ["biomed", "lifestyle", "music"],
+    },
+    error: null,
+  });
+
+  rawValue = JSON.stringify({
+    format: SETTINGS_STORAGE_FORMAT,
+    schemaVersion: 2,
     data: settings,
   });
 

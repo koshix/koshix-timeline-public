@@ -7,7 +7,31 @@ export const SETTINGS_STORAGE_KEY =
   "koshix-timeline:settings";
 export const SETTINGS_STORAGE_FORMAT =
   "koshix-timeline-settings";
-export const SETTINGS_STORAGE_VERSION = 3;
+export const SETTINGS_STORAGE_VERSION = 4;
+
+// v3 の life は「生命」。v4 では「生活」になるため、
+// 旧設定の選択だけを biomed に移す（v4 設定には適用しない）。
+function migrateSettingsV3ToV4(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return data;
+  }
+
+  if (!Array.isArray(data.subFilters)) {
+    return { ...data };
+  }
+
+  return {
+    ...data,
+    subFilters: [
+      ...new Set(
+        data.subFilters.map((key) =>
+          key === "life" ? "biomed" : key
+        )
+      ),
+    ],
+  };
+}
+
 
 export function encodeSettingsStorageValue(data) {
   return createVersionedRecord(
@@ -21,6 +45,7 @@ export function decodeSettingsStorageValue(value) {
   return decodeVersionedRecord(value, {
     format: SETTINGS_STORAGE_FORMAT,
     currentVersion: SETTINGS_STORAGE_VERSION,
+    migrations: { 3: migrateSettingsV3ToV4 },
     context: "設定保存データ",
   });
 }
@@ -84,8 +109,7 @@ export function readSettingsStorage() {
     }
 
     if (
-      parsed.schemaVersion <
-      SETTINGS_STORAGE_VERSION
+      parsed.schemaVersion < 3
     ) {
       return {
         status: "obsolete",

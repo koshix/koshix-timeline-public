@@ -57,7 +57,7 @@ assert.equal(
   false
 );
 
-assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 26);
+assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 27);
 for (const key of [
   "stage",
   "comics",
@@ -69,6 +69,8 @@ for (const key of [
   assert.equal(PUBLIC_EVENT_SUB_TAGS.has(key), true);
 }
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("food"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("biomed"), true);
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("life"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("thought"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("technology"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("space"), true);
@@ -94,6 +96,10 @@ assert.equal(
 assert.deepEqual(
   PUBLIC_EVENT_SUB_FILTER_TAGS.unrest,
   ["war", "revolution"]
+);
+assert.deepEqual(
+  PUBLIC_EVENT_SUB_FILTER_TAGS.lifestyle,
+  ["life", "sport", "food"]
 );
 
 assert.deepEqual(

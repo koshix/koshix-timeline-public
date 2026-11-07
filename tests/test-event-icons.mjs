@@ -200,7 +200,7 @@ test("split icon rules are stable", () => {
     resolvePublicEventIcon({
       id: "2020-13ara66",
       primary: "society",
-      subs: ["life"],
+      subs: ["biomed"],
       region: "世界",
     }),
     "life-health"
@@ -210,7 +210,7 @@ test("split icon rules are stable", () => {
     resolvePublicEventIcon({
       id: "1953-dna-double-helix",
       primary: "science",
-      subs: ["life"],
+      subs: ["biomed"],
       region: "世界",
     }),
     "life-science"

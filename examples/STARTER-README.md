@@ -1,76 +1,78 @@
-# 自分史プロジェクション — 静的スターター
+# Koshix Timeline（自分史プロジェクション）— 静的スターター
 
-このZIPは、Webサーバーへ配置するだけで動作する静的配布版です。Node.jsやビルド作業は不要です。
+このZIPは、公開された歴史的出来事と任意の個人史を、年齢・学齢期・人生段階に重ねて表示する**静的Webアプリ**です。ZIPを展開し、設定・データを必要に応じて編集してWebサーバーに設置します。Node.jsやReact/Viteの開発環境は不要です。
 
+これはmacOS・Windowsにインストールするデスクトップアプリではありません。ZIPの `assets/` はビルド済みで、画面のプログラム自体を変更する場合は別途公開ソース版とビルド環境が必要です。
 
-## このスターターについて
+この配布には公開年表、汎用設定、空の個人史テンプレート、編集規約と権利表示を含みます。**実際の個人史、管理者の人生設定、認証用パスワード、アクセス統計データは含みません。**
 
-これはMacやWindowsへインストールする形式のアプリではありません。
-ZIPを展開し、その中のファイル一式をWebサーバーへ配置して使う静的Webアプリです。
+## 1. 設置の最短手順
 
-このスターターでは、主に次の内容を自分用に変更できます。
+1. Web版の「ダウンロード版」から `koshix-timeline-starter.zip` を取得し、展開します。
+2. 展開した `koshix-timeline-starter/` の `config.json` を開き、自分のサイトの `shareUrl` などを設定します。
+3. 必要に応じて `events.tsv` を編集し、自分の公開年表を作ります。
+4. **個人史をまだ公開サーバーへ置かず**、まず公開ファイルだけを設置して年表の表示・検索・絞込みを確認します。
+5. 個人史を使う場合は、サーバーの `personal/` を認証保護し、未認証でHTTP 401になることを確かめてから実データを配置します。
 
-- `config.json`：タイトル、ハッシュタグ、共有先URL、プロフィール初期値
-- `events.tsv`：公開年表の追加・削除・修正
-- `personal/personal-events.tsv`：個人史の追加・削除・修正
+展開したフォルダーをWebサーバーの公開ディレクトリ直下またはサブディレクトリに設置できます。ローカルで `index.html` をダブルクリックする方法（`file://`）は、ブラウザのファイル読込制限のため動作保証の対象外です。HTTP(S)経由で確認してください。
 
-`personal/personal-events.tsv` を使用する場合は、公開前に必ずWebサーバー側で認証保護してください。
+## 2. 変更できるファイル
 
-この静的スターターには、React/Viteの開発用ソースコードやNode.jsの開発環境は含まれていません。
-`assets/` 内のJavaScriptはビルド済み成果物であり、直接編集することは想定していません。
-画面構成や機能そのものを変更して再ビルドする用途は、この静的スターターの対象外です。
+| ファイル | 内容 | 注意 |
+|---|---|---|
+| `config.json` | サイト名、共有URL、生年・教育歴等の初期値 | 汎用設定を自分の設置先に合わせる |
+| `events.tsv` | 一般公開する歴史イベント | 編集後は13列・タブ区切りを維持する |
+| `personal/personal-events.tsv` | 個人史の空テンプレート | **認証保護が完了するまで実個人史を入れない** |
+| `assets/` | ビルド済みJavaScript・CSS等 | 通常は直接変更しない |
+| `DATA-GUIDE.md` | 出来事の登録・分類・出典等の規約 | 編集時に参照する |
+| `LICENSE` / `THIRD-PARTY-NOTICES.md` | 著作権・ライセンス表示 | 再配布時も保持する |
 
-## 最短手順
+### `config.json` の基本
 
-1. 自分史プロジェクションのWeb版にある「ダウンロード版」から `koshix-timeline-starter.zip` を取得する
-2. ZIPを展開する
-3. `config.json` を自分の公開先に合わせて変更する
-4. `events.tsv` を自分の年表として編集する
-5. 必要な場合だけ、認証保護した `personal/personal-events.tsv` に個人史を追加する
-6. 展開したフォルダーの内容をWebサーバーへ配置し、ブラウザで確認する
+スターターには `examples/config.json` 由来の汎用設定が含まれます。公開元サイトの運用設定を引き継ぐものではありません。
 
+主なキーは次のとおりです。
 
-## 最初に変更するファイル
+- `title` / `hashtag`：年表の表示名、共有用タグ
+- `shareUrl`：共有リンクに使うURL。実際の設置先に変更する
+- `defaults.birthYear` / `birthMonth` / `education`：初期プロフィール。教育歴の各行は `start`、`years`、`type` を持つ
+- `downloadUrl` / `publicSourceUrl`：自分で配布先を用意した場合のURL。用意しなければ空欄
+- `publicDistributionEnabled`：配布リンクの表示可否。汎用版は `false`
+- `accessStats.endpoint` / `pageUrl`：任意のサーバー側アクセス統計。汎用版は空欄
 
-### `config.json`
-
-タイトル、ハッシュタグ、共有先URL、プロフィール初期値を設定します。
-
-特に `shareUrl` を実際の公開先へ変更してください。
+たとえば、`shareUrl` は次のように設定します（JSON全体ではなく該当フィールドの例）。
 
 ```json
 "shareUrl": "https://example.com/timeline/"
 ```
 
-### `events.tsv`
+配布リンク・アクセス統計のサーバー処理がなければ、無効のままにしてください。アプリの基本的な年表表示にはそれらの機能は不要です。
 
-公開年表の正本です。タブ区切りのUTF-8テキストとして編集します。
+### `events.tsv` と分類
 
-```text
-id\tdate\tend_date\ttitle\tcats\tprimary\tsubs\tregion\timportance\tsummary\tsources\tsearch\tnote
-```
-
-詳しい登録規約は `DATA-GUIDE.md` を参照してください。
-
-## 個人イベント
-
-`personal/personal-events.tsv` は、ヘッダーだけの空テンプレートです。個人史を使わない場合は、そのままで構いません。
-
-個人史を追加する場合は、各行で次を満たしてください。
+公開年表のデータはUTF-8の**タブ区切り13列**です。ヘッダーの列順は次のとおりです。
 
 ```text
-cats に me を含める
-primary を me にする
-importance を 1、2、3 のいずれかにする
+id	date	end_date	title	cats	primary	subs	region	importance	summary	sources	search	note
 ```
 
-同じ空テンプレートを `examples/personal-events-template.tsv` にも収録しています。
+列の追加・削除や並び替えはしないでください。タブと改行を保って編集します。
 
-## 重要：個人史の保護
+大分野は `society`（社会）、`science`（科学）、`education`（教育）、`computer`（情報）、`culture`（文化）、`work`（作品）の6つです。`cats` は表示に含めたい分野（複数可）、`primary` は主分野1つ、`subs` は出来事の副分類タグです。`sf` はSFを表す補助カテゴリで、`primary` には使用しません。
 
-実データを書き込む前に、Webサーバー側で `personal/` ディレクトリを認証保護してください。画面上で非表示にするだけでは、TSVファイルは保護されません。
+`subs` の有効な実タグは26種類、画面上の横断フィルターは24種類（4行×6個）です。「動乱」は `war` と `revolution`、「生活」は `sport` と `food` のどちらかに一致する合成フィルターです。**`unrest` と `lifestyle` はTSVに記録するタグではありません。**
 
-ApacheのBasic認証を使う場合の概略は次です。
+分類の使い分け、日付精度、重要度、出典、重複、IDの規約は同梱の `DATA-GUIDE.md` を参照してください。スターターZIPにはイベント検証コマンドは含まれないため、大量編集や厳密な形式検証には公開ソース版の `npm run build:events` を利用してください。
+
+## 3. 個人史を利用する場合
+
+同梱の `personal/personal-events.tsv` は、13列のヘッダーだけを含む**空テンプレート**です。同じテンプレートが `examples/personal-events-template.tsv` にもあります。個人史を利用しなければ編集する必要はありません。
+
+個人史の各行では、`cats` に `me` を含め、`primary` は `me`、`importance` は `1`、`2`、`3` のいずれかとします。`me` は公開年表の大分野には含めません。
+
+個人史を画面で非表示にしても、Webサーバーへ置いたファイルへの直接アクセスは防げません。実データを配置する**前**に、個人史や管理者用の人生設定ファイルを認証で保護してください。
+
+Apache Basic認証を使用する場合の設定例（実際のパス・パスワードファイルはサーバー環境に合わせる）：
 
 ```apache
 AuthType Basic
@@ -79,33 +81,41 @@ AuthUserFile /absolute/path/outside/webroot/.htpasswd
 Require valid-user
 ```
 
-パスワードファイルはWeb公開領域の外に置きます。実個人史の公開前に、認証なしでは `401`、認証ありでは `200` になることを確認してください。
+パスワードファイルはWeb公開領域の外で管理します。実際のサーバーに対して、認証なしでは **HTTP 401**、正しい認証付きでは **HTTP 200** になることを確認します。アクセス制御が確かめられない場合は、実個人史を公開サーバーへアップロードしないでください。
 
-```bash
-curl -I https://example.com/timeline/personal/personal-events.tsv
-curl -I -u USER https://example.com/timeline/personal/personal-events.tsv
-```
+ブラウザ内に保存する利用者固有の個人史・共通年表のカスタマイズと、Webサーバー上の公開TSV・管理者用個人史とは別のデータです。必要に応じてブラウザからエクスポートしてバックアップしてください。
 
-## 配置
+## 4. 配置・更新時の注意
 
-このフォルダーの内容を、そのままWebサーバーへ置きます。相対パスを使っているため、ドメイン直下でも任意のサブディレクトリでも動作します。
+スターターの代表的な内容は次のとおりです。
 
 ```text
-index.html
-assets/
-config.json
-events.tsv
-icons.svg
-favicon.svg
-personal/
+koshix-timeline-starter/
+├── index.html
+├── assets/
+├── config.json
+├── events.tsv
+├── icons.svg
+├── favicon.svg
+├── personal/
+│   └── personal-events.tsv
+├── examples/
+│   └── personal-events-template.tsv
+├── DATA-GUIDE.md
+├── LICENSE
+└── THIRD-PARTY-NOTICES.md
 ```
 
-サーバー側で作成した `personal/.htaccess` などを、再アップロード時に削除・上書きしないよう注意してください。
+`index.html` と `assets/` は必ず**同じビルド世代**のセットとして更新してください。新しい版を上書きするときは、サーバー固有の `.htaccess` や個人史・人生設定、バックアップを誤って消さないでください。`rsync --delete` 等で公開ディレクトリを無条件に同期するのは避けてください。
 
-## 原型とライセンス
+正常動作の確認では、公開Webページと `events.tsv` がHTTP 200で取得でき、年表の表示・検索・分野・副分類フィルターが動作することを確かめてください。個人史を置いた場合は、未認証HTTP 401を必ず再確認してください。
 
-このアプリは、松尾公也氏の「SF・コンピューター技術ライフライン」を原型としています。
+## 5. 原型・著作権・ライセンス
 
-- https://github.com/matsuo-koya/sf-tech-lifeline
+このアプリは、松尾公也氏の「SF・コンピューター技術ライフライン」を原型とする派生作品です。
 
-ソフトウェアのライセンスは `LICENSE`、第三者ソフトウェアの表示は `THIRD-PARTY-NOTICES.md` を参照してください。
+- 元プロジェクト: https://github.com/matsuo-koya/sf-tech-lifeline
+- 原作品: Copyright (c) 2026 Koya Matsuo
+- 本派生版で新たに作成・改変した部分: Copyright (c) 2026 Kunio Koshigiri
+
+ソフトウェアはMIT Licenseで提供します。詳細は `LICENSE` を参照してください。原作品および第三者ソフトウェアの表示は `THIRD-PARTY-NOTICES.md` に記載しています。改変・再配布時も必要な著作権表示と許諾条件を維持してください。
