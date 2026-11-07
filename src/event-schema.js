@@ -127,7 +127,7 @@ export const PUBLIC_EVENT_SUB_FILTER_ICONS = {
   art: ["art"],
   visual: ["visual-work", "visual-media"],
   communication: ["communication"],
-  media: ["visual-media"],
+  media: ["media"],
   industry: ["industry"],
 
   technology: [
@@ -140,8 +140,8 @@ export const PUBLIC_EVENT_SUB_FILTER_ICONS = {
   environment: ["environment"],
   space: ["space"],
 
-  stage: ["art"],
-  design: ["art"],
+  stage: ["stage"],
+  design: ["design"],
   lifestyle: ["fallback-culture"],
 };
 

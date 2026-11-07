@@ -1,36 +1,39 @@
 // Public timeline icon selection.
 //
 // Principle:
-// - If an event has multiple subs tags, the stable semantic priority
-//   below determines the displayed icon.
-// - The established priority order is preserved for visual continuity.
-// - New cross-category tags are inserted where they remain visible
-//   without broadly reshuffling existing icon choices.
+// - Representative icons follow a fixed priority based on subs frequency.
+// - Fixed on 2026-11-07 using 1917 public events; rarer subs rank first.
+// - Routine event edits do not change the priority.
+// - Reconsider only after major data or taxonomy changes.
+// - See docs/ICON-PRIORITY.md.
 // - Some tags then split into two visual subtypes.
 // - If subs is empty, primary supplies a fallback icon.
 // - Icons are derived at display time and are not stored in event TSV data.
 
 export const SUB_ICON_PRIORITY = [
   "revolution",
-  "industry",
+  "design",
+  "stage",
   "communication",
-  "math",
-  "art",
+  "media",
   "environment",
-  "law",
+  "industry",
   "space",
-  "biomed",
-  "thought",
-  "music",
-  "economy",
-  "visual",
-  "war",
-  "matter",
-  "technology",
-  "rights",
-  "literature",
-  "politics",
   "life",
+  "war",
+  "biomed",
+  "math",
+  "law",
+  "visual",
+  "economy",
+  "music",
+  "matter",
+  "rights",
+  "thought",
+  "art",
+  "politics",
+  "technology",
+  "literature",
 ];
 
 export const PUBLIC_EVENT_ICON_NAMES = new Set([
@@ -47,6 +50,7 @@ export const PUBLIC_EVENT_ICON_NAMES = new Set([
   "war",
   "visual-work",
   "visual-media",
+  "media",
   "economy",
   "law",
   "communication",
@@ -58,6 +62,8 @@ export const PUBLIC_EVENT_ICON_NAMES = new Set([
   "space",
   "environment",
   "art",
+  "stage",
+  "design",
   "math",
   "revolution",
   "fallback-work",

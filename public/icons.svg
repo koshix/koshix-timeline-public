@@ -256,6 +256,38 @@
     </g>
   </symbol>
 
+
+  <symbol id="icon-stage" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor" stroke-width="2.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 12h48M12 12v37M52 12v37M9 51h46"/>
+      <path d="M13 16c7 2 10 6 10 12l-5 14-5 3z"/>
+      <path d="M51 16c-7 2-10 6-10 12l5 14 5 3z"/>
+      <path d="M23 16q9 6 18 0"/>
+    </g>
+  </symbol>
+
+  <symbol id="icon-design" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor" stroke-width="2.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="32" cy="13" r="4"/>
+      <path d="M29 17L14 54l6-5 12-30 12 30 6 5-15-37"/>
+      <path d="M24 34h16"/>
+      <path d="M10 56h44M13 52h38"/>
+      <path d="M19 52v4M27 52v4M35 52v4M43 52v4"/>
+    </g>
+  </symbol>
+
+  <symbol id="icon-media" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor" stroke-width="2.6"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 27h11l20-11v28L23 36H12z"/>
+      <path d="M18 36l4 17h8l-4-16"/>
+      <path d="M48 25q7 6 0 12"/>
+      <path d="M52 19q11 12 0 24"/>
+    </g>
+  </symbol>
+
   <symbol id="icon-art" viewBox="0 0 64 64">
     <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
       <rect x="8" y="11" width="48" height="42"/>
