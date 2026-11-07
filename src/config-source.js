@@ -3,7 +3,7 @@ import {
 } from "./education-history.js";
 
 const BUILTIN_CONFIG = {
-  title: "自分史プロジェクション",
+  title: "Layering History — 個人史プロジェクション",
   hashtag: "#自分史プロジェクション",
   shareUrl: "",
   downloadUrl: "",
