@@ -1,4 +1,5 @@
 export const LEGACY_EVENT_ID_ALIASES = Object.freeze({
+  "1881-ferry-free-primary-school": "1882-ferry-compulsory-secular-school",
   "1913-core75-01": "1842-fertilizer-industrialization",
   "1913-core75-02": "1913-ford-moving-assembly-line",
   "1915-core75-03": "1915-general-relativity",

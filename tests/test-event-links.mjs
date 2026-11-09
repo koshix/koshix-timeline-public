@@ -108,6 +108,19 @@ assert.equal(
 
 
 assert.equal(
+  findEventByShareParam(
+    [{
+      id: "1882-ferry-compulsory-secular-school",
+      date: "1882-03-28",
+      title: "フェリー教育改革",
+    }],
+    "1881-ferry-free-primary-school"
+  )?.id,
+  "1882-ferry-compulsory-secular-school"
+);
+
+
+assert.equal(
   weighShareText("ABC"),
   3
 );
