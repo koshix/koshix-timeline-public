@@ -57,12 +57,12 @@ assert.equal(
   false
 );
 
-assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 23);
-for (const key of ["stage", "design", "visual"]) {
+assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 25);
+for (const key of ["stage", "architecture", "design", "visual", "game"]) {
   assert.equal(PUBLIC_EVENT_SUB_TAGS.has(key), true);
 }
 for (const key of [
-  "comics", "game", "architecture", "sport", "food",
+  "comics", "sport", "food",
 ]) {
   assert.equal(PUBLIC_EVENT_SUB_TAGS.has(key), false);
 }

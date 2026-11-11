@@ -51,6 +51,7 @@ export const PUBLIC_EVENT_SUB_TAG_KEYS = [
   "music",
   "art",
   "visual",
+  "game",
   "communication",
   "media",
   "politics",
@@ -64,6 +65,7 @@ export const PUBLIC_EVENT_SUB_TAG_KEYS = [
   "environment",
   "space",
   "stage",
+  "architecture",
   "design",
 ];
 
@@ -109,6 +111,8 @@ export const PUBLIC_EVENT_SUB_FILTER_ROWS = [
 export const PUBLIC_EVENT_SUB_FILTER_TAGS = {
   unrest: ["war", "revolution"],
   lifestyle: ["life"],
+  design: ["design", "architecture"],
+  visual: ["visual", "game"],
 };
 
 export const PUBLIC_EVENT_SUB_FILTER_ICONS = {

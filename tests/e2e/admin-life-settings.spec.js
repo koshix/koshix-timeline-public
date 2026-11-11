@@ -85,7 +85,7 @@ window.close();
 
   await expect(
     page.getByRole("heading", {
-      name: "Layering History — 個人史プロジェクション",
+      name: "Layering History — 自分史プロジェクション",
       exact: true,
     })
   ).toBeVisible();

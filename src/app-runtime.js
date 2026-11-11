@@ -12,7 +12,7 @@ import {
 } from "./workspace-store.js";
 
 const DEFAULT_APP_TITLE =
-  "Layering History — 個人史プロジェクション";
+  "Layering History — 自分史プロジェクション";
 const DEFAULT_HASHTAG =
   "#自分史プロジェクション";
 

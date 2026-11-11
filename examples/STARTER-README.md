@@ -1,4 +1,4 @@
-# Layering History（個人史プロジェクション）— 静的スターター
+# Layering History（自分史プロジェクション）— 静的スターター
 
 このZIPは、公開された歴史的出来事と任意の個人史を、年齢・学齢期・人生段階に重ねて表示する**静的Webアプリ**です。ZIPを展開し、設定・データを必要に応じて編集してWebサーバーに設置します。Node.jsやReact/Viteの開発環境は不要です。
 
@@ -60,7 +60,7 @@ id	date	end_date	title	cats	primary	subs	region	importance	summary	sources	searc
 
 大分野は `society`（社会）、`science`（科学）、`education`（教育）、`computer`（情報）、`culture`（文化）、`work`（作品）の6つです。`cats` は表示に含めたい分野（複数可）、`primary` は主分野1つ、`subs` は出来事の副分類タグです。`sf` はSFを表す補助カテゴリで、`primary` には使用しません。
 
-`subs` の有効な実タグは26種類、画面上の横断フィルターは24種類（4行×6個）です。「動乱」は `war` と `revolution`、「生活」は `sport` と `food` のどちらかに一致する合成フィルターです。**`unrest` と `lifestyle` はTSVに記録するタグではありません。**
+`subs` の有効な実タグは25種類、画面上の横断フィルターは22種類です。「動乱」は `war` または `revolution`、「生活」は `life`、「意匠」は `design` または `architecture`、「映像」は `visual` または `game` に一致します。`architecture` と `game` は独立した実タグです。**`unrest` と `lifestyle` はTSVに記録するタグではありません。**
 
 分類の使い分け、日付精度、重要度、出典、重複、IDの規約は同梱の `DATA-GUIDE.md` を参照してください。スターターZIPにはイベント検証コマンドは含まれないため、大量編集や厳密な形式検証には公開ソース版の `npm run build:events` を利用してください。
 

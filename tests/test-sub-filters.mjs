@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   PUBLIC_EVENT_SUB_FILTER_ICONS,
   PUBLIC_EVENT_SUB_FILTER_ROWS,
+  PUBLIC_EVENT_SUB_FILTER_TAGS,
 } from "../src/event-schema.js";
 import {
   PUBLIC_EVENT_ICON_NAMES,
@@ -89,4 +90,22 @@ test("every sub filter has one or two valid icons", () => {
       );
     }
   }
+});
+
+test("architecture and game are included in grouped filters", () => {
+  assert.deepEqual(
+    PUBLIC_EVENT_SUB_FILTER_TAGS.design,
+    ["design", "architecture"]
+  );
+  assert.deepEqual(
+    PUBLIC_EVENT_SUB_FILTER_TAGS.visual,
+    ["visual", "game"]
+  );
+
+  const keys = PUBLIC_EVENT_SUB_FILTER_ROWS
+    .flat()
+    .map(([key]) => key);
+
+  assert.equal(keys.includes("architecture"), false);
+  assert.equal(keys.includes("game"), false);
 });
