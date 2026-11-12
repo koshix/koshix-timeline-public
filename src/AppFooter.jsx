@@ -63,7 +63,7 @@ export default function AppFooter({
             {downloadUrl && (
               <a
                 href={downloadUrl}
-                download="koshix-timeline-starter.zip"
+                download="layering-history-starter.zip"
                 style={{ color: "#59616c" }}
               >
                 ダウンロード版
@@ -175,7 +175,7 @@ export default function AppFooter({
           downloadUrl && (
             <a
               href={downloadUrl}
-              download="koshix-timeline-starter.zip"
+              download="layering-history-starter.zip"
               style={{ color: "#59616c" }}
             >
               ダウンロード版

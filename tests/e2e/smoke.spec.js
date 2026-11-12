@@ -186,7 +186,7 @@ test("public release shows distribution links when enabled", async ({ page }) =>
       response,
       json: {
         ...config,
-        downloadUrl: "https://example.com/koshix-timeline-starter.zip",
+        downloadUrl: "https://example.com/layering-history-starter.zip",
         publicSourceUrl: "https://example.com/koshix-timeline-public",
         publicDistributionEnabled: true,
       },
@@ -195,12 +195,20 @@ test("public release shows distribution links when enabled", async ({ page }) =>
 
   await openApp(page);
 
-  await expect(
-    page.getByRole("link", {
-      name: "ダウンロード版",
-      exact: true,
-    })
-  ).toBeVisible();
+  const starterLink = page.getByRole("link", {
+    name: "ダウンロード版",
+    exact: true,
+  });
+
+  await expect(starterLink).toBeVisible();
+  await expect(starterLink).toHaveAttribute(
+    "href",
+    "https://example.com/layering-history-starter.zip"
+  );
+  await expect(starterLink).toHaveAttribute(
+    "download",
+    "layering-history-starter.zip"
+  );
 
   await expect(
     page.getByRole("link", {

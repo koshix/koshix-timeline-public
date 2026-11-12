@@ -7,7 +7,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, "..");
 const distDir = path.join(projectRoot, "dist");
 const releaseDir = path.join(projectRoot, "release");
-const starterName = "koshix-timeline-starter";
+const starterName = "layering-history-starter";
 const stageDir = path.join(releaseDir, starterName);
 const zipPath = path.join(releaseDir, `${starterName}.zip`);
 

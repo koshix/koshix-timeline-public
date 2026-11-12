@@ -8,7 +8,7 @@
 
 この説明書は特定の配布版番号を固定して示すものではありません。版番号と公開イベント件数は同梱の `release-manifest.json` を正本とします。
 
-簡単に設置して使いたい場合は、Layering History Web版の「ダウンロード版」から `koshix-timeline-starter.zip` を利用してください。このZIPはNode.jsやビルド作業を必要としない静的配布版です。
+簡単に設置して使いたい場合は、Layering History Web版の「ダウンロード版」から `layering-history-starter.zip` を利用してください。このZIPはNode.jsやビルド作業を必要としない静的配布版です。
 
 ## クイックスタート
 

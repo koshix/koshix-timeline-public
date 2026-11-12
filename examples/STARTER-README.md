@@ -8,8 +8,8 @@
 
 ## 1. 設置の最短手順
 
-1. Web版の「ダウンロード版」から `koshix-timeline-starter.zip` を取得し、展開します。
-2. 展開した `koshix-timeline-starter/` の `config.json` を開き、自分のサイトの `shareUrl` などを設定します。
+1. Web版の「ダウンロード版」から `layering-history-starter.zip` を取得し、展開します。
+2. 展開した `layering-history-starter/` の `config.json` を開き、自分のサイトの `shareUrl` などを設定します。
 3. 必要に応じて `events.tsv` を編集し、自分の公開年表を作ります。
 4. **個人史をまだ公開サーバーへ置かず**、まず公開ファイルだけを設置して年表の表示・検索・絞込みを確認します。
 5. 個人史を使う場合は、サーバーの `personal/` を認証保護し、未認証でHTTP 401になることを確かめてから実データを配置します。
@@ -90,7 +90,7 @@ Require valid-user
 スターターの代表的な内容は次のとおりです。
 
 ```text
-koshix-timeline-starter/
+layering-history-starter/
 ├── index.html
 ├── assets/
 ├── config.json
