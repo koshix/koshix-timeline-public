@@ -252,6 +252,37 @@ assert.throws(
   /未知のsubsタグ "audio"/
 );
 
+// subsは0〜3個を許可し、4個以上は拒否する。
+assert.doesNotThrow(
+  () => validatePublicEventRow({
+    ...publicRow,
+    subs: "math|technology|media",
+  })
+);
+
+assert.throws(
+  () => validatePublicEventRow({
+    ...publicRow,
+    subs: "math|technology|media|communication",
+  }),
+  /subs は最大3個/
+);
+
+assert.doesNotThrow(
+  () => validatePublicEvent({
+    ...decodeEventRow(publicRow),
+    subs: ["math", "technology", "media"],
+  })
+);
+
+assert.throws(
+  () => validatePublicEvent({
+    ...decodeEventRow(publicRow),
+    subs: ["math", "technology", "media", "communication"],
+  }),
+  /subs は最大3個/
+);
+
 const decodedPublic = decodeEventRow(
   publicRow
 );

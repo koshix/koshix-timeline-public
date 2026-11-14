@@ -77,6 +77,42 @@ export const PUBLIC_EVENT_SUB_TAG_KEYS = [
   "labor",
 ];
 
+export const PUBLIC_EVENT_SUB_TAG_LABELS = Object.freeze({
+  thought: "思想",
+  rights: "人権",
+  law: "法制",
+  war: "戦争",
+  revolution: "革命",
+  literature: "文学",
+  music: "音楽",
+  art: "美術",
+  visual: "映像",
+  game: "遊戯",
+  communication: "通信",
+  media: "媒体",
+  politics: "政治",
+  economy: "経済",
+  industry: "産業",
+  technology: "技術",
+  math: "数理",
+  matter: "物質",
+  life: "生活",
+  biomed: "生命",
+  environment: "環境",
+  space: "宇宙",
+  stage: "舞台",
+  architecture: "建築",
+  design: "意匠",
+  religion: "宗教",
+  transport: "交通",
+  food: "食農",
+  sport: "体育",
+  gender: "性差",
+  energy: "資源",
+  colonialism: "植民",
+  labor: "労働",
+});
+
 export const PUBLIC_EVENT_SUB_TAGS = new Set(
   PUBLIC_EVENT_SUB_TAG_KEYS
 );
@@ -444,6 +480,10 @@ export function validatePublicEventRow(row) {
     validateCommonEventRow(row);
   const subs = splitEventList(row.subs);
 
+  if (subs.length > 3) {
+    throw new Error("subs は最大3個です");
+  }
+
   if (cats.length === 0) {
     throw new Error("cats が空です");
   }
@@ -574,6 +614,10 @@ export function validatePublicEvent(event) {
   const subs = event.subs ?? [];
   if (!Array.isArray(subs)) {
     throw new Error("subs が配列ではありません");
+  }
+
+  if (subs.length > 3) {
+    throw new Error("subs は最大3個です");
   }
 
   for (const sub of subs) {
