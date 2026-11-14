@@ -57,15 +57,18 @@ assert.equal(
   false
 );
 
-assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 25);
+assert.equal(PUBLIC_EVENT_SUB_TAG_KEYS.length, 33);
+assert.equal(new Set(PUBLIC_EVENT_SUB_TAG_KEYS).size, 33);
 for (const key of ["stage", "architecture", "design", "visual", "game"]) {
   assert.equal(PUBLIC_EVENT_SUB_TAGS.has(key), true);
 }
 for (const key of [
-  "comics", "sport", "food",
+  "religion", "transport", "food", "sport",
+  "gender", "energy", "colonialism", "labor",
 ]) {
-  assert.equal(PUBLIC_EVENT_SUB_TAGS.has(key), false);
+  assert.equal(PUBLIC_EVENT_SUB_TAGS.has(key), true);
 }
+assert.equal(PUBLIC_EVENT_SUB_TAGS.has("comics"), false);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("biomed"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("life"), true);
 assert.equal(PUBLIC_EVENT_SUB_TAGS.has("thought"), true);

@@ -2,7 +2,10 @@
 //
 // Principle:
 // - Representative icons follow a fixed priority based on subs frequency.
-// - Fixed on 2026-11-07 using 1917 public events; rarer subs rank first.
+// - Original 23-tag order fixed on 2026-11-07 using 1917 events.
+// - Game and architecture added at ranks 1 and 2 on 2026-11-12.
+// - Religion added after revolution on 2026-11-13.
+// - The previous 25-tag relative order is unchanged.
 // - Routine event edits do not change the priority.
 // - Reconsider only after major data or taxonomy changes.
 // - See docs/ICON-PRIORITY.md.
@@ -11,7 +14,10 @@
 // - Icons are derived at display time and are not stored in event TSV data.
 
 export const SUB_ICON_PRIORITY = [
+  "game",
+  "architecture",
   "revolution",
+  "religion",
   "design",
   "stage",
   "communication",
@@ -66,6 +72,9 @@ export const PUBLIC_EVENT_ICON_NAMES = new Set([
   "design",
   "math",
   "revolution",
+  "game",
+  "architecture",
+  "religion",
   "fallback-work",
   "fallback-science",
   "fallback-education",

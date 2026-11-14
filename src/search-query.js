@@ -110,22 +110,26 @@ export const parseSearchExpression = (value) => {
   }
 };
 
-export const matchesSearchExpression = (node, haystack) => {
+export const matchesSearchExpression = (
+  node,
+  haystack,
+  termMatcher = (term) => haystack.includes(term)
+) => {
   if (!node) return true;
 
   if (node.type === "term") {
-    return haystack.includes(node.value);
+    return termMatcher(node.value);
   }
 
   if (node.type === "and") {
     return (
-      matchesSearchExpression(node.left, haystack) &&
-      matchesSearchExpression(node.right, haystack)
+      matchesSearchExpression(node.left, haystack, termMatcher) &&
+      matchesSearchExpression(node.right, haystack, termMatcher)
     );
   }
 
   return (
-    matchesSearchExpression(node.left, haystack) ||
-    matchesSearchExpression(node.right, haystack)
+    matchesSearchExpression(node.left, haystack, termMatcher) ||
+    matchesSearchExpression(node.right, haystack, termMatcher)
   );
 };

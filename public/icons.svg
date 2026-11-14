@@ -315,6 +315,51 @@
     </g>
   </symbol>
 
+  <symbol id="icon-architecture" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor"
+       stroke-width="2.6" stroke-linecap="round"
+       stroke-linejoin="round">
+      <path d="M7 53h50"/>
+      <path d="M11 53V25l12-7 12 7v28"/>
+      <path d="M35 33l10-6 10 6v20"/>
+      <path d="M23 18V9h9v13"/>
+      <path d="M16 31h5M26 31h4"/>
+      <path d="M16 39h5M26 39h4"/>
+      <path d="M43 36h5M43 43h5"/>
+      <path d="M21 53v-9h8v9"/>
+      <path d="M7 59h50M39 53v6M23 53v6"/>
+    </g>
+  </symbol>
+
+  <symbol id="icon-game" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor"
+       stroke-width="2.6" stroke-linecap="round"
+       stroke-linejoin="round">
+      <path d="M17 23h30c5 0 8 3 10 10l4 16
+               c1 5-2 8-6 8-4 0-7-4-11-10H20
+               c-4 6-7 10-11 10-4 0-7-3-6-8
+               l4-16c2-7 5-10 10-10z"/>
+      <path d="M16 35h14M23 28v14"/>
+      <circle cx="42" cy="33" r="2.5"/>
+      <circle cx="49" cy="39" r="2.5"/>
+    </g>
+  </symbol>
+
+  <!-- Abstract light and enclosing curves; no sectarian emblem. -->
+  <symbol id="icon-religion" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor"
+       stroke-width="2.6" stroke-linecap="round"
+       stroke-linejoin="round">
+      <circle cx="32" cy="23" r="6"/>
+      <path d="M32 8v7M19 12l6 6M45 12l-6 6"/>
+      <path d="M12 51c0-12 4-19 12-24"/>
+      <path d="M52 51c0-12-4-19-12-24"/>
+      <path d="M18 51c2-7 6-12 12-15"/>
+      <path d="M46 51c-2-7-6-12-12-15"/>
+      <path d="M12 55h40"/>
+    </g>
+  </symbol>
+
   <symbol id="icon-fallback-work" viewBox="0 0 64 64">
     <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
       <rect x="14" y="8" width="36" height="48" rx="3"/>

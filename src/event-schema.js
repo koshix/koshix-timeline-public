@@ -67,6 +67,14 @@ export const PUBLIC_EVENT_SUB_TAG_KEYS = [
   "stage",
   "architecture",
   "design",
+  "religion",
+  "transport",
+  "food",
+  "sport",
+  "gender",
+  "energy",
+  "colonialism",
+  "labor",
 ];
 
 export const PUBLIC_EVENT_SUB_TAGS = new Set(

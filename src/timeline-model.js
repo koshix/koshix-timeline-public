@@ -2,6 +2,7 @@ import {
   eventYear,
   PUBLIC_EVENT_PRIMARY_CATEGORY_KEYS,
   PUBLIC_EVENT_SUB_FILTER_TAGS,
+  PUBLIC_EVENT_SUB_TAGS,
 } from "./event-schema.js";
 import { eventId } from "./event-links.js";
 import { catsOf, primaryCatOf } from "./categories.js";
@@ -53,9 +54,26 @@ export function createTimelineSearch(searchText) {
           .join(" ")
       );
 
+      const subs = Array.isArray(event.subs)
+        ? event.subs
+        : typeof event.subs === "string"
+          ? event.subs.split("|")
+          : [];
+
       return matchesSearchExpression(
         expression.root,
-        haystack
+        haystack,
+        (term) => {
+          if (!term.startsWith("subs:")) {
+            return haystack.includes(term);
+          }
+
+          const tag = term.slice("subs:".length);
+          return (
+            PUBLIC_EVENT_SUB_TAGS.has(tag) &&
+            subs.includes(tag)
+          );
+        }
       );
     },
   };
